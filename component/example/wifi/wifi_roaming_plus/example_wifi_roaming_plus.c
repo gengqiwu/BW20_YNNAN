@@ -687,7 +687,7 @@ void wifi_roaming_plus_thread(void *param)
 	struct wifi_roaming_data read_data = {0};
 	printf("\nExample: wifi_roaming_plus \n");
 	while (1) { //wait wifi connect
-		if (wifi_is_running(WLAN0_IDX) && ((wifi_get_join_status() == RTW_JOINSTATUS_SUCCESS) && (*(u32 *)LwIP_GetIP(0) != IP_ADDR_INVALID))) {
+		if (wifi_0is_running(WLAN0_IDX) && ((wifi_get_join_status() == RTW_JOINSTATUS_SUCCESS) && (*(u32 *)LwIP_GetIP(0) != IP_ADDR_INVALID))) {
 			break;
 		} else {
 			rtos_time_delay_ms(1000);

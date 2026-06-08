@@ -24,6 +24,7 @@ add_subdirectory(project)
 add_subdirectory(target)
 add_subdirectory(test)
 add_subdirectory(utils)
+add_subdirectory(lyy_app)
 
 if(CONFIG_AUDIO_FWK)
     add_subdirectory(audio/audio_config)

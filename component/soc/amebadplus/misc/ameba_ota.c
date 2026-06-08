@@ -932,6 +932,7 @@ int ota_update_s2_download_fw(ota_context *ctx)
 	while (1) {
 		_memset(buf, 0, BUF_SIZE);
 		read_bytes = ota_update_conn_read(ctx, buf, BUF_SIZE);
+		rtos_time_delay_ms(1);
 		if (read_bytes == 0) {
 			ret = 0;
 			break; // Read end

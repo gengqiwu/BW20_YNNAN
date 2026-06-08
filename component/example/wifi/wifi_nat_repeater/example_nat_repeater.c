@@ -37,7 +37,7 @@ unsigned char rptchannel = 6;
 static int ip_nat_wifi_restart_ap(struct _rtw_softap_info_t *softAP_config)
 {
 	unsigned char idx = 0;
-	u32 addr;
+	u32 addr; 
 	u32 netmask;
 	u32 gw;
 	int timeout = 20;

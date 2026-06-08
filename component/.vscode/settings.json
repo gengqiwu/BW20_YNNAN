@@ -1,0 +1,12 @@
+{
+    "files.associations": {
+        "lwipconf.h": "c",
+        "rtw_wifi_constants.h": "c",
+        "device.h": "c",
+        "timer_api.h": "c",
+        "platform_stdlib.h": "c",
+        "httpd.h": "c",
+        "vfs.h": "c",
+        "ameba_ota.h": "c"
+    }
+}
