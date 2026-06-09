@@ -1,0 +1,1005 @@
+
+[14:44:36.819]收←◆D [.lyy_app/hw/lyy_device/lyy_xyj.c, terminal_device_data, 327]: HAL_vUartSend:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 0101000000A03C72
+
+[14:44:36.896]收←◆D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 929]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01011402800020000000000000400000600000000000002B9A
+D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 956]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01011402800020000000000000400000600000000000002B9A
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:25
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, device_qhxyj_packet_parse, 732]: >>>device_qhxyj_packet_parse[25]:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01011402800020000000000000400000600000000000002B9A
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 241]: bit status>>>>>>>>>>>>>>>>BYTE7:0x0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 245]:     qhxyj_devSta.isRun :0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 246]:   qhxyj_devSta.isAlarm :0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 247]:   qhxyj_devSta.isReady :0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 248]: bit status>>>>>>>>>>>>>>>>BYTE14:0x60
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 250]:  qhxyj_devSta.isDoorOk :1
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 251]: bit status>>>>>>>>>>>>>>>>BYTE15:0x0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 253]: qhxyj_devSta.isAutoRun :0
+
+[14:44:37.475]收←◆I [.lyy_app/hw/lyy_thing/thing_init.c, APP_prvHeapMonitorTask, 74]: Free heap: [161152] bytes
+
+[14:44:37.820]收←◆D [.lyy_app/hw/lyy_device/lyy_xyj.c, terminal_device_data, 327]: HAL_vUartSend:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 010303200046C5B6
+
+[14:44:38.022]收←◆D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 929]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01038C0000000000000000000300000000004600000BB8001800050000000A0001000100000001000000EF00F000F0000003FF7FFF0000000003FF000000000000009A003A0004000A01580000000000004D443831373048304553542D2D5930464D31562E3231003400000000000000050009000000000000000000000000000000000000000000000000000000005911
+D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 956]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01038C0000000000000000000300000000004600000BB8001800050000000A0001000100000001000000EF00F000F0000003FF7FFF0000000003FF000000000000009A003A0004000A01580000000000004D443831373048304553542D2D5930464D31562E3231003400000000000000050009000000000000000000000000000000000000000000000000000000005911
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:145
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, device_qhxyj_packet_parse, 732]: >>>device_qhxyj_packet_parse[145]:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01038C0000000000000000000300000000004600000BB8001800050000000A0001000100000001000000EF00F000F0000003FF7FFF0000000003FF000000000000009A003A0004000A01580000000000004D443831373048304553542D2D5930464D31562E3231003400000000000000050009000000000000000000000000000000000000000000000000000000005911
+
+[14:44:39.480]收←◆I [.lyy_app/hw/lyy_thing/thing_init.c, APP_prvHeapMonitorTask, 74]: Free heap: [161152] bytes
+
+[14:44:39.818]收←◆D [.lyy_app/hw/lyy_device/lyy_xyj.c, terminal_device_data, 327]: HAL_vUartSend:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 0101000000A03C72
+
+[14:44:39.896]收←◆D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 929]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01011402800020000000000000400000600000000000002B9A
+D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 956]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01011402800020000000000000400000600000000000002B9A
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:25
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, device_qhxyj_packet_parse, 732]: >>>device_qhxyj_packet_parse[25]:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01011402800020000000000000400000600000000000002B9A
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 241]: bit status>>>>>>>>>>>>>>>>BYTE7:0x0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 245]:     qhxyj_devSta.isRun :0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 246]:   qhxyj_devSta.isAlarm :0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 247]:   qhxyj_devSta.isReady :0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 248]: bit status>>>>>>>>>>>>>>>>BYTE14:0x60
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 250]:  qhxyj_devSta.isDoorOk :1
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 251]: bit status>>>>>>>>>>>>>>>>BYTE15:0x0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 253]: qhxyj_devSta.isAutoRun :0
+
+[14:44:40.820]收←◆D [.lyy_app/hw/lyy_device/lyy_xyj.c, terminal_device_data, 327]: HAL_vUartSend:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 010303200046C5B6
+
+[14:44:41.022]收←◆D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 929]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01038C0000000000000000000300000000004600000BB8001800050000000A0001000100000001000000EF00F000F0000003FF7FFF0000000003FF000000000000009A003A0004000A01580000000000004D443831373048304553542D2D5930464D31562E3231003400000000000000050009000000000000000000000000000000000000000000000000000000005911
+D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 956]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01038C0000000000000000000300000000004600000BB8001800050000000A0001000100000001000000EF00F000F0000003FF7FFF0000000003FF000000000000009A003A0004000A01580000000000004D443831373048304553542D2D5930464D31562E3231003400000000000000050009000000000000000000000000000000000000000000000000000000005911
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:145
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, device_qhxyj_packet_parse, 732]: >>>device_qhxyj_packet_parse[145]:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01038C0000000000000000000300000000004600000BB8001800050000000A0001000100000001000000EF00F000F0000003FF7FFF0000000003FF000000000000009A003A0004000A01580000000000004D443831373048304553542D2D5930464D31562E3231003400000000000000050009000000000000000000000000000000000000000000000000000000005911
+
+[14:44:41.481]收←◆I [.lyy_app/hw/lyy_thing/thing_init.c, APP_prvHeapMonitorTask, 74]: Free heap: [161152] bytes
+
+[14:44:42.821]收←◆D [.lyy_app/hw/lyy_device/lyy_xyj.c, terminal_device_data, 327]: HAL_vUartSend:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 0101000000A03C72
+
+[14:44:42.896]收←◆D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 929]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01011402800020000000000000400000600000000000002B9A
+D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 956]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01011402800020000000000000400000600000000000002B9A
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:25
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, device_qhxyj_packet_parse, 732]: >>>device_qhxyj_packet_parse[25]:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01011402800020000000000000400000600000000000002B9A
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 241]: bit status>>>>>>>>>>>>>>>>BYTE7:0x0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 245]:     qhxyj_devSta.isRun :0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 246]:   qhxyj_devSta.isAlarm :0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 247]:   qhxyj_devSta.isReady :0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 248]: bit status>>>>>>>>>>>>>>>>BYTE14:0x60
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 250]:  qhxyj_devSta.isDoorOk :1
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 251]: bit status>>>>>>>>>>>>>>>>BYTE15:0x0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 253]: qhxyj_devSta.isAutoRun :0
+
+[14:44:43.486]收←◆I [.lyy_app/hw/lyy_thing/thing_init.c, APP_prvHeapMonitorTask, 74]: Free heap: [161152] bytes
+
+[14:44:43.757]收←◆I [.lyy_app/hw/lyy_thing/thing_mqtt.c, lyy_mqtt_packet_parse, 554]: mqtt publish
+D [.lyy_app/hw/lyy_thing/thing_iot.c, lyy_thing_down_parse, 94]: lyy_thing_down_parse topic ctlb/model/down_raw
+D [.lyy_app/hw/lyy_thing/thing_iot.c, lyy_thing_down_ctlb, 384]: get_dev_type_code: 12
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, terminal_device_data, 327]: HAL_vUartSend:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 011007CF000102000100AF
+
+[14:44:43.821]收←◆D [.lyy_app/hw/lyy_device/lyy_xyj.c, terminal_device_data, 327]: HAL_vUartSend:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 010303200046C5B6
+
+[14:44:44.023]收←◆D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 929]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 011007CF0001308201038C0000000000000000000300000000004600000BB8001800050000000A0001000100000001000000EF00F000F0000003FF7FFF0000000003FF000000000000009A003A0004000A01580000000000004D443831373048304553542D2D5930464D31562E3231003400000000000000050009000000000000000000000000000000000000000000000000000000005911
+D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 956]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 011007CF0001308201038C0000000000000000000300000000004600000BB8001800050000000A0001000100000001000000EF00F000F0000003FF7FFF0000000003FF000000000000009A003A0004000A01580000000000004D443831373048304553542D2D5930464D31562E3231003400000000000000050009000000000000000000000000000000000000000000000000000000005911
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:153
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, device_qhxyj_packet_parse, 732]: >>>device_qhxyj_packet_parse[8]:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 011007CF00013082
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, device_qhxyj_packet_parse, 871]: qixyj_setProgram_sem
+
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:145
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, device_qhxyj_packet_parse, 732]: >>>device_qhxyj_packet_parse[145]:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01038C0000000000000000000300000000004600000BB8001800050000000A0001000100000001000000EF00F000F0000003FF7FFF0000000003FF000000000000009A003A0004000A01580000000000004D443831373048304553542D2D5930464D31562E3231003400000000000000050009000000000000000000000000000000000000000000000000000000005911
+
+[14:44:45.030]收←◆D [.lyy_app/hw/lyy_device/lyy_xyj.c, terminal_device_data, 327]: HAL_vUartSend:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 010307D6001E254E
+
+[14:44:45.148]收←◆D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 929]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01033C0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000007AD7
+D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 956]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01033C0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000007AD7
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:65
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, device_qhxyj_packet_parse, 732]: >>>device_qhxyj_packet_parse[65]:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01033C0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000007AD7
+I [.lyy_app/hw/lyy_thing/thing_mqtt.c, lyy_mqtt_model_publish, 110]: lyy_mqtt_model_publish: sys/KSG3Bdm5oCvM/G0316494/ctlb/model/up_raw:0
+
+[14:44:45.487]收←◆I [.lyy_app/hw/lyy_thing/thing_init.c, APP_prvHeapMonitorTask, 74]: Free heap: [161024] bytes
+
+[14:44:45.821]收←◆D [.lyy_app/hw/lyy_device/lyy_xyj.c, terminal_device_data, 327]: HAL_vUartSend:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 0101000000A03C72
+
+[14:44:45.895]收←◆D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 929]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01011402800020000000000000400000600000000000002B9A
+D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 956]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01011402800020000000000000400000600000000000002B9A
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:25
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, device_qhxyj_packet_parse, 732]: >>>device_qhxyj_packet_parse[25]:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01011402800020000000000000400000600000000000002B9A
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 241]: bit status>>>>>>>>>>>>>>>>BYTE7:0x0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 245]:     qhxyj_devSta.isRun :0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 246]:   qhxyj_devSta.isAlarm :0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 247]:   qhxyj_devSta.isReady :0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 248]: bit status>>>>>>>>>>>>>>>>BYTE14:0x60
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 250]:  qhxyj_devSta.isDoorOk :1
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 251]: bit status>>>>>>>>>>>>>>>>BYTE15:0x0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 253]: qhxyj_devSta.isAutoRun :0
+
+[14:44:46.030]收←◆D [.lyy_app/hw/lyy_device/lyy_xyj.c, terminal_device_data, 327]: HAL_vUartSend:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 0103083400500658
+
+[14:44:46.253]收←◆D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 929]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 0103A09162B24601681E1E001E0000000000000A060001012C003C00000000000000009163B2460078000000000000000000000A060001012C003C00000000000000009163B24600B4000000000000000000000A060001012C003C00000000000000009163B2460078000000000000000000000A060004012C00B4000000000000000091213246003C0000000000000000000000000000000000000000000000000000A0C1
+D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 956]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 0103A09162B24601681E1E001E0000000000000A060001012C003C00000000000000009163B2460078000000000000000000000A060001012C003C00000000000000009163B24600B4000000000000000000000A060001012C003C00000000000000009163B2460078000000000000000000000A060004012C00B4000000000000000091213246003C0000000000000000000000000000000000000000000000000000A0C1
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:165
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, device_qhxyj_packet_parse, 732]: >>>device_qhxyj_packet_parse[165]:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 0103A09162B24601681E1E001E0000000000000A060001012C003C00000000000000009163B2460078000000000000000000000A060001012C003C00000000000000009163B24600B4000000000000000000000A060001012C003C00000000000000009163B2460078000000000000000000000A060004012C00B4000000000000000091213246003C0000000000000000000000000000000000000000000000000000A0C1
+I [.lyy_app/hw/lyy_thing/thing_mqtt.c, lyy_mqtt_model_publish, 110]: lyy_mqtt_model_publish: sys/KSG3Bdm5oCvM/G0316494/ctlb/model/up_raw:2b慒瞙
+
+[14:44:46.821]收←◆D [.lyy_app/hw/lyy_device/lyy_xyj.c, terminal_device_data, 327]: HAL_vUartSend:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 010303200046C5B6
+
+[14:44:47.024]收←◆D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 929]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01038C0000000000000000000300000000004600000BB8001800050000000A0001000100000001000000EF00F000F0000003FF7FFF0000000003FF000000000000009A003A0004000A01580000000000004D443831373048304553542D2D5930464D31562E323100340000000000000005000900000000000000000000000000000000000000000000000000003246CD83
+D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 956]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01038C0000000000000000000300000000004600000BB8001800050000000A0001000100000001000000EF00F000F0000003FF7FFF0000000003FF000000000000009A003A0004000A01580000000000004D443831373048304553542D2D5930464D31562E323100340000000000000005000900000000000000000000000000000000000000000000000000003246CD83
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:145
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, device_qhxyj_packet_parse, 732]: >>>device_qhxyj_packet_parse[145]:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 7D [.lyy_app/hw/lyy_device/lyy_xyj.c, terminal_device_data, 327]: HAL_vUartSend:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01030884005007BF
+0]: 01030884005007BF
+HAL_vUartSend:
+00004600000BB8001800050000000A0001000100000001000000EF00F000F0000003FF7FFF0000000003FF000000000000009A003A0004000A01580000000000004D443831373048304553542D2D5930464D31562E323100340000000000000005000900000000000000000000000000000000000000000000000000003246CD83
+
+[14:44:47.254]收←◆D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 929]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 0103A000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000A589
+D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 956]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 0103A000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000A589
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:165
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, device_qhxyj_packet_parse, 732]: >>>device_qhxyj_packet_parse[165]:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 0103A000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000A589
+I [.lyy_app/hw/lyy_thing/thing_mqtt.c, lyy_mqtt_model_publish, 110]: lyy_mqtt_model_publish: sys/KSG3Bdm5oCvM/G0316494/ctlb/model/up_raw:4
+
+[14:44:47.495]收←◆I [.lyy_app/hw/lyy_thing/thing_init.c, APP_prvHeapMonitorTask, 74]: Free heap: [161024] bytes
+
+[14:44:48.031]收←◆I [.lyy_app/hw/lyy_thing/thing_mqtt.c, lyy_mqtt_model_publish, 110]: lyy_mqtt_model_publish: sys/KSG3Bdm5oCvM/G0316494/ctlb/model/down_raw_reply:sys/KSG3Bdm5oCvM/G0316494/ctlb/model/down_raw_reply
+I [.lyy_app/hw/lyy_thing/thing_mqtt.c, lyy_mqtt_packet_parse, 554]: mqtt publish
+D [.lyy_app/hw/lyy_thing/thing_iot.c, lyy_thing_down_parse, 94]: lyy_thing_down_parse topic ctlb/model/down_raw
+D [.lyy_app/hw/lyy_thing/thing_iot.c, lyy_thing_down_ctlb, 384]: get_dev_type_code: 12
+I [.lyy_app/hw/lyy_thing/thing_mqtt.c, lyy_mqtt_model_publish, 110]: lyy_mqtt_model_publish: sys/KSG3Bdm5oCvM/G0316494/ctlb/model/up_raw:6
+I [.lyy_app/hw/lyy_thing/thing_mqtt.c, lyy_mqtt_model_publish, 110]: lyy_mqtt_model_publish: sys/KSG3Bdm5oCvM/G0316494/ctlb/model/down_raw_reply:sys/KSG3Bdm5oCvM/G0316494/ctlb/model/down_raw_reply
+
+[14:44:48.099]收←◆I [.lyy_app/hw/lyy_thing/thing_mqtt.c, lyy_mqtt_packet_parse, 554]: mqtt publish
+D [.lyy_app/hw/lyy_thing/thing_iot.c, lyy_thing_down_parse, 94]: lyy_thing_down_parse topic ctlb/model/up_raw_reply
+D [.lyy_app/hw/lyy_thing/thing_iot.c, lyy_thing_down_parse, 117]: get ### up_raw_reply ###
+
+[14:44:48.131]收←◆I [.lyy_app/hw/lyy_thing/thing_mqtt.c, lyy_mqtt_packet_parse, 554]: mqtt publish
+D [.lyy_app/hw/lyy_thing/thing_iot.c, lyy_thing_down_parse, 94]: lyy_thing_down_parse topic ctlb/model/up_raw_reply
+D [.lyy_app/hw/lyy_thing/thing_iot.c, lyy_thing_down_parse, 117]: get ### up_raw_reply ###
+
+[14:44:48.163]收←◆I [.lyy_app/hw/lyy_thing/thing_mqtt.c, lyy_mqtt_packet_parse, 554]: mqtt publish
+D [.lyy_app/hw/lyy_thing/thing_iot.c, lyy_thing_down_parse, 94]: lyy_thing_down_parse topic ctlb/model/up_raw_reply
+D [.lyy_app/hw/lyy_thing/thing_iot.c, lyy_thing_down_parse, 117]: get ### up_raw_reply ###
+
+[14:44:48.350]收←◆I [.lyy_app/hw/lyy_thing/thing_mqtt.c, lyy_mqtt_packet_parse, 554]: mqtt publish
+D [.lyy_app/hw/lyy_thing/thing_iot.c, lyy_thing_down_parse, 94]: lyy_thing_down_parse topic ctlb/model/up_raw_reply
+D [.lyy_app/hw/lyy_thing/thing_iot.c, lyy_thing_down_parse, 117]: get ### up_raw_reply ###
+
+[14:44:48.821]收←◆D [.lyy_app/hw/lyy_device/lyy_xyj.c, terminal_device_data, 327]: HAL_vUartSend:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 0101000000A03C72
+
+[14:44:48.897]收←◆D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 929]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01011402800020000000000000400000600000000000002B9A
+D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 956]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01011402800020000000000000400000600000000000002B9A
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:25
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, device_qhxyj_packet_parse, 732]: >>>device_qhxyj_packet_parse[25]:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01011402800020000000000000400000600000000000002B9A
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 241]: bit status>>>>>>>>>>>>>>>>BYTE7:0x0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 245]:     qhxyj_devSta.isRun :0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 246]:   qhxyj_devSta.isAlarm :0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 247]:   qhxyj_devSta.isReady :0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 248]: bit status>>>>>>>>>>>>>>>>BYTE14:0x60
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 250]:  qhxyj_devSta.isDoorOk :1
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 251]: bit status>>>>>>>>>>>>>>>>BYTE15:0x0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 253]: qhxyj_devSta.isAutoRun :0
+
+[14:44:49.496]收←◆I [.lyy_app/hw/lyy_thing/thing_init.c, APP_prvHeapMonitorTask, 74]: Free heap: [161024] bytes
+
+[14:44:49.823]收←◆D [.lyy_app/hw/lyy_device/lyy_xyj.c, terminal_device_data, 327]: HAL_vUartSend:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 010303200046C5B6
+
+[14:44:50.020]收←◆D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 929]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01038C0000000000000000000300000000004600000BB8001800050000000A0001000100000001000000EF00F000F0000003FF7FFF0000000003FF000000000000009A003A0004000A01580000000000004D443831373048304553542D2D5930464D31562E3231003400000000000000050009000000000000000000000000000000000000000000000000000000005911
+D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 956]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01038C0000000000000000000300000000004600000BB8001800050000000A0001000100000001000000EF00F000F0000003FF7FFF0000000003FF000000000000009A003A0004000A01580000000000004D443831373048304553542D2D5930464D31562E3231003400000000000000050009000000000000000000000000000000000000000000000000000000005911
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:145
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, device_qhxyj_packet_parse, 732]: >>>device_qhxyj_packet_parse[145]:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01038C0000000000000000000300000000004600000BB8001800050000000A0001000100000001000000EF00F000F0000003FF7FFF0000000003FF000000000000009A003A0004000A01580000000000004D443831373048304553542D2D5930464D31562E3231003400000000000000050009000000000000000000000000000000000000000000000000000000005911
+
+[14:44:51.503]收←◆I [.lyy_app/hw/lyy_thing/thing_init.c, APP_prvHeapMonitorTask, 74]: Free heap: [161024] bytes
+
+[14:44:51.822]收←◆D [.lyy_app/hw/lyy_device/lyy_xyj.c, terminal_device_data, 327]: HAL_vUartSend:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 0101000000A03C72
+
+[14:44:51.898]收←◆D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 929]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01011402800020000000000000400000600000000000002B9A
+D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 956]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01011402800020000000000000400000600000000000002B9A
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:25
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, device_qhxyj_packet_parse, 732]: >>>device_qhxyj_packet_parse[25]:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01011402800020000000000000400000600000000000002B9A
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 241]: bit status>>>>>>>>>>>>>>>>BYTE7:0x0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 245]:     qhxyj_devSta.isRun :0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 246]:   qhxyj_devSta.isAlarm :0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 247]:   qhxyj_devSta.isReady :0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 248]: bit status>>>>>>>>>>>>>>>>BYTE14:0x60
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 250]:  qhxyj_devSta.isDoorOk :1
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 251]: bit status>>>>>>>>>>>>>>>>BYTE15:0x0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 253]: qhxyj_devSta.isAutoRun :0
+
+[14:44:52.669]收←◆I [.lyy_app/hw/lyy_thing/thing_mqtt.c, lyy_mqtt_monitor_heart, 187]: lmq heart wait cnt: [1]
+
+[14:44:52.771]收←◆I [.lyy_app/hw/lyy_thing/thing_mqtt.c, lyy_mqtt_packet_parse, 562]: mqtt ping ack
+
+[14:44:52.823]收←◆D [.lyy_app/hw/lyy_device/lyy_xyj.c, terminal_device_data, 327]: HAL_vUartSend:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 010303200046C5B6
+
+[14:44:53.025]收←◆D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 929]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01038C0000000000000000000300000000004600000BB8001800050000000A0001000100000001000000EF00F000F0000003FF7FFF0000000003FF000000000000009A003A0004000A01580000000000004D443831373048304553542D2D5930464D31562E3231003400000000000000050009000000000000000000000000000000000000000000000000000000005911
+D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 956]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01038C0000000000000000000300000000004600000BB8001800050000000A0001000100000001000000EF00F000F0000003FF7FFF0000000003FF000000000000009A003A0004000A01580000000000004D443831373048304553542D2D5930464D31562E3231003400000000000000050009000000000000000000000000000000000000000000000000000000005911
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:145
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, device_qhxyj_packet_parse, 732]: >>>device_qhxyj_packet_parse[145]:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01038C0000000000000000000300000000004600000BB8001800050000000A0001000100000001000000EF00F000F0000003FF7FFF0000000003FF000000000000009A003A0004000A01580000000000004D443831373048304553542D2D5930464D31562E3231003400000000000000050009000000000000000000000000000000000000000000000000000000005911
+
+[14:44:53.503]收←◆I [.lyy_app/hw/lyy_thing/thing_init.c, APP_prvHeapMonitorTask, 74]: Free heap: [161024] bytes
+
+[14:44:54.819]收←◆D [.lyy_app/hw/lyy_device/lyy_xyj.c, terminal_device_data, 327]: HAL_vUartSend:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 0101000000A03C72
+
+[14:44:54.898]收←◆D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 929]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01011402800020000000000000400000600000000000002B9A
+D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 956]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01011402800020000000000000400000600000000000002B9A
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:25
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, device_qhxyj_packet_parse, 732]: >>>device_qhxyj_packet_parse[25]:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01011402800020000000000000400000600000000000002B9A
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 241]: bit status>>>>>>>>>>>>>>>>BYTE7:0x0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 245]:     qhxyj_devSta.isRun :0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 246]:   qhxyj_devSta.isAlarm :0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 247]:   qhxyj_devSta.isReady :0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 248]: bit status>>>>>>>>>>>>>>>>BYTE14:0x60
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 250]:  qhxyj_devSta.isDoorOk :1
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 251]: bit status>>>>>>>>>>>>>>>>BYTE15:0x0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 253]: qhxyj_devSta.isAutoRun :0
+
+[14:44:55.507]收←◆I [.lyy_app/hw/lyy_thing/thing_init.c, APP_prvHeapMonitorTask, 74]: Free heap: [161024] bytes
+
+[14:44:55.824]收←◆D [.lyy_app/hw/lyy_device/lyy_xyj.c, terminal_device_data, 327]: HAL_vUartSend:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 010303200046C5B6
+
+[14:44:56.027]收←◆D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 929]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01038C0000000000000000000300000000004600000BB8001800050000000A0001000100000001000000EF00F000F0000003FF7FFF0000000003FF000000000000009A003A0004000A01580000000000004D443831373048304553542D2D5930464D31562E3231003400000000000000050009000000000000000000000000000000000000000000000000000000005911
+D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 956]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01038C0000000000000000000300000000004600000BB8001800050000000A0001000100000001000000EF00F000F0000003FF7FFF0000000003FF000000000000009A003A0004000A01580000000000004D443831373048304553542D2D5930464D31562E3231003400000000000000050009000000000000000000000000000000000000000000000000000000005911
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:145
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, device_qhxyj_packet_parse, 732]: >>>device_qhxyj_packet_parse[145]:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01038C0000000000000000000300000000004600000BB8001800050000000A0001000100000001000000EF00F000F0000003FF7FFF0000000003FF000000000000009A003A0004000A01580000000000004D443831373048304553542D2D5930464D31562E3231003400000000000000050009000000000000000000000000000000000000000000000000000000005911
+
+[14:44:57.515]收←◆I [.lyy_app/hw/lyy_thing/thing_init.c, APP_prvHeapMonitorTask, 74]: Free heap: [161024] bytes
+
+[14:44:57.572]收←◆I [.lyy_app/hw/lyy_thing/thing_mqtt.c, lyy_mqtt_packet_parse, 554]: mqtt publish
+D [.lyy_app/hw/lyy_thing/thing_iot.c, lyy_thing_down_parse, 94]: lyy_thing_down_parse topic ctlb/model/down_raw
+D [.lyy_app/hw/lyy_thing/thing_iot.c, lyy_thing_down_ctlb, 384]: get_dev_type_code: 12
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, terminal_device_data, 327]: HAL_vUartSend:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 011007CF000102000240AE
+
+[14:44:57.666]收←◆D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 929]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 011007CF00013082
+
+[14:44:57.824]收←◆D [.lyy_app/hw/lyy_device/lyy_xyj.c, terminal_device_data, 327]: HAL_vUartSend:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 0101000000A03C72
+
+[14:44:57.900]收←◆D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 929]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01011402800020000000000000400000600000000000002B9A
+D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 956]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 011007CF0001308201011402800020000000000000400000600000000000002B9A
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:33
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, device_qhxyj_packet_parse, 732]: >>>device_qhxyj_packet_parse[8]:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 011007CF00013082
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, device_qhxyj_packet_parse, 871]: qixyj_setProgram_sem
+
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:25
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, device_qhxyj_packet_parse, 732]: >>>device_qhxyj_packet_parse[25]:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01011402800020000000000000400000600000000000002B9A
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 241]: bit status>>>>>>>>>>>>>>>>BYTE7:0x0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 245]:     qhxyj_devSta.isRun :0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 246]:   qhxyj_devSta.isAlarm :0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 247]:   qhxyj_devSta.isReady :0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 248]: bit status>>>>>>>>>>>>>>>>BYTE14:0x60
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 250]:  qhxyj_devSta.isDoorOk :1
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 251]: bit status>>>>>>>>>>>>>>>>BYTE15:0x0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 253]: qhxyj_devSta.isAutoRun :0
+
+[14:44:58.824]收←◆D [.lyy_app/hw/lyy_device/lyy_xyj.c, terminal_device_data, 327]: HAL_vUartSend:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 010303200046C5B6
+
+[14:44:58.904]收←◆D [.lyy_app/hw/lyy_device/lyy_xyj.c, terminal_device_data, 327]: HAL_vUartSend:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 010307D6001E254E
+
+[14:44:59.022]收←◆D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 929]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01038C0000000000000000000300000000004600000BB8001800050000000A0001000100000001000000EF00F000F0000003FF7FFF0000000003FF00000000A0F9F9F1BBDB41A1580000000000004D443831373048304553542D2D5930464D31562E3231003400000000000000050009000000000000000000000000000000000000000000000000000000005911
+
+[14:44:59.521]收←◆I [.lyy_app/hw/lyy_thing/thing_init.c, APP_prvHeapMonitorTask, 74]: Free heap: [160896] bytes
+
+[14:44:59.904]收←◆D [.lyy_app/hw/lyy_device/lyy_xyj.c, terminal_device_data, 327]: HAL_vUartSend:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 0103083400500658
+
+[14:45:00.124]收←◆D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 929]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 0103A0946232464258001E0000000000000000023500000032003C0000000000000000A863324600B4000000000000000000000A060001012C00780000000000000000A863322D40B40000001E0000000000000A060005012C01680000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001677
+D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 956]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01038C0000000000000000000300000000004600000BB8001800050000000A0001000100000001000000EF00F000F0000003FF7FFF0000000003FF00000000A0F9F9F1BBDB41A1580000000000004D443831373048304553542D2D5930464D31562E32310034000000000000000500090000000000000000000000000000000000000000000000000000000059110103A0946232464258001E0000000000000000023500000032003C0000000000000000A863324600B4000000000000000000000A060001012C00780000000000000000A863322D40B40000001E0000000000000A060005012CD [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:51
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:50
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:49
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:48
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:47
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:46
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:45
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:44
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:43
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:42
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:41
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:40
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:39
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:38
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:37
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:36
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:35
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:34
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:33
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:32
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:31
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:30
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:29
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:28
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:27
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:26
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:25
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:24
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:23
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:22
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:21
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:20
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:19
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 597]: device check is error
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:18
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:17
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 597]: device check is error
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:16
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:15
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:14
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:13
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 597]: device check is error
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:12
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:11
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:10
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:9
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:8
+
+[14:45:00.824]收←◆D [.lyy_app/hw/lyy_device/lyy_xyj.c, terminal_device_data, 327]: HAL_vUartSend:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 0101000000A03C72
+
+[14:45:00.900]收←◆D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 929]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01011402800020000000000000400000600000000000002B9A
+D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 956]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01011402800020000000000000400000600000000000002B9A
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:25
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, device_qhxyj_packet_parse, 7D [.lyy_app/hw/lyy_device/lyy_xyj.c, terminal_device_data, 327]: HAL_vUartSend:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01030884005007BF
+3AL_vUartSend:
+qhxyj_packet_parse[25]:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01011402800020000000000000400000600000000000002B9A
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 241]: bit status>>>>>>>>>>>>>>>>BYTE7:0x0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 245]:     qhxyj_devSta.isRun :0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 246]:   qhxyj_devSta.isAlarm :0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 247]:   qhxyj_devSta.isReady :0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 248]: bit status>>>>>>>>>>>>>>>>BYTE14:0x60
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 250]:  qhxyj_devSta.isDoorOk :1
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 251]: bit status>>>>>>>>>>>>>>>>BYTE15:0x0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 253]: qhxyj_devSta.isAutoRun :0
+
+[14:45:01.124]收←◆D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 929]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 0103A000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000A589
+D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 956]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 0103A000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000A589
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:165
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, device_qhxyj_packet_parse, 732]: >>>device_qhxyj_packet_parse[165]:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 0103A000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000A589
+I [.lyy_app/hw/lyy_thing/thing_mqtt.c, lyy_mqtt_model_publish, 110]: lyy_mqtt_model_publish: sys/KSG3Bdm5oCvM/G0316494/ctlb/model/up_raw:4
+
+[14:45:01.528]收←◆I [.lyy_app/hw/lyy_thing/thing_init.c, APP_prvHeapMonitorTask, 74]: Free heap: [160544] bytes
+
+[14:45:01.825]收←◆D [.lyy_app/hw/lyy_device/lyy_xyj.c, terminal_device_data, 327]: HAL_vUartSend:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 010303200046C5B6
+
+[14:45:01.906]收←◆I [.lyy_app/hw/lyy_thing/thing_mqtt.c, lyy_mqtt_model_publish, 110]: lyy_mqtt_model_publish: sys/KSG3Bdm5oCvM/G0316494/ctlb/model/down_raw_reply:sys/KSG3Bdm5oCvM/G0316494/ctlb/model/down_raw_reply
+I [.lyy_app/hw/lyy_thing/thing_mqtt.c, lyy_mqtt_packet_parse, 554]: mqtt publish
+D [.lyy_app/hw/lyy_thing/thing_iot.c, lyy_thing_down_parse, 94]: lyy_thing_down_parse topic ctlb/model/down_raw
+D [.lyy_app/hw/lyy_thing/thing_iot.c, lyy_thing_down_ctlb, 384]: get_dev_type_code: 12
+I [.lyy_app/hw/lyy_thing/thing_mqtt.c, lyy_mqtt_model_publish, 110]: lyy_mqtt_model_publish: sys/KSG3Bdm5oCvM/G0316494/ctlb/model/up_raw:6
+I [.lyy_app/hw/lyy_thing/thing_mqtt.c, lyy_mqtt_model_publish, 110]: lyy_mqtt_model_publish: sys/KSG3Bdm5oCvM/G0316494/ctlb/model/down_raw_reply:sys/KSG3Bdm5oCvM/G0316494/ctlb/model/down_raw_reply
+I [.lyy_app/hw/lyy_thing/thing_mqtt.c, lyy_mqtt_packet_parse, 554]: mqtt publish
+D [.lyy_app/hw/lyy_thing/thing_iot.c, lyy_thing_down_parse, 94]: lyy_thing_down_parse topic ctlb/model/up_raw_reply
+D [.lyy_app/hw/lyy_thing/thing_iot.c, lyy_thing_down_parse, 117]: get ### up_raw_reply ###
+
+[14:45:02.029]收←◆D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 929]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01038C0000000000000000000300000000004600000BB8001800050000000A0001000100000001000000EF00F000F0000003FF7FFF0000000003FF000000000000009A003A0004000A01580000000000004D443831373048304553542D2D5930464D31562E3231003400000000000000050009000000000000000000000000000000000000000000000000000000005911
+D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 956]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01038C0000000000000000000300000000004600000BB8001800050000000A0001000100000001000000EF00F000F0000003FF7FFF0000000003FF000000000000009A003A0004000A01580000000000004D443831373048304553542D2D5930464D31562E3231003400000000000000050009000000000000000000000000000000000000000000000000000000005911
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:145
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, device_qhxyj_packet_parse, 732]: >>>device_qhxyj_packet_parse[145]:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01038C0000000000000000000300000000004600000BB8001800050000000A0001000100000001000000EF00F000F0000003FF7FFF0000000003FF000000000000009A003A0004000A01580000000000004D443831373048304553542D2D5930464D31562E3231003400000000000000050009000000000000000000000000000000000000000000000000000000005911
+
+[14:45:02.170]收←◆I [.lyy_app/hw/lyy_thing/thing_mqtt.c, lyy_mqtt_packet_parse, 554]: mqtt publish
+D [.lyy_app/hw/lyy_thing/thing_iot.c, lyy_thing_down_parse, 94]: lyy_thing_down_parse topic ctlb/model/up_raw_reply
+D [.lyy_app/hw/lyy_thing/thing_iot.c, lyy_thing_down_parse, 117]: get ### up_raw_reply ###
+
+[14:45:03.536]收←◆I [.lyy_app/hw/lyy_thing/thing_init.c, APP_prvHeapMonitorTask, 74]: Free heap: [160896] bytes
+
+[14:45:03.825]收←◆D [.lyy_app/hw/lyy_device/lyy_xyj.c, terminal_device_data, 327]: HAL_vUartSend:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 0101000000A03C72
+
+[14:45:03.901]收←◆D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 929]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01011402800020000000000000400000600000000000002B9A
+D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 956]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01011402800020000000000000400000600000000000002B9A
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:25
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, device_qhxyj_packet_parse, 732]: >>>device_qhxyj_packet_parse[25]:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01011402800020000000000000400000600000000000002B9A
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 241]: bit status>>>>>>>>>>>>>>>>BYTE7:0x0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 245]:     qhxyj_devSta.isRun :0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 246]:   qhxyj_devSta.isAlarm :0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 247]:   qhxyj_devSta.isReady :0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 248]: bit status>>>>>>>>>>>>>>>>BYTE14:0x60
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 250]:  qhxyj_devSta.isDoorOk :1
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 251]: bit status>>>>>>>>>>>>>>>>BYTE15:0x0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 253]: qhxyj_devSta.isAutoRun :0
+
+[14:45:04.826]收←◆D [.lyy_app/hw/lyy_device/lyy_xyj.c, terminal_device_data, 327]: HAL_vUartSend:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 010303200046C5B6
+
+[14:45:05.028]收←◆D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 929]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01038C0000000000000000000300000000004600000BB8001800050000000A0001000100000001000000EF00F000F0000003FF7FFF0000000003FF000000000000009A003A0004000A01580000000000004D443831373048304553542D2D5930464D31562E3231003400000000000000050009000000000000000000000000000000000000000000000000000000005911
+D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 956]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01038C0000000000000000000300000000004600000BB8001800050000000A0001000100000001000000EF00F000F0000003FF7FFF0000000003FF000000000000009A003A0004000A01580000000000004D443831373048304553542D2D5930464D31562E3231003400000000000000050009000000000000000000000000000000000000000000000000000000005911
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:145
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, device_qhxyj_packet_parse, 732]: >>>device_qhxyj_packet_parse[145]:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01038C0000000000000000000300000000004600000BB8001800050000000A0001000100000001000000EF00F000F0000003FF7FFF0000000003FF000000000000009A003A0004000A01580000000000004D443831373048304553542D2D5930464D31562E3231003400000000000000050009000000000000000000000000000000000000000000000000000000005911
+
+[14:45:05.542]收←◆I [.lyy_app/hw/lyy_thing/thing_init.c, APP_prvHeapMonitorTask, 74]: Free heap: [160896] bytes
+
+[14:45:06.823]收←◆D [.lyy_app/hw/lyy_device/lyy_xyj.c, terminal_device_data, 327]: HAL_vUartSend:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 0101000000A03C72
+
+[14:45:06.902]收←◆D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 929]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01011402800020000000000000400000600000000000002B9A
+D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 956]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01011402800020000000000000400000600000000000002B9A
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:25
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, device_qhxyj_packet_parse, 732]: >>>device_qhxyj_packet_parse[25]:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01011402800020000000000000400000600000000000002B9A
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 241]: bit status>>>>>>>>>>>>>>>>BYTE7:0x0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 245]:     qhxyj_devSta.isRun :0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 246]:   qhxyj_devSta.isAlarm :0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 247]:   qhxyj_devSta.isReady :0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 248]: bit status>>>>>>>>>>>>>>>>BYTE14:0x60
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 250]:  qhxyj_devSta.isDoorOk :1
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 251]: bit status>>>>>>>>>>>>>>>>BYTE15:0x0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 253]: qhxyj_devSta.isAutoRun :0
+
+[14:45:07.552]收←◆I [.lyy_app/hw/lyy_thing/thing_init.c, APP_prvHeapMonitorTask, 74]: Free heap: [160896] bytes
+
+[14:45:07.826]收←◆D [.lyy_app/hw/lyy_device/lyy_xyj.c, terminal_device_data, 327]: HAL_vUartSend:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 010303200046C5B6
+
+[14:45:08.027]收←◆D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 929]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01038C0000000000000000000300000000004600000BB8001800050000000A0001000100000001000000EF00F000F0000003FF7FFF0000000003FF000000000000009A003A0004000A01580000000000004D443831373048304553542D2D5930464D31562E3231003400000000000000050009000000000000000000000000000000000000000000000000000000005911
+D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 956]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01038C0000000000000000000300000000004600000BB8001800050000000A0001000100000001000000EF00F000F0000003FF7FFF0000000003FF000000000000009A003A0004000A01580000000000004D443831373048304553542D2D5930464D31562E3231003400000000000000050009000000000000000000000000000000000000000000000000000000005911
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:145
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, device_qhxyj_packet_parse, 732]: >>>device_qhxyj_packet_parse[145]:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01038C0000000000000000000300000000004600000BB8001800050000000A0001000100000001000000EF00F000F0000003FF7FFF0000000003FF000000000000009A003A0004000A01580000000000004D443831373048304553542D2D5930464D31562E3231003400000000000000050009000000000000000000000000000000000000000000000000000000005911
+
+[14:45:09.556]收←◆I [.lyy_app/hw/lyy_thing/thing_init.c, APP_prvHeapMonitorTask, 74]: Free heap: [160896] bytes
+
+[14:45:09.826]收←◆D [.lyy_app/hw/lyy_device/lyy_xyj.c, terminal_device_data, 327]: HAL_vUartSend:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 0101000000A03C72
+
+[14:45:09.900]收←◆D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 929]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01011402800020000000000000400000600000000000002B9A
+D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 956]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01011402800020000000000000400000600000000000002B9A
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:25
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, device_qhxyj_packet_parse, 732]: >>>device_qhxyj_packet_parse[25]:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01011402800020000000000000400000600000000000002B9A
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 241]: bit status>>>>>>>>>>>>>>>>BYTE7:0x0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 245]:     qhxyj_devSta.isRun :0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 246]:   qhxyj_devSta.isAlarm :0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 247]:   qhxyj_devSta.isReady :0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 248]: bit status>>>>>>>>>>>>>>>>BYTE14:0x60
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 250]:  qhxyj_devSta.isDoorOk :1
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 251]: bit status>>>>>>>>>>>>>>>>BYTE15:0x0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 253]: qhxyj_devSta.isAutoRun :0
+
+[14:45:10.827]收←◆D [.lyy_app/hw/lyy_device/lyy_xyj.c, terminal_device_data, 327]: HAL_vUartSend:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 010303200046C5B6
+
+[14:45:11.029]收←◆D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 929]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01038C0000000000000000000300000000004600000BB8001800050000000A0001000100000001000000EF00F000F0000003FF7FFF0000000003FF000000000000009A003A0004000A01580000000000004D443831373048304553542D2D5930464D31562E3231003400000000000000050009000000000000000000000000000000000000000000000000000000005911
+D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 956]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01038C0000000000000000000300000000004600000BB8001800050000000A0001000100000001000000EF00F000F0000003FF7FFF0000000003FF000000000000009A003A0004000A01580000000000004D443831373048304553542D2D5930464D31562E3231003400000000000000050009000000000000000000000000000000000000000000000000000000005911
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:145
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, device_qhxyj_packet_parse, 732]: >>>device_qhxyj_packet_parse[145]:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01038C0000000000000000000300000000004600000BB8001800050000000A0001000100000001000000EF00F000F0000003FF7FFF0000000003FF000000000000009A003A0004000A01580000000000004D443831373048304553542D2D5930464D31562E3231003400000000000000050009000000000000000000000000000000000000000000000000000000005911
+
+[14:45:11.557]收←◆I [.lyy_app/hw/lyy_thing/thing_init.c, APP_prvHeapMonitorTask, 74]: Free heap: [160896] bytes
+
+[14:45:12.827]收←◆D [.lyy_app/hw/lyy_device/lyy_xyj.c, terminal_device_data, 327]: HAL_vUartSend:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 0101000000A03C72
+
+[14:45:12.903]收←◆D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 929]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01011402800020000000000000400000600000000000002B9A
+D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 956]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01011402800020000000000000400000600000000000002B9A
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:25
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, device_qhxyj_packet_parse, 732]: >>>device_qhxyj_packet_parse[25]:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01011402800020000000000000400000600000000000002B9A
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 241]: bit status>>>>>>>>>>>>>>>>BYTE7:0x0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 245]:     qhxyj_devSta.isRun :0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 246]:   qhxyj_devSta.isAlarm :0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 247]:   qhxyj_devSta.isReady :0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 248]: bit status>>>>>>>>>>>>>>>>BYTE14:0x60
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 250]:  qhxyj_devSta.isDoorOk :1
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 251]: bit status>>>>>>>>>>>>>>>>BYTE15:0x0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 253]: qhxyj_devSta.isAutoRun :0
+
+[14:45:13.563]收←◆I [.lyy_app/hw/lyy_thing/thing_init.c, APP_prvHeapMonitorTask, 74]: Free heap: [160896] bytes
+
+[14:45:13.828]收←◆D [.lyy_app/hw/lyy_device/lyy_xyj.c, terminal_device_data, 327]: HAL_vUartSend:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 010303200046C5B6
+
+[14:45:14.028]收←◆D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 929]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01038C0000000000000000000300000000004600000BB8001800050000000A0001000100000001000000EF00F000F0000003FF7FFF0000000003FF000000000000009A003A0004000A01580000000000004D443831373048304553542D2D5930464D31562E3231003400000000000000050009000000000000000000000000000000000000000000000000000000005911
+D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 956]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01038C0000000000000000000300000000004600000BB8001800050000000A0001000100000001000000EF00F000F0000003FF7FFF0000000003FF000000000000009A003A0004000A01580000000000004D443831373048304553542D2D5930464D31562E3231003400000000000000050009000000000000000000000000000000000000000000000000000000005911
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:145
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, device_qhxyj_packet_parse, 732]: >>>device_qhxyj_packet_parse[145]:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01038C0000000000000000000300000000004600000BB8001800050000000A0001000100000001000000EF00F000F0000003FF7FFF0000000003FF000000000000009A003A0004000A01580000000000004D443831373048304553542D2D5930464D31562E3231003400000000000000050009000000000000000000000000000000000000000000000000000000005911
+
+[14:45:15.214]收←◆I [.lyy_app/hw/lyy_thing/thing_mqtt.c, lyy_mqtt_packet_parse, 554]: mqtt publish
+D [.lyy_app/hw/lyy_thing/thing_iot.c, lyy_thing_down_parse, 94]: lyy_thing_down_parse topic ctlb/model/down_raw
+D [.lyy_app/hw/lyy_thing/thing_iot.c, lyy_thing_down_ctlb, 384]: get_dev_type_code: 12
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, terminal_device_data, 327]: HAL_vUartSend:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 011007CF0001020003816E
+
+[14:45:15.309]收←◆D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 929]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 011007CF00013082
+
+[14:45:15.568]收←◆I [.lyy_app/hw/lyy_thing/thing_init.c, APP_prvHeapMonitorTask, 74]: Free heap: [160768] bytes
+
+[14:45:15.827]收←◆D [.lyy_app/hw/lyy_device/lyy_xyj.c, terminal_device_data, 327]: HAL_vUartSend:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 0101000000A03C72
+
+[14:45:15.903]收←◆D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 929]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01011402800020000000000000400000600000000000002B9A
+D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 956]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 011007CF0001308201011402800020000000000000400000600000000000002B9A
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:33
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, device_qhxyj_packet_parse, 732]: >>>device_qhxyj_packet_parse[8]:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 011007CF00013082
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, device_qhxyj_packet_parse, 871]: qixyj_setProgram_sem
+
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:25
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, device_qhxyj_packet_parse, 732]: >>>device_qhxyj_packet_parse[25]:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01011402800020000000000000400000600000000000002B9A
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 241]: bit status>>>>>>>>>>>>>>>>BYTE7:0x0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 245]:     qhxyj_devSta.isRun :0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 246]:   qhxyj_devSta.isAlarm :0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 247]:   qhxyj_devSta.isReady :0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 248]: bit status>>>>>>>>>>>>>>>>BYTE14:0x60
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 250]:  qhxyj_devSta.isDoorOk :1
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 251]: bit status>>>>>>>>>>>>>>>>BYTE15:0x0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 253]: qhxyj_devSta.isAutoRun :0
+
+[14:45:16.824]收←◆D [.lyy_app/hw/lyy_device/lyy_xyj.c, terminal_device_data, 327]: HAL_vUartSend:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 010303200046C5B6
+
+[14:45:16.907]收←◆D [.lyy_app/hw/lyy_device/lyy_xyj.c, terminal_device_data, 327]: HAL_vUartSend:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 010307D6001E254E
+
+[14:45:17.026]收←◆D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 929]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01038C0000000000000000000300000000004600000BB8001800050000000A0001000100000001000000EF00F000F0000003FF7FFF0000000003FF00000000D0F9F18BBAFB81A1580000000000004D443831373048304553542D2D5930464D31562E3231003400000000000000050009000000000000000000000000000000000000000000000000000000005911
+
+[14:45:17.575]收←◆I [.lyy_app/hw/lyy_thing/thing_init.c, APP_prvHeapMonitorTask, 74]: Free heap: [160768] bytes
+
+[14:45:17.907]收←◆D [.lyy_app/hw/lyy_device/lyy_xyj.c, terminal_device_data, 327]: HAL_vUartSend:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 0103083400500658
+
+[14:45:18.130]收←◆D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 929]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 0103A09E61324600B400000000000000000000023500000032003C00000000000000009462324B4384001E0000000000000000023500000032003C0000000000000000A863324600B4000000000000000000000A060001012C00780000000000000000A863322840B41E0000000000000000000A060005012C016800000000000000000000000000000000000000000000000000000000000000000000000000000000EE44
+D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 956]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01038C0000000000000000000300000000004600000BB8001800050000000A0001000100000001000000EF00F000F0000003FF7FFF0000000003FF00000000D0F9F18BBAFB81A1580000000000004D443831373048304553542D2D5930464D31562E32310034000000000000000500090000000000000000000000000000000000000000000000000000000059110103A09E61324600B400000000000000000000023500000032003C00000000000000009462324B4384001E0000000000000000023500000032003C0000000000000000A863324600B4000000000000000000000A060001012CD [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:51
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:50
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:49
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:48
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:47
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:46
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:45
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:44
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:43
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:42
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:41
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:40
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:39
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:38
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:37
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:36
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:35
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:34
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:33
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:32
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:31
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:30
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:29
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:28
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:27
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:26
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:25
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:24
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:23
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:22
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:21
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:20
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:19
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 597]: device check is error
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:18
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:17
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 597]: device check is error
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:16
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:15
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:14
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:13
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 597]: device check is error
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:12
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:11
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:10
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:9
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:8
+
+[14:45:18.828]收←◆D [.lyy_app/hw/lyy_device/lyy_xyj.c, terminal_device_data, 327]: HAL_vUartSend:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 0101000000A03C72
+
+[14:45:18.904]收←◆D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 929]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01011402800020000000000000400000600000000000002B9A
+D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 956]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01011402800020000000000000400000600000000000002B9A
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:25
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, device_qhxyj_packet_paD [.lyy_app/hw/lyy_device/lyy_xyj.c, terminal_device_data, 327]: HAL_vUartSend:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01030884005007BF
+r07BF
+HAL_vUartSend:
+qhxyj_packet_parse[25]:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01011402800020000000000000400000600000000000002B9A
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 241]: bit status>>>>>>>>>>>>>>>>BYTE7:0x0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 245]:     qhxyj_devSta.isRun :0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 246]:   qhxyj_devSta.isAlarm :0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 247]:   qhxyj_devSta.isReady :0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 248]: bit status>>>>>>>>>>>>>>>>BYTE14:0x60
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 250]:  qhxyj_devSta.isDoorOk :1
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 251]: bit status>>>>>>>>>>>>>>>>BYTE15:0x0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 253]: qhxyj_devSta.isAutoRun :0
+
+[14:45:19.129]收←◆D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 929]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 0103A000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000A589
+D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 956]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 0103A000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000A589
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:165
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, device_qhxyj_packet_parse, 732]: >>>device_qhxyj_packet_parse[165]:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 0103A000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000A589
+I [.lyy_app/hw/lyy_thing/thing_mqtt.c, lyy_mqtt_model_publish, 110]: lyy_mqtt_model_publish: sys/KSG3Bdm5oCvM/G0316494/ctlb/model/up_raw:4
+
+[14:45:19.582]收←◆I [.lyy_app/hw/lyy_thing/thing_init.c, APP_prvHeapMonitorTask, 74]: Free heap: [160768] bytes
+
+[14:45:19.828]收←◆D [.lyy_app/hw/lyy_device/lyy_xyj.c, terminal_device_data, 327]: HAL_vUartSend:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 010303200046C5B6
+
+[14:45:19.908]收←◆I [.lyy_app/hw/lyy_thing/thing_mqtt.c, lyy_mqtt_model_publish, 110]: lyy_mqtt_model_publish: sys/KSG3Bdm5oCvM/G0316494/ctlb/model/down_raw_reply:sys/KSG3Bdm5oCvM/G0316494/ctlb/model/down_raw_reply
+
+[14:45:19.940]收←◆I [.lyy_app/hw/lyy_thing/thing_mqtt.c, lyy_mqtt_packet_parse, 554]: mqtt publish
+D [.lyy_app/hw/lyy_thing/thing_iot.c, lyy_thing_down_parse, 94]: lyy_thing_down_parse topic ctlb/model/down_raw
+D [.lyy_app/hw/lyy_thing/thing_iot.c, lyy_thing_down_ctlb, 384]: get_dev_type_code: 12
+I [.lyy_app/hw/lyy_thing/thing_mqtt.c, lyy_mqtt_model_publish, 110]: lyy_mqtt_model_publish: sys/KSG3Bdm5oCvM/G0316494/ctlb/model/up_raw:6
+I [.lyy_app/hw/lyy_thing/thing_mqtt.c, lyy_mqtt_model_publish, 110]: lyy_mqtt_model_publish: sys/KSG3Bdm5oCvM/G0316494/ctlb/model/down_raw_reply:sys/KSG3Bdm5oCvM/G0316494/ctlb/model/down_raw_reply
+
+[14:45:19.977]收←◆I [.lyy_app/hw/lyy_thing/thing_mqtt.c, lyy_mqtt_packet_parse, 554]: mqtt publish
+D [.lyy_app/hw/lyy_thing/thing_iot.c, lyy_thing_down_parse, 94]: lyy_thing_down_parse topic ctlb/model/up_raw_reply
+D [.lyy_app/hw/lyy_thing/thing_iot.c, lyy_thing_down_parse, 117]: get ### up_raw_reply ###
+
+[14:45:20.030]收←◆D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 929]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01038C0000000000000000000300000000004600000BB8001800050000000A0001000100000001000000EF00F000F0000003FF7FFF0000000003FF000000000000009A003A0004000A01580000000000004D443831373048304553542D2D5930464D31562E3231003400000000000000050009000000000000000000000000000000000000000000000000000000005911
+D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 956]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01038C0000000000000000000300000000004600000BB8001800050000000A0001000100000001000000EF00F000F0000003FF7FFF0000000003FF000000000000009A003A0004000A01580000000000004D443831373048304553542D2D5930464D31562E3231003400000000000000050009000000000000000000000000000000000000000000000000000000005911
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:145
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, device_qhxyj_packet_parse, 732]: >>>device_qhxyj_packet_parse[145]:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01038C0000000000000000000300000000004600000BB8001800050000000A0001000100000001000000EF00F000F0000003FF7FFF0000000003FF000000000000009A003A0004000A01580000000000004D443831373048304553542D2D5930464D31562E3231003400000000000000050009000000000000000000000000000000000000000000000000000000005911
+
+[14:45:20.192]收←◆I [.lyy_app/hw/lyy_thing/thing_mqtt.c, lyy_mqtt_packet_parse, 554]: mqtt publish
+D [.lyy_app/hw/lyy_thing/thing_iot.c, lyy_thing_down_parse, 94]: lyy_thing_down_parse topic ctlb/model/up_raw_reply
+D [.lyy_app/hw/lyy_thing/thing_iot.c, lyy_thing_down_parse, 117]: get ### up_raw_reply ###
+
+[14:45:21.587]收←◆I [.lyy_app/hw/lyy_thing/thing_init.c, APP_prvHeapMonitorTask, 74]: Free heap: [160768] bytes
+
+[14:45:21.829]收←◆D [.lyy_app/hw/lyy_device/lyy_xyj.c, terminal_device_data, 327]: HAL_vUartSend:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 0101000000A03C72
+
+[14:45:21.905]收←◆D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 929]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01011402800020000000000000400000600000000000002B9A
+D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 956]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01011402800020000000000000400000600000000000002B9A
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:25
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, device_qhxyj_packet_parse, 732]: >>>device_qhxyj_packet_parse[25]:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01011402800020000000000000400000600000000000002B9A
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 241]: bit status>>>>>>>>>>>>>>>>BYTE7:0x0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 245]:     qhxyj_devSta.isRun :0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 246]:   qhxyj_devSta.isAlarm :0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 247]:   qhxyj_devSta.isReady :0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 248]: bit status>>>>>>>>>>>>>>>>BYTE14:0x60
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 250]:  qhxyj_devSta.isDoorOk :1
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 251]: bit status>>>>>>>>>>>>>>>>BYTE15:0x0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 253]: qhxyj_devSta.isAutoRun :0
+
+[14:45:22.828]收←◆D [.lyy_app/hw/lyy_device/lyy_xyj.c, terminal_device_data, 327]: HAL_vUartSend:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 010303200046C5B6
+
+[14:45:23.029]收←◆D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 929]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01038C0000000000000000000300000000004600000BB8001800050000000A0001000100000001000000EF00F000F0000003FF7FFF0000000003FF000000000000009A003A0004000A01580000000000004D443831373048304553542D2D5930464D31562E3231003400000000000000050009000000000000000000000000000000000000000000000000000000005911
+D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 956]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01038C0000000000000000000300000000004600000BB8001800050000000A0001000100000001000000EF00F000F0000003FF7FFF0000000003FF000000000000009A003A0004000A01580000000000004D443831373048304553542D2D5930464D31562E3231003400000000000000050009000000000000000000000000000000000000000000000000000000005911
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:145
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, device_qhxyj_packet_parse, 732]: >>>device_qhxyj_packet_parse[145]:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01038C0000000000000000000300000000004600000BB8001800050000000A0001000100000001000000EF00F000F0000003FF7FFF0000000003FF000000000000009A003A0004000A01580000000000004D443831373048304553542D2D5930464D31562E3231003400000000000000050009000000000000000000000000000000000000000000000000000000005911
+
+[14:45:23.589]收←◆I [.lyy_app/hw/lyy_thing/thing_init.c, APP_prvHeapMonitorTask, 74]: Free heap: [160768] bytes
+
+[14:45:24.830]收←◆D [.lyy_app/hw/lyy_device/lyy_xyj.c, terminal_device_data, 327]: HAL_vUartSend:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 0101000000A03C72
+
+[14:45:24.905]收←◆D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 929]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01011402800020000000000000400000600000000000002B9A
+D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 956]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01011402800020000000000000400000600000000000002B9A
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:25
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, device_qhxyj_packet_parse, 732]: >>>device_qhxyj_packet_parse[25]:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01011402800020000000000000400000600000000000002B9A
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 241]: bit status>>>>>>>>>>>>>>>>BYTE7:0x0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 245]:     qhxyj_devSta.isRun :0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 246]:   qhxyj_devSta.isAlarm :0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 247]:   qhxyj_devSta.isReady :0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 248]: bit status>>>>>>>>>>>>>>>>BYTE14:0x60
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 250]:  qhxyj_devSta.isDoorOk :1
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 251]: bit status>>>>>>>>>>>>>>>>BYTE15:0x0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 253]: qhxyj_devSta.isAutoRun :0
+
+[14:45:25.595]收←◆I [.lyy_app/hw/lyy_thing/thing_init.c, APP_prvHeapMonitorTask, 74]: Free heap: [160768] bytes
+
+[14:45:25.830]收←◆D [.lyy_app/hw/lyy_device/lyy_xyj.c, terminal_device_data, 327]: HAL_vUartSend:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 010303200046C5B6
+
+[14:45:26.032]收←◆D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 929]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01038C0000000000000000000300000000004600000BB8001800050000000A0001000100000001000000EF00F000F0000003FF7FFF0000000003FF000000000000009A003A0004000A01580000000000004D443831373048304553542D2D5930464D31562E3231003400000000000000050009000000000000000000000000000000000000000000000000000000005911
+D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 956]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01038C0000000000000000000300000000004600000BB8001800050000000A0001000100000001000000EF00F000F0000003FF7FFF0000000003FF000000000000009A003A0004000A01580000000000004D443831373048304553542D2D5930464D31562E3231003400000000000000050009000000000000000000000000000000000000000000000000000000005911
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:145
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, device_qhxyj_packet_parse, 732]: >>>device_qhxyj_packet_parse[145]:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01038C0000000000000000000300000000004600000BB8001800050000000A0001000100000001000000EF00F000F0000003FF7FFF0000000003FF000000000000009A003A0004000A01580000000000004D443831373048304553542D2D5930464D31562E3231003400000000000000050009000000000000000000000000000000000000000000000000000000005911
+
+[14:45:27.600]收←◆I [.lyy_app/hw/lyy_thing/thing_init.c, APP_prvHeapMonitorTask, 74]: Free heap: [160768] bytes
+
+[14:45:27.826]收←◆D [.lyy_app/hw/lyy_device/lyy_xyj.c, terminal_device_data, 327]: HAL_vUartSend:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 0101000000A03C72
+
+[14:45:27.906]收←◆D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 929]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01011402800020000000000000400000600000000000002B9A
+D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 956]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01011402800020000000000000400000600000000000002B9A
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:25
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, device_qhxyj_packet_parse, 732]: >>>device_qhxyj_packet_parse[25]:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01011402800020000000000000400000600000000000002B9A
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 241]: bit status>>>>>>>>>>>>>>>>BYTE7:0x0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 245]:     qhxyj_devSta.isRun :0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 246]:   qhxyj_devSta.isAlarm :0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 247]:   qhxyj_devSta.isReady :0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 248]: bit status>>>>>>>>>>>>>>>>BYTE14:0x60
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 250]:  qhxyj_devSta.isDoorOk :1
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 251]: bit status>>>>>>>>>>>>>>>>BYTE15:0x0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 253]: qhxyj_devSta.isAutoRun :0
+
+[14:45:28.830]收←◆D [.lyy_app/hw/lyy_device/lyy_xyj.c, terminal_device_data, 327]: HAL_vUartSend:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 010303200046C5B6
+
+[14:45:29.033]收←◆D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 929]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01038C0000000000000000000300000000004600000BB8001800050000000A0001000100000001000000EF00F000F0000003FF7FFF0000000003FF000000000000009A003A0004000A01580000000000004D443831373048304553542D2D5930464D31562E3231003400000000000000050009000000000000000000000000000000000000000000000000000000005911
+D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 956]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01038C0000000000000000000300000000004600000BB8001800050000000A0001000100000001000000EF00F000F0000003FF7FFF0000000003FF000000000000009A003A0004000A01580000000000004D443831373048304553542D2D5930464D31562E3231003400000000000000050009000000000000000000000000000000000000000000000000000000005911
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:145
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, device_qhxyj_packet_parse, 732]: >>>device_qhxyj_packet_parse[145]:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01038C0000000000000000000300000000004600000BB8001800050000000A0001000100000001000000EF00F000F0000003FF7FFF0000000003FF000000000000009A003A0004000A01580000000000004D443831373048304553542D2D5930464D31562E3231003400000000000000050009000000000000000000000000000000000000000000000000000000005911
+
+[14:45:29.601]收←◆I [.lyy_app/hw/lyy_thing/thing_init.c, APP_prvHeapMonitorTask, 74]: Free heap: [160768] bytes
+
+[14:45:30.831]收←◆D [.lyy_app/hw/lyy_device/lyy_xyj.c, terminal_device_data, 327]: HAL_vUartSend:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 0101000000A03C72
+
+[14:45:30.907]收←◆D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 929]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01011402800020000000000000400000600000000000002B9A
+D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 956]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01011402800020000000000000400000600000000000002B9A
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:25
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, device_qhxyj_packet_parse, 732]: >>>device_qhxyj_packet_parse[25]:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01011402800020000000000000400000600000000000002B9A
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 241]: bit status>>>>>>>>>>>>>>>>BYTE7:0x0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 245]:     qhxyj_devSta.isRun :0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 246]:   qhxyj_devSta.isAlarm :0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 247]:   qhxyj_devSta.isReady :0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 248]: bit status>>>>>>>>>>>>>>>>BYTE14:0x60
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 250]:  qhxyj_devSta.isDoorOk :1
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 251]: bit status>>>>>>>>>>>>>>>>BYTE15:0x0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 253]: qhxyj_devSta.isAutoRun :0
+
+[14:45:31.606]收←◆I [.lyy_app/hw/lyy_thing/thing_init.c, APP_prvHeapMonitorTask, 74]: Free heap: [160768] bytes
+
+[14:45:31.827]收←◆D [.lyy_app/hw/lyy_device/lyy_xyj.c, terminal_device_data, 327]: HAL_vUartSend:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 010303200046C5B6
+
+[14:45:32.033]收←◆D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 929]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01038C0000000000000000000300000000004600000BB8001800050000000A0001000100000001000000EF00F000F0000003FF7FFF0000000003FF000000000000009A003A0004000A01580000000000004D443831373048304553542D2D5930464D31562E3231003400000000000000050009000000000000000000000000000000000000000000000000000000005911
+D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 956]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01038C0000000000000000000300000000004600000BB8001800050000000A0001000100000001000000EF00F000F0000003FF7FFF0000000003FF000000000000009A003A0004000A01580000000000004D443831373048304553542D2D5930464D31562E3231003400000000000000050009000000000000000000000000000000000000000000000000000000005911
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:145
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, device_qhxyj_packet_parse, 732]: >>>device_qhxyj_packet_parse[145]:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01038C0000000000000000000300000000004600000BB8001800050000000A0001000100000001000000EF00F000F0000003FF7FFF0000000003FF000000000000009A003A0004000A01580000000000004D443831373048304553542D2D5930464D31562E3231003400000000000000050009000000000000000000000000000000000000000000000000000000005911
+
+[14:45:32.682]收←◆I [.lyy_app/hw/lyy_thing/thing_mqtt.c, lyy_mqtt_monitor_heart, 187]: lmq heart wait cnt: [1]
+
+[14:45:32.776]收←◆I [.lyy_app/hw/lyy_thing/thing_mqtt.c, lyy_mqtt_packet_parse, 562]: mqtt ping ack
+
+[14:45:33.613]收←◆I [.lyy_app/hw/lyy_thing/thing_init.c, APP_prvHeapMonitorTask, 74]: Free heap: [160768] bytes
+
+[14:45:33.831]收←◆D [.lyy_app/hw/lyy_device/lyy_xyj.c, terminal_device_data, 327]: HAL_vUartSend:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 0101000000A03C72
+
+[14:45:33.908]收←◆D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 929]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01011402800020000000000000400000600000000000002B9A
+D [.lyy_app/hw/lyy_device/lyy_device.c, lyy_DevDataParse, 956]: lyy_DevDataParse
+
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01011402800020000000000000400000600000000000002B9A
+D [.lyy_app/hw/lyy_device/lyy_device.c, device_overlap_qh, 566]: inter_overlap  data_len:25
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, device_qhxyj_packet_parse, 732]: >>>device_qhxyj_packet_parse[25]:
+D [.lyy_app/hal/HAL_Log.c, lyy_printf_hex, 70]: 01011402800020000000000000400000600000000000002B9A
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 241]: bit status>>>>>>>>>>>>>>>>BYTE7:0x0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 245]:     qhxyj_devSta.isRun :0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 246]:   qhxyj_devSta.isAlarm :0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 247]:   qhxyj_devSta.isReady :0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 248]: bit status>>>>>>>>>>>>>>>>BYTE14:0x60
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 250]:  qhxyj_devSta.isDoorOk :1
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 251]: bit status>>>>>>>>>>>>>>>>BYTE15:0x0
+D [.lyy_app/hw/lyy_device/lyy_xyj.c, qhxyj_prase_bitCheckStutus, 253]: qhxyj_devSta.isAutoRun :0

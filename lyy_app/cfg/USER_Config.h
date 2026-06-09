@@ -14,7 +14,7 @@
 
 
 /* 正式固件 */
-#define CFG_RELEASE    
+//#define CFG_RELEASE    
 
 #ifndef CFG_RELEASE
 
@@ -43,7 +43,7 @@
 #if(CFG_USER_SOC == CFG_SOC_ESP8684)
 
 /* 模拟串口打印 */
-// #define CFG_TEST_LOG
+ #define CFG_TEST_LOG
 
 #elif(CFG_USER_SOC == CFG_SOC_RTL8711)
 

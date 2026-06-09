@@ -91,6 +91,7 @@ extern int device_qhxyj_global_param_get(void);
 extern int device_qhxyj_global_param_set(uint8_t *data, uint16_t len);
 extern int device_qhxyj_step_param_get(uint8_t step);
 extern int device_qhxyj_step_param_set(uint8_t step, uint8_t *data, uint16_t len);
+extern int device_qhxyj_program_param_set(uint8_t *data, uint16_t len);
 extern int device_qhxyj_pay_apply(void);
 extern int device_qhxyj_pay_start(uint16_t time);
 extern void qhxyj_ctlb_post_up_raw(uint8_t *data, int datalen);

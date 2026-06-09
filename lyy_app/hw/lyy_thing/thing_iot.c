@@ -54,8 +54,7 @@ int lyy_thing_raw_down(char *payload, uint32_t payload_len);
 
 void thing_build_topic_name(char *topic,char *name);
 
-
-
+uint8_t resp[3] = {0x36, 0x00, 0x00};
 /**
  * @brief Get the random string object
  * 获取随机字符串
@@ -399,18 +398,30 @@ int lyy_thing_down_ctlb(char *payload, uint32_t payload_len)
             device_qhxyj_factory_param_get();
         else if (cmd == HGJ_PARAM_CMD_SET)
             device_qhxyj_factory_param_set(data, payload_len - 1);
+        if (cmd == XYJ_PROGRAM_CMD_QUERY)
+            lyy_thing_ctlb_up_raw(resp, 3);
+        else if (cmd == XYJ_PROGRAM_CMD_SET)
+        {
+            device_qhxyj_program_param_set(data, payload_len - 1);//设置选择的程序
+            vTaskDelay(1000 / portTICK_PERIOD_MS);
+            device_qhxyj_global_param_get();//查询自动程序的全局参数
+            vTaskDelay(1000 / portTICK_PERIOD_MS);
+            device_qhxyj_step_param_get(0);//查询自动程序的第1部分步骤数据
+            vTaskDelay(1000 / portTICK_PERIOD_MS);
+            device_qhxyj_step_param_get(1);//查询自动程序的第2部分步骤数据
+        }
         if (cmd == XYJ_GLOBAL_PARAM_CMD_QUERY)
-            device_qhxyj_global_param_get();
+            device_qhxyj_global_param_get();//查询自动程序的全局参数
         else if (cmd == XYJ_GLOBAL_PARAM_CMD_SET)
-            device_qhxyj_global_param_set(data, payload_len - 1);
+            device_qhxyj_global_param_set(data, payload_len - 1);//设置自动程序的全局参数
         if (cmd == XYJ_STEP1_PARAM_CMD_QUERY)
-            device_qhxyj_step_param_get(0);
+            device_qhxyj_step_param_get(0);//查询自动程序的第1部分步骤数据
         else if (cmd == XYJ_STEP1_PARAM_CMD_SET)
-            device_qhxyj_step_param_set(0, data, payload_len - 1);
+            device_qhxyj_step_param_set(0, data, payload_len - 1);//设置自动程序的第1部分步骤数据
         if (cmd == XYJ_STEP2_PARAM_CMD_QUERY)
-            device_qhxyj_step_param_get(1);
+            device_qhxyj_step_param_get(1);//查询自动程序的第2部分步骤数据
         else if (cmd == XYJ_STEP2_PARAM_CMD_SET)
-            device_qhxyj_step_param_set(1, data, payload_len - 1);
+            device_qhxyj_step_param_set(1, data, payload_len - 1);//设置自动程序的第2部分步骤数据
         break;
     case DEVICE_TYPE_UART_SKYWORTH_GTXYJ: // 创维滚筒洗衣机
 

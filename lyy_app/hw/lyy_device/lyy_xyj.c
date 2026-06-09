@@ -56,6 +56,7 @@ static SEM_TYPE      qixyj_selectProgram_sem;
 static SEM_TYPE      qhxyj_sendCoin_sem;
 static SEM_TYPE      qixyj_start_sem;
 static SEM_TYPE      qixyj_getWashRunData_sem;
+static SEM_TYPE      qixyj_setProgram_sem;
 
 TYPE_QHXYJ_DEV_STA qhxyj_devSta={0};//状态信息
 TYPE_REPORT_QHXYJ_STA_INFO qhxyj_washRundata={0};
@@ -540,6 +541,7 @@ int device_qhxyj_factory_param_set(uint8_t* data,uint16_t len)
 int transmit_cmd_globalParmGet(void)//done
 {//01 03 03 E8 00 50 C5 86
     const uint8_t CMD[] = {0x01 ,0x03 ,0x07 ,0xD6 ,0x00 ,0x1E ,0x25 ,0x4E};
+    timeout_to_checkSta = PERIOD_FOR_CHECKSTA/TIME_INTERRUPT_MS;//查询状态定时重置
     return terminal_device_data((uint8_t*)CMD,sizeof(CMD));
 }
 
@@ -555,6 +557,32 @@ int device_qhxyj_global_param_get(void)
     return transmit_cmd_globalParmGet();
 
 }
+
+
+int transmit_cmd_programParmSet(uint8_t* data,uint16_t len)//done
+{
+    uint8_t head[] = {0x01 ,0x10 ,0x07 ,0xCF ,0x00 ,0x01,0x02};
+    uint8_t package[256] ;
+    uint16_t crc,i;
+    memset(package,0,sizeof(package));
+    memcpy(package,head,sizeof(head));
+    if(data != NULL)
+    {
+        //大小端转换
+        for(i = 0;i < len/2;i++)
+        {
+            package[sizeof(head)+2*i] = data[2*i+1];
+            package[sizeof(head)+2*i+1] = data[2*i];
+        }
+    }
+    crc = ModBusCRC16_long(package,sizeof(head)+len);
+    package[sizeof(head)+len] = crc&0xFF;
+    package[sizeof(head) + len +1] = crc>>8;
+    timeout_to_checkSta = PERIOD_FOR_CHECKSTA/TIME_INTERRUPT_MS;//查询状态定时重置
+    return terminal_device_data((uint8_t*)package,sizeof(head)+len+2);
+}
+
+
 
 /**
  * @brief
@@ -582,8 +610,27 @@ int transmit_cmd_globalParmSet(uint8_t* data,uint16_t len)//done
     package[sizeof(head)+len] = crc&0xFF;
     package[sizeof(head) + len +1] = crc>>8;
     
+    timeout_to_checkSta = PERIOD_FOR_CHECKSTA/TIME_INTERRUPT_MS;//查询状态定时重置
     return terminal_device_data((uint8_t*)package,sizeof(head)+len+2);
 }
+
+/**
+ * @brief 
+ * 设置选择的程序--乔禾洗衣机
+ * @param time 
+ * @return int 
+ */
+int device_qhxyj_program_param_set(uint8_t* data,uint16_t len)
+{
+    uint8_t ret = 0;
+    qixyj_setProgram_sem = xSemaphoreCreateBinary();
+    transmit_cmd_programParmSet(data, len);
+    ret = lyy_semWaitTryV2(qixyj_setProgram_sem, 3000);
+    lyy_semFreeV2(qixyj_setProgram_sem);
+    qixyj_setProgram_sem = NULL;
+    return ret > 0 ? 0 : -1;
+}
+
 /**
  * @brief 
  * 设置发自动程序的全局参数--乔禾洗衣机
@@ -606,6 +653,7 @@ int transmit_cmd_stepParmGet(uint8_t step)//done
 {
     const uint8_t CMD1[] = {0x01 ,0x03 ,0x08 ,0x34 ,0x00 ,0x50 ,0x06 ,0x58};
     const uint8_t CMD2[] = {0x01 ,0x03 ,0x08 ,0x84 ,0x00 ,0x50 ,0x07 ,0xBF};
+    timeout_to_checkSta = PERIOD_FOR_CHECKSTA/TIME_INTERRUPT_MS;//查询状态定时重置
     if(step == 0) return terminal_device_data((uint8_t*)CMD1,sizeof(CMD2));
    else return terminal_device_data((uint8_t*)CMD2,sizeof(CMD2));
     
@@ -820,6 +868,13 @@ void device_qhxyj_packet_parse(uint8_t *package, uint16_t len)
                 }
             }
             break;
+            case 0x07CF:
+            {/*设置选择的程序应答01 10 07 CF 00 01*/
+                if(qixyj_setProgram_sem != NULL){
+                    lyy_semSignalV2(qixyj_setProgram_sem);//接收到应答
+                    LYY_LOGD("qixyj_setProgram_sem\r\n");
+                }
+            }
             default:break;
         }
 

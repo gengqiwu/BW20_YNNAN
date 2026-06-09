@@ -912,16 +912,22 @@ void qh_packetParse(uint8_t *package, uint16_t len)
     }
 }
 
+/**
+ * @brief
+ * 串口数据解析入口
+ * @param pdata
+ * @param len
+ */
 void lyy_DevDataParse(uint8_t *pdata,uint32_t len)
 {
-    uint32_t pack_len = 0;
-    static uint8_t recvpakg[256];
-    static uint8_t recvindex = 0;
-    uint8_t pkgLen = 0;
+    uint32_t pack_len = 0;//包长度
+    static uint8_t recvpakg[512];//接收缓存
+    static uint16_t recvindex = 0;//接收缓存索引
+    uint8_t pkgLen = 0;//包长度
 
     // 针对modbus协议增加包检查
     LYY_LOGD("lyy_DevDataParse\r\n");
-    lyy_printf_hex(pdata, len);
+    lyy_printf_hex(pdata, len);//打印接收数据
 
     if(len < 4) return ;
 
@@ -930,11 +936,16 @@ void lyy_DevDataParse(uint8_t *pdata,uint32_t len)
 
         if (get_dev_type_code() < DEVICE_TYPE_UART_SKYWORTH_GTXYJ)  //针对乔禾蓝鲸洗衣机烘干机
         {
-            memcpy(recvpakg + recvindex, pdata, len);
+            if (recvindex + len > sizeof(recvpakg)) {
+                recvindex = 0; // 防止溢出
+            }
+            memcpy(recvpakg + recvindex, pdata, len);//意思是把接收到的数据放到recvpakg这个数组里，recvindex是当前已经接收的数据长度，len是新接收的数据长度，所以recvpakg + recvindex就是新数据应该放的位置。
             recvindex += len;
             if (recvindex >= 3)
             {
-                pkgLen = pdata[2];
+                pkgLen = recvpakg[2];
+                //意思是把recvpakg数组的第3个元素（索引为2）赋值给pkgLen变量，这个元素通常表示数据包的长度。
+                //与pkgLen =pdata[2]不同，recvpakg是一个缓冲区，用于存储接收到的数据，而pdata是当前接收的数据块。recvpakg[2]可能包含之前接收的数据包的长度信息，而pdata[2]只包含当前接收的数据块的长度信息。
                 if (recvindex < (pkgLen + 5))
                 {
                     return;
