@@ -65,18 +65,6 @@ typedef struct
     uint32_t    money_sum;              //现金总量
 }__attribute__((aligned(1), packed))DBJ_ACCOUNTS_DEF,*PDBJ_ACCOUNTS_DEF;
 
-/**
- * @brief
- * 找零---兑币机
- */
-typedef struct
-{
-    uint8_t sud_cmd;
-    uint8_t unique[6];
-    uint8_t type;           // 类型 00 纸钞 01 硬币
-    uint32_t out_money_inc; // 找零增量
-    uint32_t all_money_sum; // 找零总量
-} __attribute__((aligned(1), packed)) DBJ_CHANGE_DEF, *PDBJ_CHANGE_DEF;
 
 /**
  * @brief 

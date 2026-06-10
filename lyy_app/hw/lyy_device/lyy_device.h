@@ -17,18 +17,9 @@
 #define DEV_SELL_CMD                        (0xC9)
 #define DEVICE_NDJ_CMD                      (0xCC)
 
-#define HGJ_PARAM_CMD_QUERY 0x05
-#define HGJ_PARAM_CMD_SET 0x06
-#define XYJ_GLOBAL_PARAM_CMD_QUERY 0x30
-#define XYJ_GLOBAL_PARAM_CMD_SET 0x31
-#define XYJ_STEP1_PARAM_CMD_QUERY 0x32
-#define XYJ_STEP1_PARAM_CMD_SET 0x33
-#define XYJ_STEP2_PARAM_CMD_QUERY 0x34
-#define XYJ_STEP2_PARAM_CMD_SET 0x35
-#define XYJ_PROGRAM_CMD_QUERY 0x36
-#define XYJ_PROGRAM_CMD_SET 0x37
-
 #define THING_IOT_BOARD_PATH        "BOARD_OTA"
+
+extern SemaphoreHandle_t xFlashMutex;
 
 // #define ACCOUNT_LENGTH_CHECK    //美金、奥宇等某些存量主板账目指令长度有问题，特殊版本下不开启账目长度校验
 
@@ -73,16 +64,6 @@ typedef struct
     uint8_t     end;
 }__attribute__((aligned(1), packed))DEVICE_PACK_DEF,*PDEVICE_PACK_DEF;
 
-// 德峰售水机协议
-typedef struct
-{
-    uint8_t head;
-    uint8_t len;
-    uint8_t cmd;
-    uint8_t data[1255];
-    uint8_t check;
-    uint8_t end;
-} __attribute__((aligned(1), packed)) DEVICE_DF_PACK_DEF, *PDEVICE_DF_PACK_DEF;
 
 // 反向协议
 typedef struct
@@ -123,7 +104,7 @@ typedef struct
     uint8_t             ndj_start_id;
     uint8_t             ndj_cmd_id[10][6];
 }__attribute__((aligned(1), packed))APPLY_START_DEF,*PAPPLY_START_DEF;
-extern APPLY_START_DEF apply_start_t;
+
 /**
  * @brief 
  * 指令标识
@@ -194,10 +175,6 @@ typedef struct {
     uint8_t             ndj_apply_id;
     uint8_t             ndj_start_id;
     uint8_t             ndj_cmd_id[9][6];  // 8个仓位、6为的id使用（ID=1-8）
-
-    uint8_t             dfssj_apply_id;
-    uint8_t             dfssj_start_id;
-    uint8_t             dfssj_cmd_id[11][6]; // 10个出水口、6为的id使用（ID=1-8）
 }LyyHwMark_t;
 
 extern LyyHwMark_t     g_xlyyHwMark;
@@ -226,7 +203,6 @@ extern void board_ota_param_init(char *version,char *file_name,uint32_t file_siz
 extern uint16_t login_mark_get(void);
 
 extern int8_t device_send_cmd_packet(uint8_t cmd , uint8_t *pack_data,uint16_t len);
-extern int8_t device_send_dfssj_packet(uint8_t *pack_data, uint16_t len);
 
 #endif
 

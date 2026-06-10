@@ -32,16 +32,8 @@
 #include "lyy_wwj.h"
 #include "lyy_amy.h"
 #include "lyy_ndj.h"
-#include "lyy_xyj.h"
-#include "lyy_xcj.h"
-#include "lyy_hgj.h"
-#include "lyy_cwhgj.h"
-#include "lyy_cwxyj.h"
-#include "lyy_cwxhj.h"
-#include "lyy_mshgj.h"
-#include "lyy_tclxyj.h"
-#include "lyy_dfssj.h"
-#include "thing_event.h"
+#include "lyy_adh814e.h"
+#include "lyy_czf.h"
 
 #include "utils.h"
 
@@ -59,7 +51,8 @@ LyyHwMark_t     g_xlyyHwMark;
 DEVICE_COM_DEF  tdevCom = {0};
 
 BOARD_OTA_PARAM_DEF     board_ota_param_t;
-APPLY_START_DEF apply_start_t;
+
+
 
 /**
  * @brief 
@@ -386,30 +379,7 @@ int8_t device_send_cmd_packet(uint8_t cmd , uint8_t *pack_data,uint16_t len)
     return device_buildPacket(&packet);
 }
 
-/**
- * @brief 德峰售水机数据封包发送
- * @param
- * @param pack_data
- * @param len
- * @return int8_t
- */
-int8_t device_send_dfssj_packet(uint8_t *pack_data, uint16_t len)
-{
-    DEVICE_DF_PACK_DEF packet = {0};
-    uint8_t check;
-    // memset(&packet, 0, sizeof(DEVICE_DF_PACK_DEF));
 
-    packet.head = 0xAB;
-    packet.len = len + 2;
-    packet.cmd = 0x0F;
-    memcpy(packet.data, pack_data, len);
-    check = check_xor_memory(&packet.len, packet.len);
-    packet.data[len] = check;
-    packet.data[len + 1] = 0xAD;
-
-    HAL_vUartSend(HAL_UART_MAIN_BOARD, &packet.head, packet.len + 3, 500);
-    return (packet.len + 3);
-}
 
 /**
  * @brief 发送查询链接指令
@@ -546,79 +516,6 @@ char device_overlap(uint8_t *pbuff, uint16_t len, void (*parse)(uint8_t *, uint1
 
 /**
  * @brief
- * 叠包处理 正向才会使用  乔禾蓝鲸使用
- * @param pbuff
- * @param len
- * @param parse
- * @return char
- */
-char device_overlap_qh(uint8_t *pbuff, uint16_t len, void (*parse)(uint8_t *, uint16_t))
-{
-
-    uint8_t index = 0;
-    uint8_t pack_len;
-    uint8_t data_len = len;
-    uint8_t *pack = NULL;
-    uint16_t crc16, crc16Tmp;
-    lyy_printf_hex(pbuff, len);
-    do
-    {
-        LYY_LOGD("inter_overlap  data_len:%d", data_len);
-        pack = pbuff + index; //
-        if (pack[0] != 0x01)
-        {
-
-            index++; // 位置偏移
-            data_len--;
-            continue;
-        }
-        if (data_len < 3)
-            return 1;
-
-        if ((pack[1] == 0x01) || (pack[1] == 0x03)) // 指令不同，长度字段不同
-        {
-            pack_len = pack[2];
-        }
-        else
-        {
-            pack_len = 0x03;
-        }
-        if (data_len < pack_len + 5)
-        {
-            index++; // 位置偏移
-            data_len--;
-            continue;
-        }
-        crc16 = ModBusCRC16_long(pack, pack_len + 3);
-        crc16Tmp = (pack[pack_len + 4] << 8) + pack[pack_len + 3];
-        // LYY_LOGD("pack_len:%02X crc16:%04X  crc16Tmp:%04X ",pack_len, crc16,crc16Tmp);
-        if (crc16 != crc16Tmp)
-        {
-            LYY_LOGD("device check is error");
-            index++; // 位置偏移
-            data_len--;
-            continue;
-        }
-        index += pack_len + 5; // 位置偏移
-        if (data_len >= pack_len + 5)
-            data_len -= pack_len + 5; //
-        else
-            data_len--;
-        if (parse != NULL)
-        {
-            parse(pack, pack_len + 5); // 数据解析
-        }
-        else
-        {
-            LYY_LOGD("parse is error");
-        }
-    } while (data_len >= 8);
-
-    return 1;
-}
-
-/**
- * @brief
  * 串口数据帧默认处理方法
  * @param package
  * @param len
@@ -722,7 +619,7 @@ void std_packetParse(uint8_t *package, uint16_t len)
 
     LYY_LOGD("cmd:%02X sub_cmd:%02X",pdevPack->cmd,sub_cmd);
 
-    switch (pdevPack->cmd) // 根据命令判断
+    switch (pdevPack->cmd) //根据命令判断
     {
         case 0x01: //查询连接应答 或者 支付申请应答
         {
@@ -865,6 +762,11 @@ void std_packetParse(uint8_t *package, uint16_t len)
             }
         }
         break;
+        case 0xD7: // 纯支付
+        {
+            device_czf_packet_parse(sub_cmd, pdevPack->data, pdevPack->len);
+        }
+        break;
         default: 
         {
             lyy_thing_ctlb_up_raw(&pdevPack->cmd, pdevPack->len-2);
@@ -887,109 +789,44 @@ void opposite_packetParse(uint8_t *package, uint16_t len)
     (void)len;
 }
 
-/**
- * @brief
- * 乔禾洗烘机协议解析
- * @param package
- * @param len
- */
-void qh_packetParse(uint8_t *package, uint16_t len)
-{
-    int typeCode = get_dev_type_code();
-    switch (typeCode)
-    {
-    case DEVICE_TYPE_UART_LJXYJ:
-    case DEVICE_TYPE_UART_QHXYJ:
-        device_qhxyj_packet_parse(package, len);
-        break;
-    case DEVICE_TYPE_UART_QHHGJ:
-    case DEVICE_TYPE_UART_LJHGJ:
-        device_qhhgj_packet_parse(package, len);
-        break;
-    default:
-        device_parse(package, len);
-        break;
-    }
-}
 
-/**
- * @brief
- * 串口数据解析入口
- * @param pdata
- * @param len
- */
+
 void lyy_DevDataParse(uint8_t *pdata,uint32_t len)
 {
-    uint32_t pack_len = 0;//包长度
-    static uint8_t recvpakg[512];//接收缓存
-    static uint16_t recvindex = 0;//接收缓存索引
-    uint8_t pkgLen = 0;//包长度
-
-    // 针对modbus协议增加包检查
-    LYY_LOGD("lyy_DevDataParse\r\n");
-    lyy_printf_hex(pdata, len);//打印接收数据
-
+    uint32_t pack_len = 0;
     if(len < 4) return ;
-
-    if (get_dev_type_code() > DEVICE_TYPE_UART_NOTE)   //针对工厂协议，非乐摇摇协议
+    if (get_dev_type_code() == DEVICE_TYPE_UART_SHJ)
+    {
+        device_adh814e_packet_parse(pdata,len);
+    }
+    else
     {
 
-        if (get_dev_type_code() < DEVICE_TYPE_UART_SKYWORTH_GTXYJ)  //针对乔禾蓝鲸洗衣机烘干机
-        {
-            if (recvindex + len > sizeof(recvpakg)) {
-                recvindex = 0; // 防止溢出
-            }
-            memcpy(recvpakg + recvindex, pdata, len);//意思是把接收到的数据放到recvpakg这个数组里，recvindex是当前已经接收的数据长度，len是新接收的数据长度，所以recvpakg + recvindex就是新数据应该放的位置。
-            recvindex += len;
-            if (recvindex >= 3)
-            {
-                pkgLen = recvpakg[2];
-                //意思是把recvpakg数组的第3个元素（索引为2）赋值给pkgLen变量，这个元素通常表示数据包的长度。
-                //与pkgLen =pdata[2]不同，recvpakg是一个缓冲区，用于存储接收到的数据，而pdata是当前接收的数据块。recvpakg[2]可能包含之前接收的数据包的长度信息，而pdata[2]只包含当前接收的数据块的长度信息。
-                if (recvindex < (pkgLen + 5))
-                {
-                    return;
-                }
-            }
-            else
-                return;
-        }
-
-        LYY_LOGD("lyy_DevDataParse\r\n");
-        switch (get_dev_type_code())
-        {
-        case DEVICE_TYPE_UART_SKYWORTH_GTXYJ:
-            skyworth_xyj_packet_parse(pdata, len);
-            break;
-        case DEVICE_TYPE_UART_SKYWORTH_GTHGJ:
-            skyworth_hgj_packet_parse(pdata, len);
-            break;
-        case DEVICE_TYPE_UART_SKYWORTH_GTXHJ:
-            skyworth_xhj_packet_parse(pdata, len);
-            break;
-        case DEVICE_TYPE_UART_MSHGJ:
-            mshgj_packet_parse(pdata, len);
-            break;
-        case DEVICE_TYPE_UART_TCLXYJ:
-            tclxyj_packet_parse(pdata, len);
-            break;
-        case DEVICE_TYPE_UART_DFSSJ:
-            device_dfssj_packet_parse(pdata, len);
-            break;
-        case DEVICE_TYPE_UART_THXCJ:
-            xcj_packet_parse(pdata, len);
-            break;
-        default:
-            device_overlap_qh(recvpakg, recvindex, qh_packetParse);
-            break;
-        }
-
-        // 清空
-        recvindex = 0;
-        memset(recvpakg, 0, sizeof(recvpakg));
-    }else{
-
         if ((pdata[0] == 0xAA) && (pdata[3] == 0x07)) // 东之宇定制
+        {
+            pack_len = pdata[2];
+            pack_len <<= 8;
+            pack_len += pdata[1];
+            LYY_LOGD("len1:%d ;len2:%d", len - 4, pack_len);
+            if (len < pack_len + 4) // 判断长度是否正确
+            {
+                LYY_LOGD("PACK_LEN is error"); // 长度不正确
+                return;
+            }
+            if (pdata[pack_len + 3] != 0xdd) // 判断尾包是否正确
+            {
+                LYY_LOGD("PACK_END is error"); // 长度不正确
+                return;
+            }
+            LYY_LOGD("check1:%d ;check2:%d", check_xor_memory(&pdata[1], pack_len + 1), pdata[pack_len + 2]);
+            if (check_xor_memory(&pdata[1], pack_len + 1) != pdata[pack_len + 2])
+            {
+                LYY_LOGD("PACK_CHECK is error"); // 校验不正确
+                return;
+            }
+            std_packetParse(pdata, pack_len + 4); // 数据解析
+        }
+        else if ((pdata[0] == 0xAA) && (pdata[3] == 0xD7)) // 纯支付
         {
             pack_len = pdata[2];
             pack_len <<= 8;
@@ -1030,7 +867,7 @@ void APP_PrvDevLoginTask(void *arg)
 
     static uint32_t ultimeCnt;
 
-    if (get_dev_type_code() > DEVICE_TYPE_UART_NOTE)
+    if (get_dev_type_code() == DEVICE_TYPE_UART_CZF || get_dev_type_code() == DEVICE_TYPE_UART_SHJ)
         return;
 
     switch (g_xlyyHwMark.ucGetLoginFlag)
@@ -1073,6 +910,9 @@ void APP_PrvDevLoginTask(void *arg)
  * 串口版本才需要初始化
  * 其他版本不初始化
  */
+
+SemaphoreHandle_t xFlashMutex;
+
 void lyy_init_device(void)
 { 
 
@@ -1084,6 +924,8 @@ void lyy_init_device(void)
 
     g_xlyyHwMark.pxPayApply = xSemaphoreCreateBinary();
 
+    xFlashMutex= xSemaphoreCreateMutex();
+
 #define APP_DEV_LOGIN_TASK_TIME (2 * 1000)
 
     static struct HalSoftTimer DevLoginTask;
@@ -1092,25 +934,11 @@ void lyy_init_device(void)
                       APP_PrvDevLoginTask, 
                       APP_DEV_LOGIN_TASK_TIME,
                       NULL);
-
-    if ((get_dev_type_code() == DEVICE_TYPE_UART_QHXYJ) || ((get_dev_type_code() == DEVICE_TYPE_UART_LJXYJ)))
+    if (get_dev_type_code() == DEVICE_TYPE_UART_SHJ )
     {
-        lyy_device_qhxyj_init(); /*add by dxw 20241009*/
+        lyy_device_adh814e_init();
     }
-    else if ((get_dev_type_code() == DEVICE_TYPE_UART_QHHGJ) || ((get_dev_type_code() == DEVICE_TYPE_UART_LJHGJ)))
-        lyy_device_qhhgj_init(); /*add by dxw 20241009*/
-    else if (get_dev_type_code() == DEVICE_TYPE_UART_SKYWORTH_GTXYJ)
-        lyy_device_cwxyj_init(); /*add by zyl 20250605*/
-    else if (get_dev_type_code() == DEVICE_TYPE_UART_SKYWORTH_GTHGJ)
-        lyy_device_cwhgj_init(); /*add by zyl 20250605*/
-    else if (get_dev_type_code() == DEVICE_TYPE_UART_SKYWORTH_GTXHJ)
-        lyy_device_cwxhj_init(); /*add by zyl 20250605*/
-    else if (get_dev_type_code() == DEVICE_TYPE_UART_MSHGJ)
-        lyy_device_mshgj_init(); /*add by zyl 20250605*/
-    else if (get_dev_type_code() == DEVICE_TYPE_UART_DFSSJ)
-        lyy_device_dfssj_task_init(); /*add by zyl 20260402*/
-    else if (get_dev_type_code() == DEVICE_TYPE_UART_THXCJ)
-        lyy_device_xcj_init(); /*add by zyl 20260402*/
+    
 
     lyy_device_ndj_init();
 }

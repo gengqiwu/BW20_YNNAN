@@ -43,8 +43,6 @@ extern int      HAL_lGetWifiRssiToCsq(void);
 extern uint32_t HAL_ulGetBroadcastAddr(void);
 extern void     HAL_vWifiInit(WIFI_INFO_T *pxWifiInfo, vWifiWorkSta xFunc);
 
-extern void HAL_wifista_connect_flash_wifi(void);
-extern void HAL_wifista_connect_default_wifi(void);
-extern void HAL_wifista_again_connect_wifi(WIFI_INFO_T *pxWifiInfo);
-
 #endif
+
+

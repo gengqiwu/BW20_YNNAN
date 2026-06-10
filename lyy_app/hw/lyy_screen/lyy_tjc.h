@@ -132,7 +132,8 @@ typedef struct
 {
     uint8_t             status;                 //显示屏状态
     char                tjc_ver[52];
-    int                 fault_code;             //故障信息 
+    uint16_t            position;             //手动输入的货到数据
+    int                 fault_code;           // 故障信息
     uint8_t             img_flag;
     uint8_t             img_result;
     uint8_t             step;
@@ -217,6 +218,7 @@ extern void lyy_tjc_page_obj_amy_waring(char *context);
 extern void lyy_tjc_page_amy_working_V2(uint8_t statues,uint32_t time);
 extern void amy_time_to_string(uint32_t time,char *pstring);
 extern void lyy_tjc_obj_update_amy_count_down(char *body);
+extern void lyy_tjc_get_pay_qrcode_shj(uint16_t id, uint8_t wallet_id);
 
 extern void thread_dowload_semGive(void);
 

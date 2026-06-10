@@ -72,9 +72,6 @@ static void APP_PrvIWatchDongTask(void *pvArg)
 void APP_vMainInit(void)
 {
 
-    HAL_vGpioRegister();
-
-
     HAL_vFlashInit();
 
     int lRet = APP_lParamInit();
@@ -85,20 +82,17 @@ void APP_vMainInit(void)
     }
 
     HAL_vUartInit(HAL_UART_MAIN_BOARD, LYY_READ_PARAM_FAIL == lRet ? 115200 : APP_ulGetParamBaudRate());
-    // while (1)
-    // {
-    //     vTaskDelay(10 / portTICK_PERIOD_MS);
-    // }
+
+    HAL_vGpioRegister();
+
     APP_vLedInit();
-    
-    LYY_LOGD("APP_vLedInit");
+
     if(LYY_READ_PARAM_FAIL == lRet)  {
 
         APP_vFactoryInit();
         return ;
     }
-    
-    LYY_LOGD("APP_vFactoryInit");
+
     /* 进入配网模式 */
     if(WIFI_AP == APP_xGetParamWifiMode()) {
 
@@ -125,16 +119,15 @@ void APP_vMainInit(void)
     }
 
     APP_vEvenInit();
-    LYY_LOGD("APP_vEvenInit");
     APP_vEventTaskCreate();
     
     APP_vDetectInit();
     APP_vNetWorkInit();
     APP_vDrillingModeInit();
-    APP_Timer1msInit();
-    LYY_LOGD("APP_Timer1msInit");
 
-        /* 外设触发 */
+    APP_Timer1msInit();
+    
+    /* 外设触发 */
     APP_vDeteclRegisterFunc(APP_NETWORK_DETECT, APP_vApConfigSet);
     APP_vDeteclRegisterFunc(APP_INPUT_GIFT,     APP_vGiftOut);
     APP_vDeteclRegisterFunc(APP_INPUT_COIN,     APP_vCoinIn);
@@ -142,18 +135,15 @@ void APP_vMainInit(void)
     /* 平台业务 */
     lyy_init_tjc();
     lyy_mqtt_model_init();
-    LYY_LOGD("lyy_mqtt_model_init");
+
+
 }
+
+
 
 void app_example(void)
 {
 
-    // HAL_vGpioRegister();
-
-    // while (1)
-    // {
-    //     vTaskDelay(10 / portTICK_PERIOD_MS);
-    // }
     APP_vMainInit();
 
 #ifdef CFG_NO_OS

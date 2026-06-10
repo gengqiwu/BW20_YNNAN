@@ -125,61 +125,6 @@ void device_dbj_reply_out_coins_result(uint8_t *data, uint16_t len)
 
 /**
  * @brief
- * POS账目应答 ---兑币机    可以和线下账目应答合并取data[0]的数值
- * @param data
- * @param len
- */
-void device_dbj_reply_accounts_pos(uint8_t *data, uint16_t len)
-{
-    (void) len;
-    uint8_t sub_cmd = data[0];
-    device_packet_data_length(0xD1, &sub_cmd, sizeof(sub_cmd));
-}
-/**
- * @brief
- * 兑币机-出币结果 POS
- * @param pBuf 数据
- * @param len 数据长度
- */
-void device_dbj_accounts_pos(uint8_t *data, uint16_t len)
-{
-    PDBJ_ACCOUNTS_DEF pAcc = (PDBJ_ACCOUNTS_DEF)data;
-    char order[30] = {0};
-    utils_lhexToString(order, pAcc->unique, 6);
-    event_post_account_dbj_uart("pos_pay", pAcc->money_sum, pAcc->money_inc, pAcc->coins_sum, pAcc->coins_inc, order);
-    device_dbj_reply_accounts_pos(data, len);
-}
-
-/**
- * @brief
- * 找零应答 ---兑币机    可以和线下账目、POS账目应答合并取data[0]的数值
- * @param data
- * @param len
- */
-void device_dbj_reply_accounts_change(uint8_t *data, uint16_t len)
-{
-    (void)len;
-    uint8_t sub_cmd = data[0];
-    device_packet_data_length(0xD1, &sub_cmd, sizeof(sub_cmd));
-}
-
-/**
- * @brief
- * 兑币机-找零
- * @param pBuf 数据
- * @param len 数据长度
- */
-void device_dbj_accounts_change(uint8_t *data, uint16_t len)
-{
-    PDBJ_CHANGE_DEF pAcc = (PDBJ_CHANGE_DEF)data;
-    char order[30] = {0};
-    utils_lhexToString(order, pAcc->unique, 6);
-    event_post_account_dbj_uart_change("give_change", pAcc->all_money_sum, pAcc->out_money_inc, order);
-    device_dbj_reply_accounts_change(data, len);
-}
-
-/**
- * @brief
  * 出币结果--兑币机
  * @param pBuf 数据
  * @param len 数据长度
@@ -326,12 +271,9 @@ void device_dbj_reply_out_coins_result_03(uint8_t *pack, uint16_t len)
     memset(&tDevPack, 0, sizeof(tDevPack));
     tDevPack.cmd = 0xd1;
     tDevPack.len = 11;
-
-    memcpy(tDevPack.data, pack, 7);
-
     tDevPack.data[0] = 0x03;
-    tDevPack.data[7] = 0x01;
-
+    tDevPack.data[7] = 0;
+    memcpy(tDevPack.data, pack+4, 7);
     device_buildPacket(&tDevPack);
 
 }
@@ -501,12 +443,6 @@ void device_dbj_packet_parse(uint8_t subCmd, uint8_t *data, uint16_t len)
             break;
         case 0x06:  //上传线下账目
             device_dbj_accounts_offline(data, len);
-            break;
-        case 0x07: // 上传POS账目
-            device_dbj_accounts_pos(data, len);
-            break;
-        case 0x08: // 上传找零账目
-            device_dbj_accounts_change(data, len);
             break;
         case 0x20:  //出币上报
             device_dbj_out_coins_cmd_d120(data, len);

@@ -302,7 +302,7 @@ int HAL_lTlsEstablish(hal_tls_t *pxTls, const char *pcHostname, uint16_t usHostl
 
             break;
         }
- 
+
         if(HAL_ucTickTimeout(ulSysTick, ulTimeOutMs)) {
 
             LYY_LOGE("### handshake timeout : [%d]", ulTimeOutMs);

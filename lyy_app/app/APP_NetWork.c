@@ -126,11 +126,6 @@ static void APP_prvClientTlsTask(void *pvArg)
 
     (void)pvArg;
 
-    uint16_t wifi_connect_count = 0;
-    uint16_t wifi_connect_flag  = 0;
-
-
-    WIFI_INFO_T xWifiInfo_default = {CFG_WIFI_SSID, CFG_WIFI_PWD, WIFI_STA};
     WIFI_INFO_T xWifiInfo = { 0x00,  };
 
     xWifiInfo.xMode = WIFI_STA;
@@ -171,25 +166,9 @@ static void APP_prvClientTlsTask(void *pvArg)
             lWifiSta     =  g_xAppNetInfo.xWifiSta;
 
 #endif
-            wifi_connect_count++;
-            if (wifi_connect_count >= (10000 / CLIENT_TASK_TIME))
-            {
-                wifi_connect_count = 0;
-                if (wifi_connect_flag==1)
-                {
-                    wifi_connect_flag = 0;
-                    HAL_wifista_again_connect_wifi(&xWifiInfo);
-                    LYY_LOGI(">>> HAL_wifista_connect_flash_wifi");
-                }
-                else
-                {
-                    wifi_connect_flag = 1;
-                    HAL_wifista_again_connect_wifi(&xWifiInfo_default);
-                    LYY_LOGI(">>> HAL_wifista_connect_default_wifi");
-                }
-            }
 
-            continue;
+            continue ;
+
         }
 
 #if(CFG_USER_SOC == CFG_SOC_RTL8711)

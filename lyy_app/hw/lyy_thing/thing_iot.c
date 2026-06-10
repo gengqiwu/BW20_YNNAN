@@ -35,14 +35,8 @@
 
 #include "utils.h"
 
-#include "lyy_device.h"
-#include "lyy_xyj.h"
-#include "lyy_hgj.h"
-#include "lyy_cwhgj.h"
-#include "lyy_cwxyj.h"
-#include "lyy_cwxhj.h"
-#include "lyy_mshgj.h"
-#include "lyy_dfssj.h"
+
+
 
 int lyy_thing_down_property(char *payload, uint32_t payload_len);
 int lyy_thing_event_reply(char *payload, uint32_t payload_len);
@@ -54,7 +48,8 @@ int lyy_thing_raw_down(char *payload, uint32_t payload_len);
 
 void thing_build_topic_name(char *topic,char *name);
 
-uint8_t resp[3] = {0x36, 0x00, 0x00};
+
+
 /**
  * @brief Get the random string object
  * 获取随机字符串
@@ -140,29 +135,7 @@ void dev_type_update(cJSON *member)
 {
 
     if(member == NULL) 
-        return ; //成员为空
-
-    DEV_TYPE_DEF dev_type_t[] =
-        {
-            {"dev_type_default"},
-            {"dev_type_pulse"},
-            {"dev_type_level"},
-            {"dev_type_uart_custom"},
-            {"dev_type_uart_wwj_lyy"},
-            {"dev_type_uart_dbj_lyy"},
-            {"dev_type_uart_ndj_lyy"},
-            {"dev_type_uart_amy_lyy"},
-            {"dev_type_uart_xyj_lyy"},
-            {"dev_type_uart_note_lyy"},
-            {"dev_type_uart_qhxyj_lyy"}, /*乔禾洗衣机 add by dxw,20241010*/
-            {"dev_type_uart_qhhgj_lyy"}, /*乔禾烘干机 add by dxw,20241010*/
-            {"dev_type_uart_ljxyj_lyy"}, /*蓝鲸洗衣机 add by dxw,20241210*/
-            {"dev_type_uart_ljhgj_lyy"}, /*蓝鲸烘干机 add by dxw,20241210*/
-            {"dev_type_uart_cwxyj_lyy"}, /*创维滚筒洗衣机 add by zyl,20250605*/
-            {"dev_type_uart_mshgj_lyy"},
-            {"dev_type_uart_cwhgj_lyy"}, /*创维烘干机*/
-            {"dev_type_uart_cwxhj_lyy"}, /*创维洗烘机*/
-        };
+        return ; //成员为空   
 
     cJSON *temp = cJSON_GetObjectItem(member, "dev_type");
 
@@ -173,21 +146,6 @@ void dev_type_update(cJSON *member)
 
         if(memcmp(temp->valuestring, APP_pcGetDevType(), strlen(temp->valuestring)) != 0) //不一样
         {
-
-            for (uint8_t i = 0; i < sizeof(dev_type_t) / sizeof(dev_type_t[0]); i++)   //为了解决洗衣机烘干机默认波特率9600的问题。
-            {
-                if (strstr(dev_type_t[i].name, temp->valuestring) != NULL) // 一样
-                {
-                    if (i > DEVICE_TYPE_UART_NOTE)
-                    {
-                        APP_lParamSetBaundRate(9600);
-                        HAL_vUartSetParam(HAL_UART_MAIN_BOARD, 9600);
-                    }
-
-                    break;
-                }
-            }
-
             APP_lserSetDevTypeInfo(temp->valuestring);
             HAL_vReset("update dev_type to reset!!", 1000);
         }
@@ -381,74 +339,10 @@ int lyy_thing_down_ctlb(char *payload, uint32_t payload_len)
     {
         data = (uint8_t *)payload + 1;
     }
-    LYY_LOGD("get_dev_type_code: %d", get_dev_type_code());
-    switch (get_dev_type_code())
-    {
-    case DEVICE_TYPE_UART_QHHGJ:
-    case DEVICE_TYPE_UART_LJHGJ:
-        if (cmd == HGJ_PARAM_CMD_QUERY)
-            device_qhhgj_factory_param_get();
-        else if (cmd == HGJ_PARAM_CMD_SET)
-            device_qhhgj_factory_param_set(data, payload_len - 1);
-        break;
-    case DEVICE_TYPE_UART_QHXYJ:
-    case DEVICE_TYPE_UART_LJXYJ:
 
-        if (cmd == HGJ_PARAM_CMD_QUERY)
-            device_qhxyj_factory_param_get();
-        else if (cmd == HGJ_PARAM_CMD_SET)
-            device_qhxyj_factory_param_set(data, payload_len - 1);
-        if (cmd == XYJ_PROGRAM_CMD_QUERY)
-            lyy_thing_ctlb_up_raw(resp, 3);
-        else if (cmd == XYJ_PROGRAM_CMD_SET)
-        {
-            device_qhxyj_program_param_set(data, payload_len - 1);//设置选择的程序
-            vTaskDelay(1000 / portTICK_PERIOD_MS);
-            device_qhxyj_global_param_get();//查询自动程序的全局参数
-            vTaskDelay(1000 / portTICK_PERIOD_MS);
-            device_qhxyj_step_param_get(0);//查询自动程序的第1部分步骤数据
-            vTaskDelay(1000 / portTICK_PERIOD_MS);
-            device_qhxyj_step_param_get(1);//查询自动程序的第2部分步骤数据
-        }
-        if (cmd == XYJ_GLOBAL_PARAM_CMD_QUERY)
-            device_qhxyj_global_param_get();//查询自动程序的全局参数
-        else if (cmd == XYJ_GLOBAL_PARAM_CMD_SET)
-            device_qhxyj_global_param_set(data, payload_len - 1);//设置自动程序的全局参数
-        if (cmd == XYJ_STEP1_PARAM_CMD_QUERY)
-            device_qhxyj_step_param_get(0);//查询自动程序的第1部分步骤数据
-        else if (cmd == XYJ_STEP1_PARAM_CMD_SET)
-            device_qhxyj_step_param_set(0, data, payload_len - 1);//设置自动程序的第1部分步骤数据
-        if (cmd == XYJ_STEP2_PARAM_CMD_QUERY)
-            device_qhxyj_step_param_get(1);//查询自动程序的第2部分步骤数据
-        else if (cmd == XYJ_STEP2_PARAM_CMD_SET)
-            device_qhxyj_step_param_set(1, data, payload_len - 1);//设置自动程序的第2部分步骤数据
-        break;
-    case DEVICE_TYPE_UART_SKYWORTH_GTXYJ: // 创维滚筒洗衣机
 
-        break;
-    case DEVICE_TYPE_UART_SKYWORTH_GTHGJ: // 创维滚筒洗衣机
-
-        break;
-    case DEVICE_TYPE_UART_SKYWORTH_GTXHJ: // 创维滚筒洗衣机
-
-        break;
-    case DEVICE_TYPE_UART_MSHGJ: // 麦穗烘干机
-
-        break;
-    case DEVICE_TYPE_UART_TCLXYJ: //TCL洗衣机
-
-        break;
-    case DEVICE_TYPE_UART_DFSSJ: // 德锋售水机
-
-        break;
-    case DEVICE_TYPE_UART_THXCJ: // 探虎洗车机
-
-        break;
-    default:
-        // 发送到串口
-        device_packet_data_length(cmd, data, payload_len - 1);
-        break;
-    }
+    //发送到串口
+    device_packet_data_length(cmd, data, payload_len-1);
 
 
     //应答-down_raw_reply
@@ -505,7 +399,7 @@ void lyy_thing_raw_up(uint8_t *data, uint16_t len)
 {
     if(data == NULL)    return;
     if(len == 0)        return;
-  
+
     char topic[100] = {0x00,};    
 
     memset(topic, 0, sizeof(topic));
@@ -699,17 +593,12 @@ int lyy_thing_down_ota(char *payload, uint32_t payload_len)
                                     APP_prvBoardUpdataDataRvCd,
                                     APP_prvBoardUpdataRes);
     }
-    else if (strstr("sdk", module->valuestring) != NULL)
-    {
+    else {
 
-    }
-    else
-    {
-
-        // 异步不了， 资源不够
-        APP_UpgradeDelNetWorkDev(APP_UPGRADE_HTTP,
-                                    APP_UPGRADE_APP,
-                                    (uint8_t *)url->valuestring,
+        //异步不了， 资源不够
+        APP_UpgradeDelNetWorkDev(   APP_UPGRADE_HTTP, 
+                                    APP_UPGRADE_APP,  
+                                    (uint8_t *)url->valuestring, 
                                     strlen(url->valuestring),
                                     NULL,
                                     NULL);

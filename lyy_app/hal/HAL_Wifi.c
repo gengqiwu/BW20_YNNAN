@@ -22,7 +22,6 @@
 #include "HAL_Log.h"
 #include "HAL_Wifi.h"
 #include "HAL_System.h"
-#include "APP_Param.h"
 
 typedef struct {
 
@@ -266,100 +265,9 @@ void HAL_vWifiStaInit(WIFI_INFO_T *pxWifiInfo, vWifiWorkSta xFunc)
         LYY_LOGD(">>> wifi connect set success");
     }
 
-    wifi_config_autoreconnect(RTW_AUTORECONNECT_INFINITE); // RTW_AUTORECONNECT_DISABLE 禁止自动连接   RTW_AUTORECONNECT_INFINITE  无限重连   RTW_AUTORECONNECT_FINITE 有限重连
-}
-
-void HAL_wifista_again_connect_wifi(WIFI_INFO_T *pxWifiInfo) // 从新连接wifi
-{
-    g_xHalWifi.xConnectParam.password_len = strlen(pxWifiInfo->pcPwd);
-    g_xHalWifi.xConnectParam.password = (unsigned char *)pxWifiInfo->pcPwd;
-
-    g_xHalWifi.xConnectParam.ssid.len = strlen(pxWifiInfo->pcSsid) > sizeof(g_xHalWifi.xConnectParam.ssid.val) ? sizeof(g_xHalWifi.xConnectParam.ssid.val) : strlen(pxWifiInfo->pcSsid);
-
-    memcpy(g_xHalWifi.xConnectParam.ssid.val,
-           pxWifiInfo->pcSsid,
-           g_xHalWifi.xConnectParam.ssid.len);
-
-    g_xHalWifi.xConnectParam.security_type = g_xHalWifi.xConnectParam.password_len ? RTW_SECURITY_WPA2_AES_PSK : RTW_SECURITY_OPEN;
-
-    LYY_LOGD(">>> g_xHalWifi.xConnectParam.ssid.val : [%s]", g_xHalWifi.xConnectParam.ssid.val);
-
-    wifi_disconnect();
-    /* 异步 */
-    if (RTW_SUCCESS == wifi_connect(&g_xHalWifi.xConnectParam, 0))
-    {
-
-        LYY_LOGD(">>> wifi connect set success");
-    }
 
     wifi_config_autoreconnect(RTW_AUTORECONNECT_INFINITE);
-}
 
-void HAL_wifista_connect_flash_wifi(void)  //连接放在flash中的WIFI账号密码
-{
-
-    WIFI_INFO_T xWifiInfo = {0x00};
-
-    xWifiInfo.xMode = WIFI_STA;
-
-    strcpy(xWifiInfo.pcSsid, APP_pcGetParamWifiSsid());
-    strcpy(xWifiInfo.pcPwd, APP_pcGetParamWifiPwd());
-
-    g_xHalWifi.xConnectParam.password_len = strlen(xWifiInfo.pcPwd);
-    g_xHalWifi.xConnectParam.password = (unsigned char *)xWifiInfo.pcPwd;
-
-    g_xHalWifi.xConnectParam.ssid.len = strlen(xWifiInfo.pcSsid) > sizeof(g_xHalWifi.xConnectParam.ssid.val) ? sizeof(g_xHalWifi.xConnectParam.ssid.val) : strlen(xWifiInfo.pcSsid);
-
-    memcpy(g_xHalWifi.xConnectParam.ssid.val,
-           xWifiInfo.pcSsid,
-           g_xHalWifi.xConnectParam.ssid.len);
-
-    g_xHalWifi.xConnectParam.security_type = g_xHalWifi.xConnectParam.password_len ? RTW_SECURITY_WPA2_AES_PSK : RTW_SECURITY_OPEN;
-
-    LYY_LOGD(">>> g_xHalWifi.xConnectParam.ssid.val : [%s]", g_xHalWifi.xConnectParam.ssid.val);
-
-    wifi_disconnect();
-    /* 异步 */
-    if (RTW_SUCCESS == wifi_connect(&g_xHalWifi.xConnectParam, 0))
-    {
-
-        LYY_LOGD(">>> wifi connect set success");
-    }
-
-    wifi_config_autoreconnect(RTW_AUTORECONNECT_INFINITE);
-}
-
-void HAL_wifista_connect_default_wifi(void) // 连接默认WIFI
-{
-
-    WIFI_INFO_T xWifiInfo = {0x00};
-
-    xWifiInfo.xMode = WIFI_STA;
-
-    strcpy(xWifiInfo.pcSsid, CFG_WIFI_SSID);
-    strcpy(xWifiInfo.pcPwd,  CFG_WIFI_PWD);
-
-    g_xHalWifi.xConnectParam.password_len = strlen(xWifiInfo.pcPwd);
-    g_xHalWifi.xConnectParam.password = (unsigned char *)xWifiInfo.pcPwd;
-
-    g_xHalWifi.xConnectParam.ssid.len = strlen(xWifiInfo.pcSsid) > sizeof(g_xHalWifi.xConnectParam.ssid.val) ? sizeof(g_xHalWifi.xConnectParam.ssid.val) : strlen(xWifiInfo.pcSsid);
-
-    memcpy(g_xHalWifi.xConnectParam.ssid.val,
-           xWifiInfo.pcSsid,
-           g_xHalWifi.xConnectParam.ssid.len);
-
-    g_xHalWifi.xConnectParam.security_type = g_xHalWifi.xConnectParam.password_len ? RTW_SECURITY_WPA2_AES_PSK : RTW_SECURITY_OPEN;
-
-    LYY_LOGD(">>> g_xHalWifi.xConnectParam.ssid.val : [%s]", g_xHalWifi.xConnectParam.ssid.val);
-    wifi_disconnect();
-    /* 异步 */
-    if (RTW_SUCCESS == wifi_connect(&g_xHalWifi.xConnectParam, 0))
-    {
-
-        LYY_LOGD(">>> wifi connect set success");
-    }
-
-    wifi_config_autoreconnect(RTW_AUTORECONNECT_INFINITE);
 }
 
 

@@ -10,7 +10,7 @@
 #include <stdint.h>
 #include <string.h>
 
-
+#include "thing_event.h"
 #include "utils.h"
 #include "cJSON.h"
 
@@ -24,7 +24,6 @@
 #include "HAL_System.h"
 
 #include "thing_mqtt.h"
-#include "thing_event.h"
 #include "thing_property.h"
 
 
@@ -62,8 +61,7 @@ SemaphoreHandle_t   hw_httpDowloadSem    = NULL;
 void lyy_tjc_pay_package_ndj(void);
 void lyy_tjc_page_pkgs_ndj(void);
 void lyy_tjc_page_pkgs_std(void);
-void lyy_tjc_page_pkgs_pulse(void);
-void lyy_tjc_page_pkgs_xhj(void);
+void lyy_tjc_page_pkgs_shj(void);
 void lyy_tjc_page_change_amy_time(void);
 
 
@@ -532,62 +530,20 @@ void lyy_tjc_packages_show(void)
     #else
     switch (get_dev_type_code())
     {
-        case DEVICE_TYPE_UART_SKYWORTH_GTXYJ:
-        case DEVICE_TYPE_UART_SKYWORTH_GTHGJ:
-        case DEVICE_TYPE_UART_SKYWORTH_GTXHJ:
-        case DEVICE_TYPE_UART_MSHGJ:
-        case DEVICE_TYPE_UART_TCLXYJ:
-        case DEVICE_TYPE_UART_DFSSJ:   //该处待议，现在还没有定义TJC屏幕上显示什么
-            lyy_tjc_page_pkgs_xhj();
-            break;
-        case DEVICE_TYPE_UART_NDJ:
-            lyy_tjc_page_pkgs_ndj();
-            break;
-        case DEVICE_TYPE_UART_XYJ:
-        case DEVICE_TYPE_UART_THXCJ:
-            lyy_tjc_page_pkgs_std();
-            break;
-        case DEVICE_TYPE_PULSE:
-            lyy_tjc_page_pkgs_pulse();
-            break;
-        default:
-            lyy_tjc_page_pkgs_std();
-            break;
+    case DEVICE_TYPE_UART_SHJ:
+        lyy_tjc_page_pkgs_shj();
+        break;
+    case DEVICE_TYPE_UART_NDJ:
+        lyy_tjc_page_pkgs_ndj();
+        break;
+    case DEVICE_TYPE_UART_XYJ:
+        lyy_tjc_page_pkgs_std();
+        break;
+    default:
+        lyy_tjc_page_pkgs_std();
+        break;
     }
     #endif
-}
-/**
- * @brief
- * 更改显示套餐颜色   color_str
- * @param
- * @param
- */
-void lyy_tjc_pkg_set_color(char *color_str, uint8_t pkg_num)
-{
-    char str[10]={0};
-    char cmdBuff[128] = {0};
-
-    if (color_str == NULL || strlen(color_str) != 7 || color_str[0] != '#')
-    {
-        LYY_LOGD("NO #RRGGBB");
-        return;
-    }
-
-    strcpy(str, color_str);
-
-    // 提取 R、G、B 三个通道的16进制值
-    uint8_t r = (str[1] >= 'A' ? (str[1] - 'A' + 10) : (str[1] - '0')) * 16 + (str[2] >= 'A' ? (str[2] - 'A' + 10) : (str[2] - '0'));
-    uint8_t g = (str[3] >= 'A' ? (str[3] - 'A' + 10) : (str[3] - '0')) * 16 + (str[4] >= 'A' ? (str[4] - 'A' + 10) : (str[4] - '0'));
-    uint8_t b = (str[5] >= 'A' ? (str[5] - 'A' + 10) : (str[5] - '0')) * 16 + (str[6] >= 'A' ? (str[6] - 'A' + 10) : (str[6] - '0'));
-
-    // 转换成 RGB565
-    uint16_t rgb565 = ((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3);
-
-    sprintf(cmdBuff, "pkg%d.bco=%d\xff\xff\xff", pkg_num, rgb565);
-
-    LYY_LOGD("rgb565[%s]", cmdBuff);
-
-    lyy_tjc_cmd_send(cmdBuff, strlen(cmdBuff));
 }
 /**
  * @brief 
@@ -632,42 +588,6 @@ void lyy_tjc_vis_pkg_std(uint8_t id)
     lyy_tjc_objHide(temp, 1);
     vTaskDelay(5 / portTICK_PERIOD_MS);  
 }
-
-/**
- * @brief
- * 洗衣机烘干机显示套餐页
- * @param money
- * @param value
- * @param pkg_num
- */
-void lyy_tjc_page_pkgs_xhj(void)
-{
-    PAY_PACKAGES_DEF *pkgs = get_pay_packages();
-    // char price[128]={0};
-    char money[128] = {0};
-    char mode_name[128] = {0};
-    uint8_t i = 0;
-    lyy_tjc_switch_page("pkg_std2"); // 切换页面
-    vTaskDelay(10 / portTICK_PERIOD_MS);
-    lyy_tjc_device_infor();
-    if (pkgs->sum < 6) // 隐藏不需要的套餐
-    {
-        for (i = pkgs->sum + 1; i <= 6; i++) // 套餐ID 从1 存储也是从1开始
-        {
-            lyy_tjc_clean_pkg_std(i); // 隐藏
-            vTaskDelay(10 / portTICK_PERIOD_MS);
-        }
-    }
-    for (i = 0; i < pkgs->sum; i++) //
-    {
-        lyy_tjc_vis_pkg_std(i + 1);
-        sprintf(money, "%s %s", pkgs->pkg[i].display_price, pkgs->currency_name);
-        // sprintf(price,"%s %s",pkgs->pkg[i].display_value,pkgs->pkg[i].unit);
-        sprintf(mode_name, "%s", pkgs->pkg[i].name);
-        lyy_tjc_pkg_std(money, mode_name, i + 1);
-        vTaskDelay(10 / portTICK_PERIOD_MS);
-    }
-}
 /**
  * @brief 
  * 显示套餐页
@@ -704,39 +624,16 @@ void lyy_tjc_page_pkgs_std(void)
 
 /**
  * @brief
- * 显示套餐页----脉冲
+ * 显示套餐页面-售货机
  * @param money
  * @param value
  * @param pkg_num
  */
-void lyy_tjc_page_pkgs_pulse(void)
+void lyy_tjc_page_pkgs_shj(void)
 {
-    PAY_PACKAGES_DEF *pkgs = get_pay_packages();
-    uint8_t i = 0;
-    lyy_tjc_switch_page("pkg_std2"); // 切换页面
+    lyy_tjc_switch_page("pkg_shj2"); // 切换页面
     vTaskDelay(10 / portTICK_PERIOD_MS);
     lyy_tjc_device_infor();
-    if (pkgs->sum < 6) // 隐藏不需要的套餐
-    {
-        for (i = pkgs->sum + 1; i <= 6; i++) // 套餐ID 从1 存储也是从1开始
-        {
-            lyy_tjc_clean_pkg_std(i); // 隐藏
-            vTaskDelay(10 / portTICK_PERIOD_MS);
-        }
-    }
-    for (i = 0; i < pkgs->sum; i++) //
-    {
-        lyy_tjc_vis_pkg_std(i + 1);
-        vTaskDelay(10 / portTICK_PERIOD_MS);
-
-        // 给套餐发颜色
-        lyy_tjc_pkg_set_color(pkgs->pkg[i].package_Color, i + 1);
-
-        //sprintf(money, "%s %s", pkgs->pkg[i].display_price, pkgs->currency_name);
-        //sprintf(price, "%s %s", pkgs->pkg[i].display_value, pkgs->pkg[i].unit);
-        lyy_tjc_pkg_std(pkgs->pkg[i].commodity_Desc, pkgs->pkg[i].price_Desc, i + 1);
-        vTaskDelay(10 / portTICK_PERIOD_MS);
-    }
 }
 
 /**
@@ -1334,6 +1231,8 @@ void lyy_tjc_touch_time_return(char *pack,uint16_t len)
 
     lyy_tjc_set_status(TJC_SHOW_PACKAGES);
 }
+
+
 /**
  * @brief 
  * 返回上一页
@@ -1518,6 +1417,30 @@ void lyy_tjc_get_pay_qrcode(uint8_t id,uint8_t wallet_id)
     else
         lyy_tjc_get_pay_url_std(id,wallet_id);
 }
+
+/**
+ * @brief
+ * 售货机--获取支付二维码
+ * @param id  手动输入的货到编号
+ * @param wallet_id
+ */
+void lyy_tjc_get_pay_qrcode_shj(uint16_t id, uint8_t wallet_id)
+{
+    char position[10]={0};
+    pay_url_wallet_number_set(wallet_id); // 默认使用第一个钱包
+    // pay_url_package_id_set(id);
+    PAY_PARAM_DEF *param = get_pay_param();
+    lyy_tjc_pay_page_set(wallet_id, param->chnl_sum);
+
+    sprintf(position, "%d", id);  //把货到编号转成字符串
+
+    event_post_query_dynamic_url_shj(
+        position,                                 //货道编号
+        param->channel[wallet_id].code,          // 钱包编码  //默认使用第一个钱包
+        param->channel[wallet_id].channel_number // 渠道编号  //默认使用第一个钱包
+    );                                           // 获取动态支付二维码
+}
+
 /**
  * @brief 
  * 选择套餐
@@ -1592,7 +1515,17 @@ void lyy_tjc_touch_wallet(char *pack,uint16_t len)
         LYY_LOGD("wallet number is error");
         return ;
     }
-    lyy_tjc_get_pay_qrcode(pay_url_package_id_get(),id);
+    if (get_dev_type_code() == DEVICE_TYPE_UART_SHJ)
+    {
+        lyy_tjc_get_pay_qrcode_shj(tjc_infor_t.position, id);
+    }else{
+
+        lyy_tjc_get_pay_qrcode(pay_url_package_id_get(), id);
+    }
+
+    
+
+    
 }
 
 
@@ -1807,6 +1740,14 @@ void tjc_recv_packet_handle(uint8_t *pack,uint32_t len)
     uint8_t i = 0;
     
     lyy_display_recvPic(pack,len);
+
+    if (pack[0] == 0x55 && pack[1] == 0x00 && pack[4] == 0x0d && pack [5] == 0x0a)  //售货机数字键盘输入
+    {
+       /*1、先判断是否在所需通道内，2、跳转到支付二维码页面，3、给服务器传数据请求该通道支付二维码，需要带价格、商品名称，展示在页面上。*/
+
+       tjc_infor_t.position = data_arrayTolittle16(&(pack[2]));
+       lyy_tjc_get_pay_qrcode_shj(tjc_infor_t.position,0);  //首次钱包默认用0
+    }
 
 #if 0
     uint8_t packetlen = 0;

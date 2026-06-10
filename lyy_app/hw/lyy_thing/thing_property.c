@@ -32,8 +32,6 @@
 #include "lyy_pic.h"
 #include "lyy_para.h"
 #include "lyy_start.h"
-#include "lyy_dfssj.h"
-
 
 /*属性设置*/
 int property_write_uart_infor(cJSON* params);
@@ -45,36 +43,35 @@ int property_write_pulse_param(cJSON* params);
 int property_write_ndj_lane(cJSON* params);
 int property_write_fault_list(cJSON* params);
 int property_write_picture_screen(cJSON* params);
-int property_write_wifi_info(cJSON *params);
 
 /*属性读取*/
-int property_read_brt_param(cJSON *reply);
+int property_read_brt_param(cJSON* reply);
 int property_read_pulse_para(cJSON* reply);
 int property_read_infor_net(cJSON* reply);
 int property_read_login_flag(cJSON* reply);
 int property_read_dev_infor(cJSON* reply);
-int property_read_wifi_info(cJSON *reply);
 /**
  * @brief 
  * 属性操作
  */
-const PROPER_METHOD_DEF method_property[] =
+const PROPER_METHOD_DEF method_property[] = 
 {
-        {"uart_brt", property_write_uart_infor, property_read_brt_param},     // 串口参数
-        {"position_pay_package", property_write_pay_pkgs_ndj, NULL},          // 支付套餐
-        {"pay_package", property_write_pay_pkgs, NULL},                       // 其他套餐
-        {"pay_channel", property_write_pay_channel, NULL},                    // 支付渠道
-        {"equipment_info", property_write_dev_infor, NULL},                   // 业务信息
-        {"pulse_para", property_write_pulse_param, property_read_pulse_para}, // 脉冲参数
-        {"position_info", property_write_ndj_lane, NULL},
-        {"customize_errors", property_write_fault_list, NULL},
-        {"infor_net", NULL, property_read_infor_net},
-        {"login_flag", NULL, property_read_login_flag},
-        {"dev_infor", NULL, property_read_dev_infor},
-        {"network_level", NULL, NULL},
-        {"attr_container_layout", property_write_picture_screen, NULL},
-        {"wifi_info", property_write_wifi_info, property_read_wifi_info},
+    {"uart_brt",                property_write_uart_infor,      property_read_brt_param },                 //串口参数
+    {"position_pay_package",    property_write_pay_pkgs_ndj,    NULL                    },                 //支付套餐
+    {"pay_package",             property_write_pay_pkgs,        NULL                    },                 //其他套餐
+    {"pay_channel",             property_write_pay_channel,     NULL                    },                 //支付渠道 
+    {"equipment_info",          property_write_dev_infor,       NULL                    },                 //业务信息
+    {"pulse_para",              property_write_pulse_param,     property_read_pulse_para},                  //脉冲参数
+    {"position_info",           property_write_ndj_lane,        NULL                    },     
+    {"customize_errors",        property_write_fault_list,      NULL                    },     
+    {"infor_net",               NULL,                           property_read_infor_net },        
+    {"login_flag",              NULL,                           property_read_login_flag},        
+    {"dev_infor",               NULL,                           property_read_dev_infor },         
+    {"network_level",           NULL,                           NULL                    },                          
+    {"attr_container_layout",   property_write_picture_screen, NULL                     },
 };
+
+
 
 void login_flag_packet(cJSON *login,uint16_t login_flag,uint8_t result,char *message);
 
@@ -198,43 +195,15 @@ int property_write_uart_infor(cJSON* params)
     return 1;
 }
 
-int property_write_wifi_info(cJSON *params)
-{
-    cJSON *pxWifiSsid = NULL;
-    cJSON *pxWifiPwd = NULL;
-    WIFI_INFO_T pcWifiInfo;
-
-    pxWifiSsid = cJSON_GetObjectItem(params, "wifi_name");
-    pxWifiPwd = cJSON_GetObjectItem(params, "wifi_password");
-
-    if (NULL == pxWifiSsid || NULL == pxWifiPwd)
-    {
-        goto cjson_exit;
-    }
-    LYY_LOGD("wifi_name: %s", pxWifiSsid->valuestring);
-    LYY_LOGD("wifi_password: %s", pxWifiPwd->valuestring);
-
-    pcWifiInfo.xMode = WIFI_STA;
-
-    strcpy(pcWifiInfo.pcSsid, pxWifiSsid->valuestring);
-    strcpy(pcWifiInfo.pcPwd, pxWifiPwd->valuestring);
-
-    APP_lParamSetWifiInfo(&pcWifiInfo);
-
-    HAL_vReset("write_wifi success", 1000);
-
-cjson_exit:
-    return 1;
-}
 
 /**
- * @brief
+ * @brief 
  * 更新套餐
- * @param pkgs
- * @param body
- * @return int
+ * @param pkgs 
+ * @param body 
+ * @return int 
  */
-void pay_package_update(void *package, cJSON *body)
+void pay_package_update(void *package,cJSON *body)
 {
 
     cJSON *pkgs_data = NULL;
@@ -246,16 +215,8 @@ void pay_package_update(void *package, cJSON *body)
     {
         strcpy(pkgs->id,pkgs_data->valuestring);
         LYY_LOGD("pkgs->id=%s",pkgs->id);
-    }
+    }    
 
-    // 商品名称
-    pkgs_data = cJSON_GetObjectItem(body, "name");
-    if (pkgs_data != NULL && pkgs_data->type == cJSON_String)
-    {
-        strcpy(pkgs->name, pkgs_data->valuestring);
-        LYY_LOGD("pkgs->name=%s", pkgs->name);
-    }
-    
     //排序
     pkgs_data = cJSON_GetObjectItem(body, "seq");
     if(pkgs_data != NULL && pkgs_data->type == cJSON_Number)
@@ -298,37 +259,6 @@ void pay_package_update(void *package, cJSON *body)
         LYY_LOGD("pkgs->UnitDesc=%s", pkgs->unit);
     }
 
-    // 商品描述
-    pkgs_data = cJSON_GetObjectItem(body, "commodityDesc");
-    if (pkgs_data != NULL && pkgs_data->type == cJSON_String)
-    {
-        strcpy(pkgs->commodity_Desc, pkgs_data->valuestring);
-        LYY_LOGD("pkgs->commodity_Desc=%s", pkgs->commodity_Desc);
-    }
-
-    // 价格描述
-    pkgs_data = cJSON_GetObjectItem(body, "priceDesc");
-    if (pkgs_data != NULL && pkgs_data->type == cJSON_String)
-    {
-        strcpy(pkgs->price_Desc, pkgs_data->valuestring);
-        LYY_LOGD("pkgs->price_Desc=%s", pkgs->price_Desc);
-    }
-
-    // 水温度
-    pkgs_data = cJSON_GetObjectItem(body, "waterTemperature");
-    if (pkgs_data != NULL && pkgs_data->type == cJSON_String)
-    {
-        strcpy(pkgs->water_Temperature, pkgs_data->valuestring);
-        LYY_LOGD("pkgs->water_Temperature=%s", pkgs->water_Temperature);
-    }
-
-    // 套餐颜色
-    pkgs_data = cJSON_GetObjectItem(body, "packageColor");
-    if (pkgs_data != NULL && pkgs_data->type == cJSON_String)
-    {
-        strcpy(pkgs->package_Color, pkgs_data->valuestring);
-        LYY_LOGD("pkgs->package_Color=%s", pkgs->package_Color);
-    }
 
     /* 未使用到的参数，节约资源 */
 #if 0
@@ -598,7 +528,16 @@ void pay_channel_update(PAY_CHANNEL_DEF *chl,cJSON* body)
         memset(chl->region, 0x00, sizeof(chl->region));
         LYY_LOGD("chl->region=%s", channel_t->valuestring);
         strcpy(chl->region, channel_t->valuestring);
-    } 
+    }
+
+    // 钱包类型
+    channel_t = cJSON_GetObjectItem(body, "paymentMethodTypeEnum");
+    if (channel_t != NULL && channel_t->type == cJSON_String)
+    {
+        memset(chl->pay_type, 0x00, sizeof(chl->pay_type));
+        LYY_LOGD("chl->pay_type=%s", channel_t->valuestring);
+        strcpy(chl->pay_type, channel_t->valuestring);
+    }
 
 #if 0 
 
@@ -722,20 +661,8 @@ int property_write_dev_infor(cJSON* params)
         LYY_LOGD("bind_state %d", dev_info_t->business.bind_state);
 
         if(dev_info_t->business.bind_state == 0x00)
-        {
             tjc_infor_t.get_regist_flag = 0x01;
-            if (get_dev_type_code() == DEVICE_TYPE_UART_DFSSJ)
-            {
-                device_dfssj_bind_state_info(0); // 未绑定
-            }
-        }
-        else
-        {
-            if (get_dev_type_code() == DEVICE_TYPE_UART_DFSSJ)
-            {
-                device_dfssj_bind_state_info(1); // 扫码+刷卡
-            }
-        }
+
     }
 
     data = cJSON_GetObjectItem(params, "equipment_num");
@@ -760,8 +687,6 @@ int property_write_dev_infor(cJSON* params)
         LYY_LOGD("language %s", data->valuestring);
         strcpy(dev_info_t->business.language, data->valuestring);
     }
-
-
 
     return 1;
 
@@ -1086,34 +1011,14 @@ int property_read_brt_param(cJSON* reply)
     return 1;
 }
 
-int property_read_wifi_info(cJSON *reply)
-{
-    cJSON *cjData = NULL;
-
-    if (reply == NULL)
-    {
-        return -1;
-    }
-
-    cjData = cJSON_CreateObject(); // 需要返回到上一层，不需要delete
-    if (cjData != NULL)
-    {
-        cJSON_AddStringToObject(cjData, "wifi_name", APP_pcGetParamWifiSsid());
-        cJSON_AddStringToObject(cjData, "wifi_password", APP_pcGetParamWifiPwd());
-
-        cJSON_AddItemToObject(reply, "wifi_info", cjData);
-    }
-
-    return 1;
-}
 
 /**
- * @brief
+ * @brief 
  * 读取网络信息
- * @param reply
- * @return int
+ * @param reply 
+ * @return int 
  */
-int property_read_infor_net(cJSON *reply)
+int property_read_infor_net(cJSON* reply)
 {
 
     cJSON* cjData = NULL;
@@ -1436,34 +1341,6 @@ void property_post_csq_level(void)
 
     thing_property_post(params);
     
-}
-
-/**
- * @brief
- * 上报wifi账号密码
- */
-void property_post_wifi_info(void)
-{
-
-    cJSON *params = cJSON_CreateObject();
-    if (params == NULL)
-    {
-        LYY_LOGE("### params create fail");
-        return;
-    }
-
-    cJSON *wifi_info = cJSON_CreateObject();
-    if (wifi_info == NULL)
-    {
-        LYY_LOGE("### wifi_info create fail");
-        return;
-    }
-    cJSON_AddStringToObject(wifi_info, "wifi_name", APP_pcGetParamWifiSsid());
-    cJSON_AddStringToObject(wifi_info, "wifi_password", APP_pcGetParamWifiPwd());
-
-    cJSON_AddItemToObject(params, "wifi_info", wifi_info);
-
-    thing_property_post(params);
 }
 
 /**

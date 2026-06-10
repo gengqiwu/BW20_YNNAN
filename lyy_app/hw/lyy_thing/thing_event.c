@@ -5,8 +5,8 @@
  * @LastEditTime: 2024-12-06 14:54:55
  * @Description: 
  */
-
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "HAL_System.h"
@@ -126,47 +126,6 @@ void event_post_account_dbj_uart(char *type,uint32_t acc_sum,uint32_t acc_inc,ui
         }
         
         thing_event_post(value, "accounts"); 
-    }
-}
-
-/**
- * @brief
- * 账目-找零-兑币机
- * @param type
- * @param acc_sum  找零增量
- * @param acc_inc  找零总量
- * @param unqueId  指令唯一码
- */
-void event_post_account_dbj_uart_change(char *type, uint32_t acc_sum, uint32_t acc_inc, char *unqueId)
-{
-    cJSON *value = NULL;
-    // char *pcData = NULL;
-    char id[6] = {
-        0x00,
-    };
-    char id_str[15] = {
-        0x00,
-    };
-
-    value = cJSON_CreateObject();
-    if (value != NULL)
-    {
-        cJSON_AddNumberToObject(value, "change_increment", acc_inc);
-        cJSON_AddNumberToObject(value, "change_total", acc_sum);
-        cJSON_AddStringToObject(value, "pay_method", type);
-        if (unqueId == NULL)
-        {
-            // 使用随机数生辰订单号
-            vRandomGet(id, sizeof(id));
-            utils_lhexToString(id_str, (const unsigned char *)id, sizeof(id));
-            cJSON_AddStringToObject(value, "unique_code", id_str);
-        }
-        else
-        {
-            cJSON_AddStringToObject(value, "unique_code", unqueId);
-        }
-
-        thing_event_post(value, "change_accounts");
     }
 }
 
@@ -293,6 +252,30 @@ void event_post_query_dynamic_url_std(char *package_id,char *channel,char *chann
         thing_event_post(value, "get_qrcode");
     }
 
+}
+
+/**
+ * @brief
+ * 获取动态支付二维码 -- 售货机
+ * @param position
+ * @param channel
+ * @param channel_number
+ * @param x
+ * @param y
+ */
+void event_post_query_dynamic_url_shj(char *position, char *channel, char *channel_number)
+{
+
+    cJSON *value = cJSON_CreateObject();
+    if (value != NULL)
+    {
+        cJSON_AddStringToObject(value, "commodity_id", "");                       // 套餐id  position_code
+        cJSON_AddStringToObject(value, "pay_channel_code", channel);              // 支付渠道
+        cJSON_AddStringToObject(value, "pay_channel_number", channel_number);     // 渠道编号
+        cJSON_AddStringToObject(value, "position_code", position);                // 货到编号，手输
+        cJSON_AddStringToObject(value, "unique_code", get_py_url_uinque_code(0)); // 支付唯一码
+        thing_event_post(value, "get_qrcode");
+    }
 }
 
 
@@ -529,28 +512,6 @@ void event_post_start_result_ndj(uint16_t result,uint8_t x,uint8_t y,char *order
 }
 
 /**
- * @brief
- * 启动结果上报
- * @param result
- * @param x
- * @param y
- * @param order
- */
-void event_post_start_result_dfssj(uint16_t volume, uint8_t x, uint8_t y, char *order)
-{
-    cJSON *value = NULL;
-    value = cJSON_CreateObject();
-    if (value != NULL)
-    {
-        cJSON_AddNumberToObject(value, "volume", volume);
-        cJSON_AddNumberToObject(value, "position_x", x);
-        cJSON_AddNumberToObject(value, "position_y", y);
-        cJSON_AddStringToObject(value, "order", order);
-        thing_event_post(value, "start_result");
-    }
-}
-
-/**
  * @brief 
  * 
  * @param error 主板故障上报
@@ -568,47 +529,42 @@ void event_post_device_fault(uint8_t error)
 
 /**
  * @brief
- * LOG 日志上报
- * @param coin
- * @param coins
- * @param gift
- * @param gifts
- * @param lane_id
- * @param order
+ *  往服务端发送LOGE
+ * @param error
  */
-void event_post_log(char *log)
+void event_post_loge(char *loge)
 {
-    cJSON *value = cJSON_CreateObject();
+    cJSON *value = NULL;
+    value = cJSON_CreateObject();
     if (value != NULL)
     {
-        cJSON_AddStringToObject(value, "log", log);
-        thing_event_post(value, "log");
+        cJSON_AddStringToObject(value, "loge", loge);
+        thing_event_post(value, "loge");
     }
 }
-
 
 /**
  * @brief
  *  往服务端发送 hex数据转化成的字符串
  * @param error
  */
-void event_post_log_hextostring(uint8_t *data, uint16_t len)
+void event_post_loge_hextostring(uint8_t *data, uint16_t len)
 {
 #define MAX_DATA_LEN  (256)
-#define MAX_STR_LEN   (MAX_DATA_LEN * 2 + 1)
+#define MAX_STR_LEN   (MAX_DATA_LEN * 5 + 1)
 
     char out_str[MAX_STR_LEN] = {0};
 
     if (data == NULL || len == 0 || len > MAX_DATA_LEN)
     {
-        event_post_log("param fail");
+        event_post_loge("param fail");
         return;
     }
 
     uint16_t count = 0;
     for (uint16_t i = 0; i < len; i++)
     {
-        count += snprintf(&out_str[count], MAX_STR_LEN - count, "%02x", data[i]);
+        count += snprintf(&out_str[count], MAX_STR_LEN - count, "0x%02x ", data[i]);
 
         if (count >= MAX_STR_LEN - 1)
         {
@@ -616,5 +572,5 @@ void event_post_log_hextostring(uint8_t *data, uint16_t len)
         }
     }
 
-    event_post_log(out_str);
+    event_post_loge(out_str);
 }

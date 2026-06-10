@@ -21,17 +21,8 @@ typedef enum
     DEVICE_TYPE_UART_AMY,
     DEVICE_TYPE_UART_XYJ,
     DEVICE_TYPE_UART_NOTE,
-    DEVICE_TYPE_UART_QHXYJ,          /*乔禾洗衣机 add by dxw,20241010*/
-    DEVICE_TYPE_UART_QHHGJ,          /*乔禾烘干机 add by dxw,20241010*/
-    DEVICE_TYPE_UART_LJXYJ,          /*乔禾洗衣机 add by dxw,20241210*/
-    DEVICE_TYPE_UART_LJHGJ,          /*乔禾烘干机 add by dxw,20241210*/
-    DEVICE_TYPE_UART_SKYWORTH_GTXYJ, /*创维滚筒洗衣机 add by zyl,20250605*/
-    DEVICE_TYPE_UART_MSHGJ,
-    DEVICE_TYPE_UART_SKYWORTH_GTHGJ, /*创维烘干机*/
-    DEVICE_TYPE_UART_SKYWORTH_GTXHJ, /*创维洗烘机*/
-    DEVICE_TYPE_UART_TCLXYJ,         /*TCL洗衣机*/
-    DEVICE_TYPE_UART_DFSSJ,          /*德锋售水机*/
-    DEVICE_TYPE_UART_THXCJ,          /*探虎洗车机*/
+    DEVICE_TYPE_UART_CZF,
+    DEVICE_TYPE_UART_SHJ,
 } DEVICE_TYPE;
 
 typedef enum
@@ -75,6 +66,8 @@ enum LBS_COMPANY_TYPE
 #define NDJ_LANE_MAX         6      //货道数
 #define PAY_CHANNEL_MAX      4      //渠道数
 
+#define SHJ_FREIGHT_MAX      5 // 购物车模式，售货机最大单笔出货数
+
 /**
  * @brief 
  * 套餐参数
@@ -82,19 +75,12 @@ enum LBS_COMPANY_TYPE
 typedef struct 
 {
     char            id[32];             //套餐id
-    char            name[64];           // 名称
     uint32_t        seq;                //排序
     float           price;              //套餐金额
     char            display_price[32];  //展示金额
     float           priceValue;         //套餐币数  
     char            display_value[32];  //展示价值
     char            unit[32];           //套餐币单位
-
-    char            commodity_Desc[32]; // 商品描述
-    char            price_Desc[32];     // 价格描述
-    char            water_Temperature[32];         // 套餐水温度
-    char            package_Color[32];             // 套餐颜色
-
 #if 0
     char            name[128];          //名称
     char            sku[64];            //sku编码   （？）
@@ -156,7 +142,8 @@ typedef struct
     char    bg_url[128];       //背景地址
 #endif
     char    region[64];        //地区
-}__attribute__ ((aligned (1), packed)) PAY_CHANNEL_DEF;
+    char    pay_type[32];   //钱包类型
+} __attribute__((aligned(1), packed)) PAY_CHANNEL_DEF;
 
 //业务信息
 typedef struct 
@@ -224,6 +211,35 @@ typedef struct
     char     pageName[64];
 }__attribute__((aligned(1), packed))CHANNEL_PAYMENT_DEF,*PCHANNEL_PAYMENT_DEF;
 
+
+
+/**
+ * @brief
+ * 售货机启动订单明细
+ */
+typedef struct
+{
+    char itemOrder[64]; // 启动明细订单号
+    char positionId[32]; //货到ID
+    uint16_t  positionX;     //货到X
+    uint16_t  positionY;     //货到y
+    uint16_t stock;          // 扣减前库存
+    uint16_t number;         // 出货数
+} __attribute__((aligned(1), packed)) SHJ_STARTUP_ITEM_DEF, *PSHJ_STARTUP_ITEM_DEF;
+
+/**
+ * @brief
+ * 售货机启动订单
+ */
+typedef struct
+{
+    char order[64];          //启动订单号
+    uint8_t sum;             // 订单数量
+    uint8_t startflag;       //标识出货启动。
+    SHJ_STARTUP_ITEM_DEF order_item[SHJ_FREIGHT_MAX]; // 启动订单明细
+} __attribute__((aligned(1), packed)) SHJ_PAY_START_DEF, *PSHJ_PAY_START_DEF;
+
+extern SHJ_PAY_START_DEF shj_pay_start_t;
 
 extern int                      get_dev_type_code(void);
 extern PAY_PACKAGES_DEF         *get_pay_packages(void);
