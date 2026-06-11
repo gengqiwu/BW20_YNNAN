@@ -799,6 +799,10 @@ void lyy_DevDataParse(uint8_t *pdata,uint32_t len)
     {
         device_adh814e_packet_parse(pdata,len);
     }
+    if (get_dev_type_code() == DEVICE_TYPE_UART_YUNANSHJ)
+    {
+        device_yunanshj_packet_parse(pdata,len);
+    }
     else
     {
 

@@ -23,6 +23,7 @@ typedef enum
     DEVICE_TYPE_UART_NOTE,
     DEVICE_TYPE_UART_CZF,
     DEVICE_TYPE_UART_SHJ,
+    DEVICE_TYPE_UART_YUNANSHJ, //宇楠售货机
 } DEVICE_TYPE;
 
 typedef enum
