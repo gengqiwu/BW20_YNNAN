@@ -34,6 +34,9 @@
 
 #include "utils.h"
 
+static uint8_t g_yunanshj_pay_index = 0;   // 支付序号
+static uint8_t g_yunanshj_stock[12] = {0}; // 12个货道库存
+
 /** 宇楠售货机传输数据协议：
 格式：
 主机 文件头（FA） 从机地址（00） 数据长度 0 命令 数据信息 校验 文件尾(AF)
@@ -252,12 +255,67 @@ void yunanshj_cmd_set_channel_stock_and_price(uint8_t *ucCh, uint8_t *ucSt, uint
 
 /**
  * @brief 支付申请
- *
- * @param 无
+ * 流程：1.读取库存检查货道是否有货 2.下发支付金额
+ * @return int 0=信号量获取失败(超时或参数错误), 1=成功(需检查applyResult)
  */
-int device_yunanshj_pay_apply(void);
+int device_yunanshj_pay_apply(void)
 {
-    
+    uint8_t channel;  // 货道号 (1-12)
+    uint16_t amount;   // 支付金额
+
+    // 递增支付序号
+    g_yunanshj_pay_index++;
+    if (g_yunanshj_pay_index == 0) g_yunanshj_pay_index = 1;  // 防止为0
+
+    // 获取货道号
+    channel = shj_pay_start_t.order_item[0].positionX;
+    if (channel < 1 || channel > 12) {
+        LYY_LOGD("Invalid channel: %d", channel);
+        g_xlyyHwMark.applyResult = 6;  // 货道号无效
+        return 0;
+    }
+
+    // 第一步：检查库存
+    g_xlyyHwMark.ucPaySem = 1;
+    yunanshj_cmd_read_stock();  // 发送 0x26
+
+    if (xSemaphoreTake(g_xlyyHwMark.pxPayApply, 3000) == pdFALSE) {
+        g_xlyyHwMark.ucPaySem = 0;
+        LYY_LOGD("Stock query timeout");
+        g_xlyyHwMark.applyResult = 5;  // 超时
+        return 0;
+    }
+
+    // 检查对应货道库存
+    if (g_yunanshj_stock[channel - 1] == 0) {
+        LYY_LOGD("Channel %d stock is 0", channel);
+        g_xlyyHwMark.applyResult = 7;  // 库存不足
+        return 1;
+    }
+
+    // 第二步：下发金额
+    PAY_PACKAGES_DEF *pkgs = get_pay_packages();
+    if (channel <= pkgs->sum) {
+        amount = (uint16_t)pkgs->pkg[channel - 1].priceValue;
+    } else {
+        amount = 0;
+    }
+
+    uint8_t amountH = amount >> 8;
+    uint8_t amountL = amount & 0xFF;
+    LYY_LOGD("Set payment amount: channel=%d, amount=%d(0x%02X%02X)", channel, amount, amountH, amountL);
+
+    g_xlyyHwMark.ucPaySem = 1;
+    yunanshj_cmd_set_payment_amount(amountH, amountL, g_yunanshj_pay_index);
+
+    if (xSemaphoreTake(g_xlyyHwMark.pxPayApply, 5000) == pdFALSE) {
+        g_xlyyHwMark.ucPaySem = 0;
+        LYY_LOGD("Set payment amount timeout");
+        g_xlyyHwMark.applyResult = 5;  // 超时
+        return 0;
+    }
+
+    return 1;
 }
 
 
@@ -288,10 +346,16 @@ void device_yunanshj_packet_parse(uint8_t *data, uint16_t len)
     {
         case 0x24: // 售货板返回FA 00 08 00 24 ucStatus ucCrc AF
             {
+                g_xlyyHwMark.startResult = data[5];  // 0=成功, 0xED=余额不足, 0xE0=库存为0, 其他=故障
                 if(data[5]==0)LYY_LOGD("Dispense success");
                 else if(data[5]==0xED)LYY_LOGD("Insufficient balance");
                 else if(data[5]==0xE0)LYY_LOGD("Inventory is 0");
                 else LYY_LOGD("Motor fault");
+                // 释放信号量
+                if(g_xlyyHwMark.ucPaySem) {
+                    xSemaphoreGive(g_xlyyHwMark.pxPayApply);
+                    g_xlyyHwMark.ucPaySem = 0;
+                }
             }
             break;
         case 0x25://售货板返回FA 00 09 00 25 ucCh ucIndex ucCrc AF,售货板报告给上位机，出货物完成
@@ -305,10 +369,16 @@ void device_yunanshj_packet_parse(uint8_t *data, uint16_t len)
             break;
         case 0x26: // 售货板返回FA 00 13 00 26 data1 data2 …… data12 ucCrc AF,售货板报告给上位机库存数据
             {
+                memcpy(g_yunanshj_stock, &data[5], 12);  // 保存12个货道库存
                 LYY_LOGD("Stock data:");
                 for(int i=0;i<12;i++)
                 {
-                    LYY_LOGD("Channel %d: %d", i+1, data[5+i]);
+                    LYY_LOGD("Channel %d: %d", i+1, g_yunanshj_stock[i]);
+                }
+                // 释放库存查询信号量
+                if(g_xlyyHwMark.ucPaySem) {
+                    xSemaphoreGive(g_xlyyHwMark.pxPayApply);
+                    g_xlyyHwMark.ucPaySem = 0;
                 }
             }
             break;
@@ -341,8 +411,14 @@ void device_yunanshj_packet_parse(uint8_t *data, uint16_t len)
             break;
         case 0x2c: // 售货板返回FA 00 08 00 2c ucStatus ucCrc AF 参数：ucStatus：成功为 1，失败为 2
             {
+                g_xlyyHwMark.applyResult = data[5];  // 1=成功, 2=失败
                 if(data[5]==1)LYY_LOGD("Set payment amount success");
                 else LYY_LOGD("Set payment amount failure");
+                // 释放信号量
+                if(g_xlyyHwMark.ucPaySem) {
+                    xSemaphoreGive(g_xlyyHwMark.pxPayApply);
+                    g_xlyyHwMark.ucPaySem = 0;
+                }
             }
             break;
         case 0x2D: // 售货板返回FA 00 09 00 2d ucMoneyH ucMoneyL ucCrc AF 参数：ucMoneyH ucMoneyL：金额，金额=ucMoneyH * 256 + ucMoneyL
@@ -477,4 +553,28 @@ void device_yunanshj_packet_parse(uint8_t *data, uint16_t len)
     }
 
 
+}
+
+/**
+ * @brief 支付启动 - 发送出货命令
+ *
+ * @return int 0=信号量获取失败(超时), 1=成功(需检查startResult)
+ */
+int device_yunanshj_pay_statr(void)
+{
+    uint8_t channel = shj_pay_start_t.order_item[0].positionX;
+
+    LYY_LOGD("Dispense command: channel=%d, index=%d", channel, g_yunanshj_pay_index);
+
+    g_xlyyHwMark.ucPaySem = 1;
+    yunanshj_cmd_dispense(channel, g_yunanshj_pay_index);
+
+    if (xSemaphoreTake(g_xlyyHwMark.pxPayApply, 5000) == pdFALSE) {
+        g_xlyyHwMark.ucPaySem = 0;
+        LYY_LOGD("Dispense command timeout");
+        g_xlyyHwMark.startResult = 5;  // 超时
+        return 0;
+    }
+
+    return 1;
 }

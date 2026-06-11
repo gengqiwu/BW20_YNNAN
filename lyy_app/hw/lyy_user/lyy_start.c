@@ -29,6 +29,7 @@
 #include "lyy_wwj.h"
 #include "lyy_dbj.h"
 #include "lyy_adh814e.h"
+#include "lyy_yunanshj.h"
 #include "lyy_para.h"
 #include "lyy_start.h"
 #include "lyy_device.h"
@@ -199,6 +200,15 @@ void lyy_start_pay_apply(uint8_t *pucData, uint32_t ulLen)
             ret = (device_adh814e_pay_apply() > 0) ? g_xlyyHwMark.applyResult : PAY_START_RESULT_TIMEOUT; //
 
             thing_service_reply_pay_apply(pxPayApply->uniqueid, ret, pxPayApply->pay_apply_id); // 1成功，0超时
+        }
+        break;
+
+        case DEVICE_TYPE_UART_YUNANSHJ: // 宇楠售货机
+        {
+            g_xlyyHwMark.ucPaySem = 0x01;//当前有支付申请在等待结果
+            ret = (device_yunanshj_pay_apply() > 0) ? g_xlyyHwMark.applyResult : PAY_START_RESULT_TIMEOUT;
+            g_xlyyHwMark.ucPaySem = 0x00;//清除标志，表示支付申请流程已结束
+            thing_service_reply_pay_apply(pxPayApply->uniqueid, ret, pxPayApply->pay_apply_id);
         }
         break;
 
@@ -427,6 +437,31 @@ void lyy_start_pay_start(uint8_t *pucData, uint32_t ulLen)
             shj_pay_start_t.startflag = 0;   //更新标识，可以进行下次售货机支付启动
         }
         break;
+
+        case DEVICE_TYPE_UART_YUNANSHJ:  //宇楠售货机
+        {
+            g_xlyyHwMark.startResult = 0;
+            g_xlyyHwMark.ucPaySem = 0x01;
+            start_ret = (device_yunanshj_pay_statr() > 0) ? g_xlyyHwMark.startResult : PAY_START_RESULT_TIMEOUT;
+            g_xlyyHwMark.ucPaySem = 0x00;
+
+            LYY_LOGD("start_ret[YUNANSHJ]:%d", start_ret);
+
+            // 上报出货结果
+            thing_service_reply_pay_start_shj(pxPayApply->uniqueid,
+                                              shj_pay_start_t.order_item[0].itemOrder,
+                                              shj_pay_start_t.order_item[0].positionId,
+                                              shj_pay_start_t.order_item[0].positionX,
+                                              shj_pay_start_t.order_item[0].positionY,
+                                              start_ret,
+                                              (start_ret == 0) ? 1 : 0,  // 成功出货数
+                                              shj_pay_start_t.order_item[0].stock,
+                                              pxPayApply->pay_apply_id);
+
+            shj_pay_start_t.startflag = 0;   //更新标识，可以进行下次售货机支付启动
+        }
+        break;
+
         default:break;
     }          
 }
