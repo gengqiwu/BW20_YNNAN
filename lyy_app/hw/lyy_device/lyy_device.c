@@ -25,6 +25,7 @@
 
 #include "thing_iot.h"
 #include "thing_mqtt.h"
+#include "thing_event.h"
 #include "thing_property.h"
 
 #include "lyy_device.h"
@@ -795,6 +796,7 @@ void opposite_packetParse(uint8_t *package, uint16_t len)
 void lyy_DevDataParse(uint8_t *pdata,uint32_t len)
 {
     uint32_t pack_len = 0;
+    event_post_loge_hextostring(pdata, (uint16_t)len);
     if(len < 4) return ;
     if (get_dev_type_code() == DEVICE_TYPE_UART_SHJ)
     {
@@ -947,5 +949,4 @@ void lyy_init_device(void)
 
     lyy_device_ndj_init();
 }
-
 

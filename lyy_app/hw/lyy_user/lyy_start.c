@@ -454,7 +454,7 @@ void lyy_start_pay_start(uint8_t *pucData, uint32_t ulLen)
                                               shj_pay_start_t.order_item[0].positionX,
                                               shj_pay_start_t.order_item[0].positionY,
                                               start_ret,
-                                              (start_ret == 0) ? 1 : 0,  // 成功出货数
+                                              (start_ret == PAY_START_RESULT_SUCCESS) ? 1 : 0,  // 成功出货数
                                               shj_pay_start_t.order_item[0].stock,
                                               pxPayApply->pay_apply_id);
 
@@ -528,7 +528,6 @@ int api_std_start_entryQue(uint8_t type,uint16_t num,char *order , uint16_t x, u
 
     return 1;
 }
-
 
 
 
