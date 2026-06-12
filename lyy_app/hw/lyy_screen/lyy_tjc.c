@@ -531,6 +531,7 @@ void lyy_tjc_packages_show(void)
     switch (get_dev_type_code())
     {
     case DEVICE_TYPE_UART_SHJ:
+    case DEVICE_TYPE_UART_YUNANSHJ:
         lyy_tjc_page_pkgs_shj();
         break;
     case DEVICE_TYPE_UART_NDJ:
@@ -1515,7 +1516,7 @@ void lyy_tjc_touch_wallet(char *pack,uint16_t len)
         LYY_LOGD("wallet number is error");
         return ;
     }
-    if (get_dev_type_code() == DEVICE_TYPE_UART_SHJ)
+    if (get_dev_type_code() == DEVICE_TYPE_UART_SHJ  || get_dev_type_code() == DEVICE_TYPE_UART_YUNANSHJ)
     {
         lyy_tjc_get_pay_qrcode_shj(tjc_infor_t.position, id);
     }else{

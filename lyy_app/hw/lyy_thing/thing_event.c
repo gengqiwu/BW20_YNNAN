@@ -529,42 +529,47 @@ void event_post_device_fault(uint8_t error)
 
 /**
  * @brief
- *  往服务端发送LOGE
- * @param error
+ * LOG 日志上报
+ * @param coin
+ * @param coins
+ * @param gift
+ * @param gifts
+ * @param lane_id
+ * @param order
  */
-void event_post_loge(char *loge)
+void event_post_log(char *log)
 {
-    cJSON *value = NULL;
-    value = cJSON_CreateObject();
+    cJSON *value = cJSON_CreateObject();
     if (value != NULL)
     {
-        cJSON_AddStringToObject(value, "loge", loge);
-        thing_event_post(value, "loge");
+        cJSON_AddStringToObject(value, "log", log);
+        thing_event_post(value, "log");
     }
 }
+
 
 /**
  * @brief
  *  往服务端发送 hex数据转化成的字符串
  * @param error
  */
-void event_post_loge_hextostring(uint8_t *data, uint16_t len)
+void event_post_log_hextostring(uint8_t *data, uint16_t len)
 {
 #define MAX_DATA_LEN  (256)
-#define MAX_STR_LEN   (MAX_DATA_LEN * 5 + 1)
+#define MAX_STR_LEN   (MAX_DATA_LEN * 2 + 1)
 
     char out_str[MAX_STR_LEN] = {0};
 
     if (data == NULL || len == 0 || len > MAX_DATA_LEN)
     {
-        event_post_loge("param fail");
+        event_post_log("param fail");
         return;
     }
 
     uint16_t count = 0;
     for (uint16_t i = 0; i < len; i++)
     {
-        count += snprintf(&out_str[count], MAX_STR_LEN - count, "0x%02x ", data[i]);
+        count += snprintf(&out_str[count], MAX_STR_LEN - count, "%02x", data[i]);
 
         if (count >= MAX_STR_LEN - 1)
         {
@@ -572,5 +577,5 @@ void event_post_loge_hextostring(uint8_t *data, uint16_t len)
         }
     }
 
-    event_post_loge(out_str);
+    event_post_log(out_str);
 }

@@ -37,7 +37,7 @@
 
 static uint8_t g_yunanshj_pay_index = 0;   // 支付序号
 static uint8_t g_yunanshj_stock[12] = {0}; // 12个货道库存
-static uint8_t g_yunanshj_wait_dispense_result = 0;
+static uint8_t g_yunanshj_wait_dispense_result = 0;//作用于支付申请流程中，标识已经下发出货指令，正在等待出货结果返回，避免在等待过程中重复下发出货指令
 
 /** 宇楠售货机传输数据协议：
 格式：
@@ -263,17 +263,18 @@ void yunanshj_cmd_set_channel_stock_and_price(uint8_t *ucCh, uint8_t *ucSt, uint
 int device_yunanshj_pay_apply(void)
 {
     uint8_t channel;  // 货道号 (1-12)
-    uint16_t amount;   // 支付金额
 
     // 递增支付序号
     g_yunanshj_pay_index++;
     if (g_yunanshj_pay_index == 0) g_yunanshj_pay_index = 1;  // 防止为0
 
-    // 获取货道号
-    channel = shj_pay_start_t.order_item[0].positionX;
+    // 使用屏幕输入货道号，pay_start 的 startup_item 此时可能还未下发。
+    channel = tjc_infor_t.position;
+    LYY_LOGD("Pay apply channel from screen: %d", channel);
     if (channel < 1 || channel > 12) {
         LYY_LOGD("Invalid channel: %d", channel);
-        return 0;
+        g_xlyyHwMark.applyResult=PAY_APPLY_RESULT_FAULT;
+        return 1;
     }
 
     // 第一步：检查库存
@@ -289,31 +290,12 @@ int device_yunanshj_pay_apply(void)
     // 检查对应货道库存
     if (g_yunanshj_stock[channel - 1] == 0) {
         LYY_LOGD("Channel %d stock is 0", channel);
-        g_xlyyHwMark.applyResult = 7;  // 库存不足
+        g_xlyyHwMark.applyResult = PAY_APPLY_RESULT_FAIL;
         return 1;
     }
 
-    // 第二步：下发金额
-    PAY_PACKAGES_DEF *pkgs = get_pay_packages();
-    if (channel <= pkgs->sum) {
-        amount = (uint16_t)pkgs->pkg[channel - 1].priceValue;
-    } else {
-        amount = 0;
-    }
-
-    uint8_t amountH = amount >> 8;
-    uint8_t amountL = amount & 0xFF;
-    LYY_LOGD("Set payment amount: channel=%d, amount=%d(0x%02X%02X)", channel, amount, amountH, amountL);
-
-    g_xlyyHwMark.ucPaySem = 1;
-    yunanshj_cmd_set_payment_amount(amountH, amountL, g_yunanshj_pay_index);
-
-    if (xSemaphoreTake(g_xlyyHwMark.pxPayApply, 5000) == pdFALSE) {
-        g_xlyyHwMark.ucPaySem = 0;
-        LYY_LOGD("Set payment amount timeout");
-        return 0;
-    }
-
+    // 云端支付模式下不下发 0x2C 金额，有库存即可允许支付。
+    g_xlyyHwMark.applyResult = PAY_APPLY_RESULT_SUCCESS;
     return 1;
 }
 
@@ -603,7 +585,7 @@ void device_yunanshj_packet_parse(uint8_t *data, uint16_t len)
  *
  * @return int 0=信号量获取失败(超时), 1=成功(需检查startResult)
  */
-int device_yunanshj_pay_statr(void)
+int device_yunanshj_pay_start(void)
 {
     uint8_t channel = shj_pay_start_t.order_item[0].positionX;
 

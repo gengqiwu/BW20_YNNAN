@@ -43,6 +43,6 @@ extern void event_post_start_result_wwj(uint32_t gifts,uint32_t coins,uint32_t r
 extern void event_post_err_message(char *language, int login);
 
 extern void event_post_loge(char *loge);
-extern void event_post_loge_hextostring(uint8_t *data, uint16_t len);
+extern void event_post_log_hextostring(uint8_t *data, uint16_t len);
 
 #endif // !

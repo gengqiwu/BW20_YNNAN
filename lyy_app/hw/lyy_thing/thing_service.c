@@ -236,6 +236,7 @@ int thing_service_pay_start(cJSON *params, char *id)
     }
     break;
     case DEVICE_TYPE_UART_SHJ:
+    case DEVICE_TYPE_UART_YUNANSHJ:
         thing_service_pay_start_shj(params, id);
         break;
     case DEVICE_TYPE_UART_WWJ:

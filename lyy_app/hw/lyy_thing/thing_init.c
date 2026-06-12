@@ -172,7 +172,7 @@ void box_get_cloud_pay_param(void)
         event_post_query_pay_packages_ndj("CONSUMPTION",1,0,"true");
         vTaskDelay(1000  / portTICK_PERIOD_MS);
     }
-    else if (get_dev_type_code() == DEVICE_TYPE_UART_SHJ)  //售货机不获取套餐
+    else if (get_dev_type_code() == DEVICE_TYPE_UART_SHJ || get_dev_type_code() == DEVICE_TYPE_UART_YUNANSHJ)  //售货机不获取套餐
     {
         vTaskDelay(1000 / portTICK_PERIOD_MS);
     }   

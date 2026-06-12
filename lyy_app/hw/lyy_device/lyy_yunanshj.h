@@ -12,7 +12,7 @@
 
 
 extern int device_yunanshj_pay_apply(void);
-extern int device_yunanshj_pay_statr(void);
+extern int device_yunanshj_pay_start(void);
 extern void device_yunanshj_packet_parse(uint8_t *data, uint16_t len);
 
 #endif

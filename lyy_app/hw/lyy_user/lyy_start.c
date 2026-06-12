@@ -206,6 +206,7 @@ void lyy_start_pay_apply(uint8_t *pucData, uint32_t ulLen)
         case DEVICE_TYPE_UART_YUNANSHJ: // 宇楠售货机
         {
             g_xlyyHwMark.ucPaySem = 0x01;//当前有支付申请在等待结果
+            g_xlyyHwMark.applyResult=0;
             ret = (device_yunanshj_pay_apply() > 0) ? g_xlyyHwMark.applyResult : PAY_START_RESULT_TIMEOUT;
             g_xlyyHwMark.ucPaySem = 0x00;//清除标志，表示支付申请流程已结束
             thing_service_reply_pay_apply(pxPayApply->uniqueid, ret, pxPayApply->pay_apply_id);
@@ -442,7 +443,7 @@ void lyy_start_pay_start(uint8_t *pucData, uint32_t ulLen)
         {
             g_xlyyHwMark.startResult = 0;
             g_xlyyHwMark.ucPaySem = 0x01;
-            start_ret = (device_yunanshj_pay_statr() > 0) ? g_xlyyHwMark.startResult : PAY_START_RESULT_TIMEOUT;
+            start_ret = (device_yunanshj_pay_start() > 0) ? g_xlyyHwMark.startResult : PAY_START_RESULT_TIMEOUT;
             g_xlyyHwMark.ucPaySem = 0x00;
 
             LYY_LOGD("start_ret[YUNANSHJ]:%d", start_ret);

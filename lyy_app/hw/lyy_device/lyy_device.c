@@ -796,13 +796,13 @@ void opposite_packetParse(uint8_t *package, uint16_t len)
 void lyy_DevDataParse(uint8_t *pdata,uint32_t len)
 {
     uint32_t pack_len = 0;
-    event_post_loge_hextostring(pdata, (uint16_t)len);
+    event_post_log_hextostring(pdata, (uint16_t)len);
     if(len < 4) return ;
     if (get_dev_type_code() == DEVICE_TYPE_UART_SHJ)
     {
         device_adh814e_packet_parse(pdata,len);
     }
-    if (get_dev_type_code() == DEVICE_TYPE_UART_YUNANSHJ)
+    else if (get_dev_type_code() == DEVICE_TYPE_UART_YUNANSHJ)
     {
         device_yunanshj_packet_parse(pdata,len);
     }
@@ -874,7 +874,7 @@ void APP_PrvDevLoginTask(void *arg)
 
     static uint32_t ultimeCnt;
 
-    if (get_dev_type_code() == DEVICE_TYPE_UART_CZF || get_dev_type_code() == DEVICE_TYPE_UART_SHJ)
+    if (get_dev_type_code() == DEVICE_TYPE_UART_CZF || get_dev_type_code() == DEVICE_TYPE_UART_YUNANSHJ || get_dev_type_code() == DEVICE_TYPE_UART_SHJ)
         return;
 
     switch (g_xlyyHwMark.ucGetLoginFlag)
@@ -945,7 +945,6 @@ void lyy_init_device(void)
     {
         lyy_device_adh814e_init();
     }
-    
 
     lyy_device_ndj_init();
 }
