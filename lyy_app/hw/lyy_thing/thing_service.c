@@ -48,9 +48,11 @@ int thing_service_pay_start(cJSON *params, char *id);
 int thing_service_pay_apply_dbj(cJSON *params, char *id);
 int thing_service_pay_start_dbj(cJSON *params, char *id);
 int thing_service_pay_apply_wwj(cJSON *params, char *id);
+int thing_service_pay_apply_yunanshj(cJSON *params, char *id);
 int thing_service_pay_start_wwj(cJSON *params, char *id);
 int thing_service_pay_start_amy(cJSON *params, char *id);
 int thing_service_pay_start_shj(cJSON *params, char *id);
+void shj_pay_start_update(void *package, cJSON *body);
 /**
  * @brief
  * 服务
@@ -147,6 +149,9 @@ int thing_service_pay_apply(cJSON *params, char *id)
         break;
     case DEVICE_TYPE_UART_DBJ:
         thing_service_pay_apply_dbj(params, id);
+        break;
+    case DEVICE_TYPE_UART_YUNANSHJ:
+        thing_service_pay_apply_yunanshj(params, id);
         break;
     default:
         thing_service_pay_apply_wwj(params, id);
@@ -792,6 +797,39 @@ int thing_service_pay_apply_wwj(cJSON *params, char *id)
         return -1;
 
     return api_std_start_entryQue(START_TYPE_PAY_APPLY, 0, order->valuestring, 0, 0, id); // 支付申请入队
+}
+
+int thing_service_pay_apply_yunanshj(cJSON *params, char *id)
+{
+    SHJ_STARTUP_ITEM_DEF pay_apply_item = {0};
+    cJSON *order = cJSON_GetObjectItem(params, "order");
+    cJSON *data = cJSON_GetObjectItem(params, "startup_item");
+    cJSON *cJsonData = NULL;
+
+    if ((order == NULL) || (order->type != cJSON_String))
+        return -1;
+
+    if (data == NULL || (data->type != cJSON_String))
+    {
+        return -1;
+    }
+
+    cJsonData = cJSON_Parse(data->valuestring);
+    if (cJsonData == NULL)
+    {
+        return -2;
+    }
+
+    if (!cJSON_IsArray(cJsonData))
+    {
+        cJSON_Delete(cJsonData);
+        return -3;
+    }
+
+    shj_pay_start_update(&pay_apply_item, cJSON_GetArrayItem(cJsonData, 0));
+    cJSON_Delete(cJsonData);
+
+    return api_std_start_entryQue(START_TYPE_PAY_APPLY, pay_apply_item.positionX, order->valuestring, 0, 0, id);
 }
 
 /**

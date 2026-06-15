@@ -260,7 +260,7 @@ void yunanshj_cmd_set_channel_stock_and_price(uint8_t *ucCh, uint8_t *ucSt, uint
  * 流程：1.读取库存检查货道是否有货 2.下发支付金额
  * @return int 0=信号量获取失败(超时或参数错误), 1=成功(需检查applyResult)
  */
-int device_yunanshj_pay_apply(void)
+int device_yunanshj_pay_apply(uint8_t apply_channel)
 {
     uint8_t channel;  // 货道号 (1-12)
 
@@ -268,9 +268,9 @@ int device_yunanshj_pay_apply(void)
     g_yunanshj_pay_index++;
     if (g_yunanshj_pay_index == 0) g_yunanshj_pay_index = 1;  // 防止为0
 
-    // 使用屏幕输入货道号，pay_start 的 startup_item 此时可能还未下发。
-    channel = tjc_infor_t.position;
-    LYY_LOGD("Pay apply channel from screen: %d", channel);
+    // Use the channel parsed from cloud startup_item.positionX.
+    channel = apply_channel;
+    LYY_LOGD("Pay apply channel from cloud: %d", channel);
     if (channel < 1 || channel > 12) {
         LYY_LOGD("Invalid channel: %d", channel);
         g_xlyyHwMark.applyResult=PAY_APPLY_RESULT_FAULT;

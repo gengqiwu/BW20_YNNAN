@@ -11,7 +11,7 @@
 #include <stdint.h>
 
 
-extern int device_yunanshj_pay_apply(void);
+extern int device_yunanshj_pay_apply(uint8_t channel);
 extern int device_yunanshj_pay_start(void);
 extern void device_yunanshj_packet_parse(uint8_t *data, uint16_t len);
 

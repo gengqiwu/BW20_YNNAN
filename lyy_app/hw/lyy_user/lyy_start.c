@@ -207,7 +207,7 @@ void lyy_start_pay_apply(uint8_t *pucData, uint32_t ulLen)
         {
             g_xlyyHwMark.ucPaySem = 0x01;//当前有支付申请在等待结果
             g_xlyyHwMark.applyResult=0;
-            ret = (device_yunanshj_pay_apply() > 0) ? g_xlyyHwMark.applyResult : PAY_START_RESULT_TIMEOUT;
+            ret = (device_yunanshj_pay_apply(pxPayApply->number) > 0) ? g_xlyyHwMark.applyResult : PAY_START_RESULT_TIMEOUT;
             g_xlyyHwMark.ucPaySem = 0x00;//清除标志，表示支付申请流程已结束
             thing_service_reply_pay_apply(pxPayApply->uniqueid, ret, pxPayApply->pay_apply_id);
         }
