@@ -804,7 +804,7 @@ void lyy_DevDataParse(uint8_t *pdata,uint32_t len)
     }
     else if (get_dev_type_code() == DEVICE_TYPE_UART_YUNANSHJ)
     {
-        device_yunanshj_packet_parse(pdata,len);
+        device_yunanshj_stream_parse(pdata,len);
     }
     else
     {
@@ -948,4 +948,3 @@ void lyy_init_device(void)
 
     lyy_device_ndj_init();
 }
-

@@ -39,6 +39,12 @@ static uint8_t g_yunanshj_pay_index = 0;   // 支付序号
 static uint8_t g_yunanshj_stock[12] = {0}; // 12个货道库存
 static uint8_t g_yunanshj_wait_dispense_result = 0;//作用于支付申请流程中，标识已经下发出货指令，正在等待出货结果返回，避免在等待过程中重复下发出货指令
 
+#define YUNANSHJ_MIN_PACKET_LEN 7
+#define YUNANSHJ_RX_BUFFER_SIZE 256
+
+static uint8_t g_yunanshj_rx_buffer[YUNANSHJ_RX_BUFFER_SIZE] = {0};
+static uint16_t g_yunanshj_rx_len = 0;
+
 /** 宇楠售货机传输数据协议：
 格式：
 主机 文件头（FA） 从机地址（00） 数据长度 0 命令 数据信息 校验 文件尾(AF)
@@ -584,6 +590,94 @@ void device_yunanshj_packet_parse(uint8_t *data, uint16_t len)
  * @brief 支付启动 - 发送出货命令
  *
  * @return int 0=信号量获取失败(超时), 1=成功(需检查startResult)
+ */
+void device_yunanshj_stream_parse(uint8_t *data, uint16_t len)
+{
+    if (data == NULL || len == 0)
+    {
+        return;
+    }
+
+    if (len > YUNANSHJ_RX_BUFFER_SIZE)
+    {
+        LYY_LOGD("Yunanshj uart data too long: %d", len);
+        g_yunanshj_rx_len = 0;
+        return;
+    }
+
+    if ((g_yunanshj_rx_len + len) > YUNANSHJ_RX_BUFFER_SIZE)
+    {
+        LYY_LOGD("Yunanshj rx buffer overflow, drop cached data");
+        g_yunanshj_rx_len = 0;
+    }
+
+    memcpy(&g_yunanshj_rx_buffer[g_yunanshj_rx_len], data, len);
+    g_yunanshj_rx_len += len;
+
+    while (g_yunanshj_rx_len > 0)
+    {
+        uint16_t start = 0;
+        while (start < g_yunanshj_rx_len && g_yunanshj_rx_buffer[start] != 0xFA)
+        {
+            start++;
+        }
+
+        if (start >= g_yunanshj_rx_len)
+        {
+            g_yunanshj_rx_len = 0;
+            return;
+        }
+
+        if (start > 0)
+        {
+            memmove(g_yunanshj_rx_buffer, &g_yunanshj_rx_buffer[start], g_yunanshj_rx_len - start);
+            g_yunanshj_rx_len -= start;
+        }
+
+        if (g_yunanshj_rx_len < 3)
+        {
+            return;
+        }
+
+        uint8_t packet_len = g_yunanshj_rx_buffer[2];
+        if (packet_len < YUNANSHJ_MIN_PACKET_LEN)
+        {
+            LYY_LOGD("Invalid yunanshj packet length: %d", packet_len);
+            memmove(g_yunanshj_rx_buffer, &g_yunanshj_rx_buffer[1], g_yunanshj_rx_len - 1);
+            g_yunanshj_rx_len--;
+            continue;
+        }
+
+        if (g_yunanshj_rx_len < packet_len)
+        {
+            return;
+        }
+
+        if (g_yunanshj_rx_buffer[packet_len - 1] != 0xAF)
+        {
+            LYY_LOGD("Invalid yunanshj packet end");
+            memmove(g_yunanshj_rx_buffer, &g_yunanshj_rx_buffer[1], g_yunanshj_rx_len - 1);
+            g_yunanshj_rx_len--;
+            continue;
+        }
+
+        device_yunanshj_packet_parse(g_yunanshj_rx_buffer, packet_len);
+
+        if (g_yunanshj_rx_len == packet_len)
+        {
+            g_yunanshj_rx_len = 0;
+            return;
+        }
+
+        memmove(g_yunanshj_rx_buffer, &g_yunanshj_rx_buffer[packet_len], g_yunanshj_rx_len - packet_len);
+        g_yunanshj_rx_len -= packet_len;
+    }
+}
+
+/**
+ * @brief Send dispense command for cloud payment start.
+ *
+ * @return int 0=timeout, 1=success (check startResult)
  */
 int device_yunanshj_pay_start(void)
 {
