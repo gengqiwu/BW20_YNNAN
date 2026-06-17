@@ -38,9 +38,15 @@
 static uint8_t g_yunanshj_pay_index = 0;   // 支付序号
 static uint8_t g_yunanshj_stock[12] = {0}; // 12个货道库存
 static uint8_t g_yunanshj_wait_dispense_result = 0;//作用于支付申请流程中，标识已经下发出货指令，正在等待出货结果返回，避免在等待过程中重复下发出货指令
+static volatile uint8_t g_yunanshj_detect_query_waiting = 0;
+static volatile uint8_t g_yunanshj_detect_query_done = 0;
+static volatile uint8_t g_yunanshj_drop_detect_enabled = 1;
 
 #define YUNANSHJ_MIN_PACKET_LEN 7
 #define YUNANSHJ_RX_BUFFER_SIZE 256
+#define YUNANSHJ_DETECT_QUERY_TIMEOUT_MS 1000
+#define YUNANSHJ_DISPENSE_RESULT_TIMEOUT_MS 25000
+#define YUNANSHJ_WAIT_STEP_MS 100
 
 static uint8_t g_yunanshj_rx_buffer[YUNANSHJ_RX_BUFFER_SIZE] = {0};
 static uint16_t g_yunanshj_rx_len = 0;
@@ -364,10 +370,17 @@ void device_yunanshj_packet_parse(uint8_t *data, uint16_t len)
                    data[6] == g_yunanshj_pay_index &&
                    g_yunanshj_wait_dispense_result &&
                    g_xlyyHwMark.ucPaySem) {
-                    g_xlyyHwMark.startResult = PAY_START_RESULT_SUCCESS;
-                    g_yunanshj_wait_dispense_result = 0;
-                    xSemaphoreGive(g_xlyyHwMark.pxPayApply);
-                    g_xlyyHwMark.ucPaySem = 0;
+                    if (g_yunanshj_drop_detect_enabled)
+                    {
+                        LYY_LOGD("Dispense complete, wait drop detect");
+                    }
+                    else
+                    {
+                        g_xlyyHwMark.startResult = PAY_START_RESULT_SUCCESS;
+                        g_yunanshj_wait_dispense_result = 0;
+                        xSemaphoreGive(g_xlyyHwMark.pxPayApply);
+                        g_xlyyHwMark.ucPaySem = 0;
+                    }
                 }
             }
             break;
@@ -404,7 +417,7 @@ void device_yunanshj_packet_parse(uint8_t *data, uint16_t len)
                 }
             }
             break;
-        case 0x2A :// 售货板返回FA 00 08 00 2A ucCh ucIndex ucCrc AF掉货检测到有物品掉落
+        case 0x2A :// 售货板返回FA 00 09 00 2A ucCh ucIndex ucCrc AF掉货检测到有物品掉落
             {
                 LYY_LOGD("Dispense detected, channel: %d, index: %d", data[5], data[6]);
                 //发送FA 00 08 00 2A ucCh ucCrc AF给售货板
@@ -422,7 +435,7 @@ void device_yunanshj_packet_parse(uint8_t *data, uint16_t len)
                 }
             }
             break;
-        case 0x2B: // 售货板返回FA 00 08 00 2B ucCh ucIndex ucCrc AF弹簧转一圈，掉货检测没有物品掉落，等待超时
+        case 0x2B: // 售货板返回FA 00 09 00 2B ucCh ucIndex ucCrc AF弹簧转一圈，掉货检测没有物品掉落，等待超时
             {
                 LYY_LOGD("Dispense failure, channel: %d, index: %d", data[5], data[6]);
                 //发送FA 00 08 00 2B ucCh ucCrc AF给售货板
@@ -471,13 +484,19 @@ void device_yunanshj_packet_parse(uint8_t *data, uint16_t len)
             break;
         case 0x31: // 售货板返回FA 00 08 00 31 data ucCrc AF参数：data：启用掉货检测为 1，不启用掉货检测为 0
             {
-                if(data[5]==1)LYY_LOGD("Dispense detect enabled");
-                else LYY_LOGD("Dispense detect disabled");
+                if (g_yunanshj_detect_query_waiting)
+                {
+                    g_yunanshj_drop_detect_enabled = (data[5] == 1) ? 1 : 0;
+                    g_yunanshj_detect_query_done = 1;
+                    g_yunanshj_detect_query_waiting = 0;
+                    if(g_yunanshj_drop_detect_enabled)LYY_LOGD("Dispense detect enabled");
+                    else LYY_LOGD("Dispense detect disabled");
+                }
             }
             break;
         case 0x32: // 售货板返回FA 00 07 00 32 ucCrc AF
             {
-                LYY_LOGD("Clear channel fault status");
+                LYY_LOGD("Set dispense detect reply");
             }
             break;
         case 0x33: // 售货板返回FA 00 09 00 32 data1 data2 ucCrc AF参数：data1 data2：按位来表示各个货道的故障状态。Data1.3-data.0 对应货道 12-9，data2.7-data2.0 对应货道 8-1 ，对应的值为 1 则货道状态为故障，0 则正常。比如 data1=0x06（二进制 00000110），则货道 12 和 9 正常，货道 11 和 10 故障；data2=0x43（二进制值 0100 0011），则货道 8 、6 、5、 4 和 3 正常，货道 7 、 2和 1 有故障。
@@ -682,19 +701,50 @@ void device_yunanshj_stream_parse(uint8_t *data, uint16_t len)
 int device_yunanshj_pay_start(void)
 {
     uint8_t channel = shj_pay_start_t.order_item[0].positionX;
+    uint32_t waited_ms = 0;
+    uint32_t query_waited_ms = 0;
 
     LYY_LOGD("Dispense command: channel=%d, index=%d", channel, g_yunanshj_pay_index);
+
+    g_xlyyHwMark.ucPaySem = 0;
+    g_yunanshj_wait_dispense_result = 0;
+    g_yunanshj_detect_query_done = 0;
+    g_yunanshj_detect_query_waiting = 1;
+    g_yunanshj_drop_detect_enabled = 1;
+    yunanshj_cmd_query_dispense_detect_status();
+    while (!g_yunanshj_detect_query_done && query_waited_ms < YUNANSHJ_DETECT_QUERY_TIMEOUT_MS)
+    {
+        vTaskDelay(YUNANSHJ_WAIT_STEP_MS / portTICK_PERIOD_MS);
+        query_waited_ms += YUNANSHJ_WAIT_STEP_MS;
+    }
+
+    if (!g_yunanshj_detect_query_done)
+    {
+        g_yunanshj_detect_query_waiting = 0;
+        g_yunanshj_drop_detect_enabled = 0;
+        LYY_LOGD("Dispense detect query timeout, use disabled mode");
+    }
+
+    while (xSemaphoreTake(g_xlyyHwMark.pxPayApply, 0) != pdFALSE)
+    {
+    }
 
     g_xlyyHwMark.ucPaySem = 1;
     g_yunanshj_wait_dispense_result = 1;
     yunanshj_cmd_dispense(channel, g_yunanshj_pay_index);
 
-    if (xSemaphoreTake(g_xlyyHwMark.pxPayApply, 25000) == pdFALSE) {
-        g_xlyyHwMark.ucPaySem = 0;
-        g_yunanshj_wait_dispense_result = 0;
-        LYY_LOGD("Dispense result timeout");
-        return 0;
+    while (waited_ms < YUNANSHJ_DISPENSE_RESULT_TIMEOUT_MS)
+    {
+        if (xSemaphoreTake(g_xlyyHwMark.pxPayApply, YUNANSHJ_WAIT_STEP_MS) != pdFALSE)
+        {
+            return 1;
+        }
+
+        waited_ms += YUNANSHJ_WAIT_STEP_MS;
     }
 
-    return 1;
+    g_xlyyHwMark.ucPaySem = 0;
+    g_yunanshj_wait_dispense_result = 0;
+    LYY_LOGD("Dispense result timeout");
+    return 0;
 }
