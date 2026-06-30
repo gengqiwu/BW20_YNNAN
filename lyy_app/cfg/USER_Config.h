@@ -14,7 +14,7 @@
 
 
 /* 正式固件 */
-//#define CFG_RELEASE    
+#define CFG_RELEASE    
 
 #ifndef CFG_RELEASE
 
@@ -43,7 +43,7 @@
 #if(CFG_USER_SOC == CFG_SOC_ESP8684)
 
 /* 模拟串口打印 */
-#define CFG_TEST_LOG
+// #define CFG_TEST_LOG
 
 #elif(CFG_USER_SOC == CFG_SOC_RTL8711)
 
@@ -62,14 +62,11 @@
 
 #define CFG_PM_MODEL		(CFG_PM_DWIN)
 
-// 屏蔽了，生产环境，打开测试环境
-//#define URL_TYPE_DEVELOP
-
 
 /* 版本信息 */
-#define CFG_APP_VERSION                         "BW20_YN_V1.04"
-#define CFG_SDK_VERSION                         "AMEBA_RTOS_SDK_V1.0.1"
-#define CFG_HARD_VERSION                        "BW20_LYY_V1.00"
+#define CFG_APP_VERSION                         "BW20_STD_V1.0.14"
+#define CFG_SDK_VERSION                         "AMEBA_RTOS_SDK_V1.0.1"    
+#define CFG_HARD_VERSION                        "BW20_LYY_V1.00"  
 
 
 /* 网络配置参数 */

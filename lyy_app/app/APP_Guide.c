@@ -327,20 +327,9 @@ void APP_vGuideLoop(void)
 
             utils_lHexToStringLower((char *)pucDviceIdStr, (uint8_t *)pucDeviceIdBuff, lLen);
 
-
-#ifdef URL_TYPE_DEVELOP
-            LYY_LOGD("develop guide url");
-            // 开发环境
-            sprintf(pcGuideUrl, "https://db.cadmem.com/openapi/v1/dev/%s/device?deviceId=%s",
-                    APP_pcGetProductKey(),
-                    pucDviceIdStr);
-#else
-            LYY_LOGD("release guide url");
-            // 正式环境
-            sprintf(pcGuideUrl, "https://sgiot.starthing.com/openapi/v1/dev/%s/device?deviceId=%s",
-                    APP_pcGetProductKey(),
-                    pucDviceIdStr);
-#endif // DEBUG
+            sprintf(pcGuideUrl,     "https://sgiot.starthing.com/openapi/v1/dev/%s/device?deviceId=%s",
+                                    APP_pcGetProductKey(),
+                                    pucDviceIdStr);
 
             LYY_LOGD(">>> URL : [%s]", pcGuideUrl);
 
