@@ -14,7 +14,7 @@
 
 
 /* 正式固件 */
-#define CFG_RELEASE    
+// #define CFG_RELEASE    
 
 #ifndef CFG_RELEASE
 
@@ -64,7 +64,7 @@
 
 
 /* 版本信息 */
-#define CFG_APP_VERSION                         "BW20_STD_V1.0.14"
+#define CFG_APP_VERSION                         "BW20_STD_V1.0.15"
 #define CFG_SDK_VERSION                         "AMEBA_RTOS_SDK_V1.0.1"    
 #define CFG_HARD_VERSION                        "BW20_LYY_V1.00"  
 
@@ -105,5 +105,4 @@ enum {
 
 
 #endif
-
 

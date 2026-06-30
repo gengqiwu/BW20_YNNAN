@@ -3,7 +3,7 @@
 #include <string.h>
 #include "FreeRTOS.h"
 #include "task.h"
-#include "hal_sem.h"
+#include "HAL_Sem.h"
 
 /**
  * @brief 

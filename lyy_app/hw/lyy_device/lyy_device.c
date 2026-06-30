@@ -595,6 +595,7 @@ char device_overlap_qh(uint8_t *pbuff, uint16_t len, void (*parse)(uint8_t *, ui
         if (crc16 != crc16Tmp)
         {
             LYY_LOGD("device check is error");
+            event_post_log("device check is error");
             index++; // 位置偏移
             data_len--;
             continue;
@@ -611,6 +612,7 @@ char device_overlap_qh(uint8_t *pbuff, uint16_t len, void (*parse)(uint8_t *, ui
         else
         {
             LYY_LOGD("parse is error");
+            event_post_log("parse is error");
         }
     } while (data_len >= 8);
 
