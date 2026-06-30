@@ -267,26 +267,26 @@ void device_czf_packet_parse(uint8_t subCmd, uint8_t *data, uint16_t len)
 
     switch (subCmd)
     {
-    case 0x01: // 主板带价格，支付二维码申请
+    case 0x01: // 主板带价格申请支付二维码
         device_czf_qrcode_apply(data, len);
         break;
     case 0x02: // 主板接收支付二维码的应答
         break;
     case 0x03: // 主板接收QR支付成功的应答
         break;
-    case 0x04: // 主板返回机器启动状态
+    case 0x04: // 主板上报机器启动状态
         device_czf_start_status(data, len);
         break;
-    case 0x05: // 主板获取支付渠道(json方式)
+    case 0x05: // 主板获取支付渠道(JSON方式，当前按HEX方式返回)
         device_czf_get_pay_channel(data, len);
         break;
-    case 0x06: // 主板获取支付渠道(hex方式)
+    case 0x06: // 主板获取支付渠道(HEX方式)
         device_czf_get_pay_channel(data, len);
         break;
-    case 0x07: // 主板取消POS支付
+    case 0x07: // 主板取消POS支付/取消订单
         device_czf_pos_clear(data, len);
         break;
-    case 0x08: // 主板取消POS支付
+    case 0x08: // 主板心跳/查询盒子与POS在线状态
         device_czf_net_state(data, len);
         break;
     default:
