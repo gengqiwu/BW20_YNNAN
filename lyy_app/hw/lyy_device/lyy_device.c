@@ -596,6 +596,8 @@ char device_overlap_qh(uint8_t *pbuff, uint16_t len, void (*parse)(uint8_t *, ui
         {
             LYY_LOGD("device check is error");
             event_post_log("device check is error");
+            event_post_log("device check raw packet");
+            event_post_log_hextostring(pack, pack_len + 5);
             index++; // 位置偏移
             data_len--;
             continue;
@@ -1105,5 +1107,3 @@ void lyy_init_device(void)
 
     lyy_device_ndj_init();
 }
-
-
