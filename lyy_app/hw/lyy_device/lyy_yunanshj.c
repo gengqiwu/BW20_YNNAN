@@ -41,6 +41,7 @@ static uint8_t g_yunanshj_wait_dispense_result = 0;//作用于支付申请流程
 static volatile uint8_t g_yunanshj_detect_query_waiting = 0;
 static volatile uint8_t g_yunanshj_detect_query_done = 0;
 static volatile uint8_t g_yunanshj_drop_detect_enabled = 1;
+static volatile uint8_t g_yunanshj_detect_property_report_pending = 0;
 
 #define YUNANSHJ_MIN_PACKET_LEN 7
 #define YUNANSHJ_RX_BUFFER_SIZE 256
@@ -165,6 +166,15 @@ void yunanshj_cmd_query_dispense_detect_status(void)
     uint8_t cmd_data[7] = {0xFA, 0x00, 0x07, 0x00, 0x31, 0x00, 0xAF};
     cmd_data[5] = ucCrcVal(&cmd_data[1], 4); // 校验位，从从机地址到数据信息进行异或得到的值
     HAL_vUartSend(HAL_UART_MAIN_BOARD, cmd_data, sizeof(cmd_data), 500);
+}
+/**
+ * @brief 设置出货掉货检测查询等待标志，等待售货板返回查询结果后上报
+ */
+void yunanshj_dispense_detect_query_report_pending(void)
+{
+    g_yunanshj_detect_query_done = 0;
+    g_yunanshj_detect_query_waiting = 1;
+    g_yunanshj_detect_property_report_pending = 1;
 }
 
 /**
@@ -491,6 +501,11 @@ void device_yunanshj_packet_parse(uint8_t *data, uint16_t len)
                     g_yunanshj_detect_query_waiting = 0;
                     if(g_yunanshj_drop_detect_enabled)LYY_LOGD("Dispense detect enabled");
                     else LYY_LOGD("Dispense detect disabled");
+                    if(g_yunanshj_detect_property_report_pending)
+                    {
+                        g_yunanshj_detect_property_report_pending = 0;
+                        property_post_vending_drop_detection(g_yunanshj_drop_detect_enabled);
+                    }
                 }
             }
             break;
@@ -710,6 +725,7 @@ int device_yunanshj_pay_start(void)
     g_yunanshj_wait_dispense_result = 0;
     g_yunanshj_detect_query_done = 0;
     g_yunanshj_detect_query_waiting = 1;
+    g_yunanshj_detect_property_report_pending = 0;
     g_yunanshj_drop_detect_enabled = 1;
     yunanshj_cmd_query_dispense_detect_status();
     while (!g_yunanshj_detect_query_done && query_waited_ms < YUNANSHJ_DETECT_QUERY_TIMEOUT_MS)

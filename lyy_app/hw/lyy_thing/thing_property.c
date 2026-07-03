@@ -32,6 +32,7 @@
 #include "lyy_pic.h"
 #include "lyy_para.h"
 #include "lyy_start.h"
+#include "lyy_yunanshj.h"
 
 /*属性设置*/
 int property_write_uart_infor(cJSON* params);
@@ -43,6 +44,7 @@ int property_write_pulse_param(cJSON* params);
 int property_write_ndj_lane(cJSON* params);
 int property_write_fault_list(cJSON* params);
 int property_write_picture_screen(cJSON* params);
+int property_write_vending_drop_detection(cJSON* params);
 
 /*属性读取*/
 int property_read_brt_param(cJSON* reply);
@@ -69,6 +71,7 @@ const PROPER_METHOD_DEF method_property[] =
     {"dev_infor",               NULL,                           property_read_dev_infor },         
     {"network_level",           NULL,                           NULL                    },                          
     {"attr_container_layout",   property_write_picture_screen, NULL                     },
+    {"vending_drop_detection",  property_write_vending_drop_detection, NULL             },
 };
 
 
@@ -991,6 +994,40 @@ int property_write_picture_screen(cJSON* params)
 }
 
 /**
+ * @brief Set vending drop detection enable state.
+ */
+int property_write_vending_drop_detection(cJSON* params)
+{
+    uint8_t enable = 0;
+    if(params == NULL)
+    {
+        return -1;
+    }
+    if(params->type == cJSON_True)
+    {
+        enable = 1;
+    }
+    else if(params->type == cJSON_False)
+    {
+        enable = 0;
+    }
+    else if(params->type == cJSON_Number)
+    {
+        enable = (params->valueint != 0) ? 1 : 0;
+    }
+    else
+    {
+        LYY_LOGD("vending_drop_detection type error");
+        return -1;
+    }
+    LYY_LOGD("set vending_drop_detection %d", enable);
+    yunanshj_cmd_set_dispense_detect(enable);
+    yunanshj_dispense_detect_query_report_pending();
+    yunanshj_cmd_query_dispense_detect_status();
+    return 1;
+}
+
+/**
  * @description: 服务器读取设备波特率
  * @param {*}
  * @return {*}
@@ -1009,6 +1046,27 @@ int property_read_brt_param(cJSON* reply)
     cJSON_AddStringToObject(reply, "uart_brt", brtBuff);
 
     return 1;
+}
+
+void property_post_vending_drop_detection(uint8_t enable)
+{
+    cJSON* params = cJSON_CreateObject();
+    if(params == NULL)
+    {
+        LYY_LOGE("### vending_drop_detection create fail");
+        return;
+    }
+
+    if(enable)
+    {
+        cJSON_AddTrueToObject(params, "vending_drop_detection");
+    }
+    else
+    {
+        cJSON_AddFalseToObject(params, "vending_drop_detection");
+    }
+
+    thing_property_post(params);
 }
 
 

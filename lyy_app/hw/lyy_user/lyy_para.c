@@ -62,8 +62,8 @@ int get_dev_type_code(void)
             {"dev_type_uart_xyj_lyy"},
             {"dev_type_uart_note_lyy"},
             {"dev_type_uart_czf_lyy"},
+            {"dev_type_uart_ynshj_lyy"},//宇楠售货机
             {"dev_type_uart_shj_lyy"},
-            {"dev_type_uart_yunanshj_lyy"},//宇楠售货机
         };
 
     for(uint8_t i=0;i<sizeof(dev_type_t)/sizeof(dev_type_t[0]);i++)
