@@ -51,6 +51,9 @@ static uint8_t flagReportDevStatus = 0;//满足上报主板状态标志
 static int mqtt_status_old = 0;//记录mqtt连接状态
 static int flagfactoryParmGet = 0;//记录主板参数获取标记 
 
+static volatile uint8_t qhxyj_pay_start_waiting = 0;
+static volatile uint8_t qhxyj_background_querying = 0;
+
 static SEM_TYPE      qixyj_checkStaus_sem;
 static SEM_TYPE      qixyj_selectProgram_sem;
 static SEM_TYPE      qhxyj_sendCoin_sem;
@@ -844,6 +847,13 @@ void thread_qhxyj_inquire_status(void *arg)
     while (1)
     {
         vTaskDelay(500 / portTICK_PERIOD_MS);
+        qhxyj_background_querying = 1;
+        if(qhxyj_pay_start_waiting)
+        {
+            qhxyj_background_querying = 0;
+            continue;
+        }
+
         if(mqtt_status_old != lyy_mqtt_get_status())
         {/*网络状态变更*/
             mqtt_status_old = lyy_mqtt_get_status();
@@ -872,6 +882,7 @@ void thread_qhxyj_inquire_status(void *arg)
                 vTaskDelay(1000 / portTICK_PERIOD_MS);
             }
         }
+        qhxyj_background_querying = 0;
         
     }
 }
@@ -879,15 +890,39 @@ void thread_qhxyj_inquire_status(void *arg)
 /*获取设备状态倒计时清零，立即触发*/
 static void trigger_checkSta_timeout(void)
 {
+    if(qhxyj_pay_start_waiting)
+    {
+        transmit_cmd_bitStatusGet( );
+        return;
+    }
+
     if(flagLoopCheckSta)
         timeout_to_checkSta = 0;
     else
         transmit_cmd_bitStatusGet( );
 }
 
+static void qhxyj_wait_background_idle(uint32_t timeout_ms)
+{
+    uint32_t wait_ms = 0;
+
+    while(qhxyj_background_querying && wait_ms < timeout_ms)
+    {
+        vTaskDelay(100 / portTICK_PERIOD_MS);
+        wait_ms += 100;
+    }
+}
+
 void device_qhxyj_update_status(void *arg)
 {
     (void)arg;
+    qhxyj_background_querying = 1;
+    if(qhxyj_pay_start_waiting)
+    {
+        qhxyj_background_querying = 0;
+        return;
+    }
+
     if (flagLoopCheckSta)
     {
         if(timeout_to_checkSta)
@@ -898,11 +933,17 @@ void device_qhxyj_update_status(void *arg)
         {
             transmit_cmd_bitStatusGet( );
             vTaskDelay(1000 / portTICK_PERIOD_MS);
+            if(qhxyj_pay_start_waiting)
+            {
+                qhxyj_background_querying = 0;
+                return;
+            }
             transmit_cmd_washRunDataGet();
             timeout_to_checkSta = PERIOD_FOR_CHECKSTA/TIME_INTERRUPT_MS;
         }
         
     }
+    qhxyj_background_querying = 0;
 }
 HAL_RTOS_TIMER_T g_xyjTimerHandle;
 
@@ -1219,6 +1260,9 @@ int device_qhxyj_pay_start(uint16_t mode)
     int repeatCnt = 0;
     uint16_t coinNun = 0;
     uint8_t ret = 0;
+    qhxyj_pay_start_waiting = 1;
+    qhxyj_wait_background_idle(6000);
+
     /*给主板下发程序选择指令*/
     //lyy_semNewV2(&qixyj_selectProgram_sem, 0);
     qixyj_selectProgram_sem = xSemaphoreCreateBinary();
@@ -1230,6 +1274,7 @@ int device_qhxyj_pay_start(uint16_t mode)
     if(ret==0)
     {//超时未收到主板应答
         event_post_log("transmit_cmd_select_program");
+        qhxyj_pay_start_waiting = 0;
         return 0;
     }
     vTaskDelay(200 / portTICK_PERIOD_MS); // 延时一会
@@ -1309,7 +1354,8 @@ int device_qhxyj_pay_start(uint16_t mode)
             break;
         }
     }
-    
+    qhxyj_pay_start_waiting = 0;
+
     return ret;
 }
 
