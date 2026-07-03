@@ -1021,9 +1021,8 @@ int property_write_vending_drop_detection(cJSON* params)
         return -1;
     }
     LYY_LOGD("set vending_drop_detection %d", enable);
-    yunanshj_cmd_set_dispense_detect(enable);
     yunanshj_dispense_detect_query_report_pending();
-    yunanshj_cmd_query_dispense_detect_status();
+    yunanshj_cmd_set_dispense_detect(enable);
     return 1;
 }
 
@@ -1066,6 +1065,7 @@ void property_post_vending_drop_detection(uint8_t enable)
         cJSON_AddFalseToObject(params, "vending_drop_detection");
     }
 
+    LYY_LOGD("post vending_drop_detection %d", enable ? 1 : 0);
     thing_property_post(params);
 }
 

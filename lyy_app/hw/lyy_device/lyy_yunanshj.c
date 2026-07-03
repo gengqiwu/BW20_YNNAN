@@ -512,6 +512,10 @@ void device_yunanshj_packet_parse(uint8_t *data, uint16_t len)
         case 0x32: // 售货板返回FA 00 07 00 32 ucCrc AF
             {
                 LYY_LOGD("Set dispense detect reply");
+                if(g_yunanshj_detect_property_report_pending)
+                {
+                    yunanshj_cmd_query_dispense_detect_status();
+                }
             }
             break;
         case 0x33: // 售货板返回FA 00 09 00 32 data1 data2 ucCrc AF参数：data1 data2：按位来表示各个货道的故障状态。Data1.3-data.0 对应货道 12-9，data2.7-data2.0 对应货道 8-1 ，对应的值为 1 则货道状态为故障，0 则正常。比如 data1=0x06（二进制 00000110），则货道 12 和 9 正常，货道 11 和 10 故障；data2=0x43（二进制值 0100 0011），则货道 8 、6 、5、 4 和 3 正常，货道 7 、 2和 1 有故障。
