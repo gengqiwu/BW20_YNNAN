@@ -1262,7 +1262,7 @@ int device_qhxyj_pay_start(uint16_t mode)
     uint8_t ret = 0;
     qhxyj_pay_start_waiting = 1;
     qhxyj_wait_background_idle(6000);
-
+    vTaskDelay(200 / portTICK_PERIOD_MS); 
     /*给主板下发程序选择指令*/
     //lyy_semNewV2(&qixyj_selectProgram_sem, 0);
     qixyj_selectProgram_sem = xSemaphoreCreateBinary();
