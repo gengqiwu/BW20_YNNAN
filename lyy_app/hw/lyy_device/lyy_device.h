@@ -11,7 +11,7 @@
 #include "stdint.h"
 
 #include "HAL_System.h"
-#include "hal_sem.h"
+#include "HAL_Sem.h"
 
 #define INIT_NET_COIN_MARK      0xA0 //自增码初始值
 
@@ -240,5 +240,4 @@ extern int8_t device_send_cmd_packet(uint8_t cmd , uint8_t *pack_data,uint16_t l
 extern int8_t device_send_dfssj_packet(uint8_t *pack_data, uint16_t len);
 
 #endif
-
 

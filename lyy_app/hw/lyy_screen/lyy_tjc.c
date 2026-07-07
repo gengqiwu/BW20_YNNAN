@@ -22,7 +22,7 @@
 #include "HAL_Wifi.h"
 #include "HAL_Uart.h"
 #include "HAL_System.h"
-#include "hal_sem.h"
+#include "HAL_Sem.h"
 
 #include "thing_mqtt.h"
 #include "thing_event.h"

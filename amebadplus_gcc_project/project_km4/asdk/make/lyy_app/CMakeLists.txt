@@ -35,6 +35,7 @@ set(
     ${UTILS}/ringbuf.c
     ${UTILS}/ringbuffer.c
     ${HAL}/HAL_Log.c
+    ${HAL}/HAL_Sem.c
     ${HAL}/HAL_Ota.c
     ${HAL}/HAL_Udp.c
     ${HAL}/HAL_Tls.c
@@ -66,9 +67,16 @@ set(
     ${HW}/lyy_device/lyy_dbj.c
     ${HW}/lyy_device/lyy_wwj.c
     ${HW}/lyy_device/lyy_device.c
-    ${HW}/lyy_device/lyy_czf.c
-    ${HW}/lyy_device/lyy_adh814e.c
-    ${HW}/lyy_device/lyy_yunanshj.c
+    ${HW}/lyy_device/lyy_cwhgj.c
+    ${HW}/lyy_device/lyy_cwxhj.c
+    ${HW}/lyy_device/lyy_cwxyj.c
+    ${HW}/lyy_device/lyy_dfssj.c
+    ${HW}/lyy_device/lyy_hgj.c
+    ${HW}/lyy_device/lyy_lgxyjmax.c
+    ${HW}/lyy_device/lyy_mshgj.c
+    ${HW}/lyy_device/lyy_tclxyj.c
+    ${HW}/lyy_device/lyy_xcj.c
+    ${HW}/lyy_device/lyy_xyj.c
     ${HW}/lyy_user/lyy_start.c
     ${HW}/lyy_user/lyy_para.c
     ${HW}/lyy_thing/mqtt_api.c
