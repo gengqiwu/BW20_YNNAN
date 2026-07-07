@@ -9,14 +9,13 @@ enum
     APP_UPGRADE_BOARD,                  /* 主板 */
 };
 
-
-enum 
+enum
 {
     APP_UPGRADE_APP,
     APP_UPGRADE_SDK,
     APP_UPGRADE_DEVICE,
+    APP_UPGRADE_SCREEN,
 };
-
 
 enum 
 {

@@ -10,7 +10,7 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "thing_event.h"
+
 #include "utils.h"
 #include "cJSON.h"
 
@@ -22,10 +22,14 @@
 #include "HAL_Wifi.h"
 #include "HAL_Uart.h"
 #include "HAL_System.h"
+#include "hal_sem.h"
 
 #include "thing_mqtt.h"
+#include "thing_event.h"
 #include "thing_property.h"
-
+#include "thing_iot.h"
+#include "thing_init.h"
+#include "lyy_device.h"
 
 #include "lyy_tjc.h"
 #include "lyy_pic.h"
@@ -61,11 +65,14 @@ SemaphoreHandle_t   hw_httpDowloadSem    = NULL;
 void lyy_tjc_pay_package_ndj(void);
 void lyy_tjc_page_pkgs_ndj(void);
 void lyy_tjc_page_pkgs_std(void);
-void lyy_tjc_page_pkgs_shj(void);
+void lyy_tjc_page_pkgs_pulse(void);
+void lyy_tjc_page_pkgs_xhj(void);
 void lyy_tjc_page_change_amy_time(void);
 
-
-void tjc_touch_return(char *pack,uint16_t len);
+void lyy_tjc_touch_pay_deduction(char *pack, uint16_t len);
+void lyy_tjc_touch_pay_now(char *pack, uint16_t len);
+void lyy_tjc_touch_earn_points(char *pack, uint16_t len);
+void tjc_touch_return(char *pack, uint16_t len);
 void lyy_tjc_touch_time_return(char *pack,uint16_t len);
 void tjc_touch_back(char *pack,uint16_t len);
 void lyy_tjc_touch_package(char *pack,uint16_t len);
@@ -74,34 +81,201 @@ void lyy_tjc_time_version(char *pack,uint16_t len);
 void lyy_tjc_vlaue_screen_type(char *pack,uint16_t len);
 void tjc_touch_regist_next(char *pack,uint16_t len);
 void tjc_touch_device_status_display(char *pack,uint16_t len);
+void lyy_tjc_touch_pay_now_points(char *pack, uint16_t len);
+void lyy_tjc_packages_choose(uint8_t id, uint8_t wallet_number);
 
-const TJC_PACKET_PARSE_DEF tjc_packet_parse_t[] = 
-{
-    {"back" ,           tjc_touch_back},
-    {"package1",        lyy_tjc_touch_package},
-    {"package2",        lyy_tjc_touch_package},  
-    {"package3",        lyy_tjc_touch_package},  
-    {"package4",        lyy_tjc_touch_package},
-    {"package5",        lyy_tjc_touch_package},
-    {"package6",        lyy_tjc_touch_package},
-    {"return",          tjc_touch_return},
-    {"wallet0",         lyy_tjc_touch_wallet},
-    {"wallet1",         lyy_tjc_touch_wallet},
-    {"wallet2",         lyy_tjc_touch_wallet},
-    {"wallet3",         lyy_tjc_touch_wallet},
-    {"screen_ver:",     lyy_tjc_time_version},
-    {"screen_type:",    lyy_tjc_vlaue_screen_type},
-    {"time_return",     lyy_tjc_touch_time_return},
-    {"regist_next",     tjc_touch_regist_next},
-    {"get_status",      tjc_touch_device_status_display},
-    //todo（先不使用log显示）
+const TJC_PACKET_PARSE_DEF tjc_packet_parse_t[] =
+    {
+        {"pay_deduction", lyy_tjc_touch_pay_deduction},
+        {"pay_now_points", lyy_tjc_touch_pay_now_points},
+        {"pay_now", lyy_tjc_touch_pay_now},
+        {"earn_points", lyy_tjc_touch_earn_points},
+        {"back", tjc_touch_back},
+        {"package1", lyy_tjc_touch_package},
+        {"package2", lyy_tjc_touch_package},
+        {"package3", lyy_tjc_touch_package},
+        {"package4", lyy_tjc_touch_package},
+        {"package5", lyy_tjc_touch_package},
+        {"package6", lyy_tjc_touch_package},
+        {"return", tjc_touch_return},
+        {"wallet0", lyy_tjc_touch_wallet},
+        {"wallet1", lyy_tjc_touch_wallet},
+        {"wallet2", lyy_tjc_touch_wallet},
+        {"wallet3", lyy_tjc_touch_wallet},
+        {"screen_ver:", lyy_tjc_time_version},
+        {"screen_type:", lyy_tjc_vlaue_screen_type},
+        {"time_return", lyy_tjc_touch_time_return},
+        {"regist_next", tjc_touch_regist_next},
+        {"get_status", tjc_touch_device_status_display},
+// todo（先不使用log显示）
 #if 0
     {"log_open",  tjc_touch_log_open},
     {"log_close", tjc_touch_log_close},
 #endif
 };
+
 /**
  * @brief 
+ * 获取积分配置
+ * @return 
+ */
+TJC_POINT_CONFIG_DEF *get_point_config(void)
+{
+    return &tjc_infor_t.point_config;
+}
+
+/**
+ * @brief
+ * 获取积分授权
+ * @return
+ */
+TJC_POINT_AUTHORIZE_DEF *get_point_authorize(void)
+{
+    return &tjc_infor_t.point_authorize;
+}
+
+/**
+ * @brief
+ * 获取积分领取
+ * @return
+ */
+TJC_POINT_CLAIM_DEF *get_point_claim(void)
+{
+    return &tjc_infor_t.point_claim;
+}
+
+/**
+ * @brief
+ * 设备可以领取积分展示
+ * @return
+ */
+void device_get_points_show(void)
+{
+    char str[200] = {0};
+
+    TJC_POINT_CONFIG_DEF *point_config_data = get_point_config();
+
+    // 拼接样例  100.02Pt=1RMB
+    sprintf(str, "%sPt=%s%s", point_config_data->equipment_available_point, point_config_data->equipment_available_deduct_amount, point_config_data->currency_code);
+
+    lyy_tjc_objTxt("get_points", str);
+    vTaskDelay(2 / portTICK_PERIOD_MS);
+}
+
+/**
+ * @brief
+ * 会员现有积分展示
+ * @return
+ */  
+void member_now_points_show(void)
+{
+
+    char str[200] = {0};
+    char str_2[200] = {0};
+
+    TJC_POINT_CONFIG_DEF *point_config_data = get_point_config();
+    TJC_POINT_CLAIM_DEF *point_claim_data = get_point_claim();
+
+    // 拼接样例  100.02Pt=1RMB
+    sprintf(str, "%sPt=%s%s", point_claim_data->user_point, point_claim_data->user_deduct_amount, point_config_data->currency_code);
+    lyy_tjc_objTxt("now_points", str);    
+    vTaskDelay(2 / portTICK_PERIOD_MS);
+
+    // 拼接样例  +0.02Pt Received
+    sprintf(str_2, "+%sPt Received", point_claim_data->claimed_points);
+    lyy_tjc_objTxt("add_points", str_2);
+    vTaskDelay(2 / portTICK_PERIOD_MS);
+}
+
+/**
+ * @brief
+ * 会员去消费积分展示  
+ * @return
+ */
+void member_to_consume_points_show(void)
+{
+    char str[200] = {0};
+    char str_2[200] = {0};
+    char str_3[200] = {0};
+    char str_4[200] = {0};
+
+    TJC_POINT_CONFIG_DEF *point_config_data = get_point_config();
+    TJC_POINT_AUTHORIZE_DEF *point_authorize_data = get_point_authorize();
+
+    // 拼接样例  100.02Pt=1RMB
+    sprintf(str, "%sPt=%s%s", point_authorize_data->user_point, point_authorize_data->user_deduct_amount, point_config_data->currency_code);
+    lyy_tjc_objTxt("consume_points", str);
+    vTaskDelay(2 / portTICK_PERIOD_MS);
+
+    // 拼接样例  Pay Deduction 100HKD  抵扣金额
+    sprintf(str_2, "Pay Deduction\\r%s%s", point_authorize_data->pay_amount, point_config_data->currency_code);
+    lyy_tjc_objTxt("deduc_amount", str_2);
+    vTaskDelay(2 / portTICK_PERIOD_MS);
+
+    // 拼接样例  Pay Now 100HKD   正常金额
+    sprintf(str_3, "Pay Now\\r%s%s", point_authorize_data->order_amount, point_config_data->currency_code);
+    lyy_tjc_objTxt("now_amount", str_3);
+    vTaskDelay(2 / portTICK_PERIOD_MS);
+
+    // 拼接样例  +0.02Pt Received   登录消费领取积分
+    sprintf(str_4, "+%sPt Received", point_authorize_data->claimed_points);
+    lyy_tjc_objTxt("reg_add_points", str_4);
+    vTaskDelay(2 / portTICK_PERIOD_MS);
+}
+
+/**
+ * @brief
+ * 会员去消费 增加 积分展示  
+ * @return
+ */
+void member_to_consume_add_points_show(void)
+{
+
+    char str[200] = {0};
+    //TJC_POINT_AUTHORIZE_DEF *point_authorize_data = get_point_authorize();
+
+    // 拼接样例  +0.02Pt Received  支付成功，直接到账积分
+    sprintf(str, "+%sPt Received", tjc_infor_t.pay_claimed_points);
+    lyy_tjc_objTxt("pay_add_points", str);
+    vTaskDelay(2 / portTICK_PERIOD_MS);                                   
+}
+
+/**
+ * @brief
+ * 游客支付，显示待领取积分
+ * @return
+ */
+void tourist_to_consume_add_points_show(void)
+{
+
+    char str[200] = {0};
+    // TJC_POINT_AUTHORIZE_DEF *point_authorize_data = get_point_authorize();
+
+    // 拼接样例Pending points  100.02Points
+    sprintf(str, "Pending points\\r%sPoints", tjc_infor_t.pay_claimed_points);
+    lyy_tjc_objTxt("pending_points", str);
+    vTaskDelay(2 / portTICK_PERIOD_MS);
+}
+
+/**
+ * @brief
+ * 本次消费可以增加积分tjc_infor_t.pay_claimed_points
+ * @return
+ */
+void consume_can_add_points_show(void)
+{
+
+    char str[200] = {0};
+    //TJC_POINT_AUTHORIZE_DEF *point_authorize_data = get_point_authorize();
+
+    // 拼接样例  
+    sprintf(str, "You will earn points after successful payment");
+    lyy_tjc_objTxt("pay_add_points", str);
+    vTaskDelay(2 / portTICK_PERIOD_MS);
+}
+
+/**
+ * @brief
  * 发送数据到串口屏
  * @param objName 对象名称
  * @param txt 对象内容
@@ -342,13 +516,17 @@ void lyy_tjc_package_page(void)
  */
 void lyy_tjc_device_infor(void)
 {
+    // char str[200] = {0};
+    // sprintf(str, "phone%s", tjc_infor_t.telephone);
 
     lyy_tjc_objTxt("net_status", NET_RETURN_RESULT(lyy_mqtt_get_status())); 
     vTaskDelay(2 / portTICK_PERIOD_MS);  
     lyy_tjc_objTxt("devid", APP_pcGetParamDevId());  
     vTaskDelay(2 / portTICK_PERIOD_MS);  
     lyy_tjc_objTxt("ver", CFG_APP_VERSION); 
-    vTaskDelay(2 / portTICK_PERIOD_MS);     
+    vTaskDelay(2 / portTICK_PERIOD_MS);
+    lyy_tjc_objTxt("telephone", tjc_infor_t.telephone);
+    vTaskDelay(2 / portTICK_PERIOD_MS);
 }
 /**
  * @brief 
@@ -530,21 +708,62 @@ void lyy_tjc_packages_show(void)
     #else
     switch (get_dev_type_code())
     {
-    case DEVICE_TYPE_UART_SHJ:
-    case DEVICE_TYPE_UART_YUNANSHJ:
-        lyy_tjc_page_pkgs_shj();
-        break;
-    case DEVICE_TYPE_UART_NDJ:
-        lyy_tjc_page_pkgs_ndj();
-        break;
-    case DEVICE_TYPE_UART_XYJ:
-        lyy_tjc_page_pkgs_std();
-        break;
-    default:
-        lyy_tjc_page_pkgs_std();
-        break;
+        case DEVICE_TYPE_UART_SKYWORTH_GTXYJ:
+        case DEVICE_TYPE_UART_SKYWORTH_GTHGJ:
+        case DEVICE_TYPE_UART_SKYWORTH_GTXHJ:
+        case DEVICE_TYPE_UART_MSHGJ:
+        case DEVICE_TYPE_UART_TCLXYJ:
+        case DEVICE_TYPE_UART_DFSSJ:   //该处待议，现在还没有定义TJC屏幕上显示什么
+            lyy_tjc_page_pkgs_xhj();
+            break;
+        case DEVICE_TYPE_UART_NDJ:
+            lyy_tjc_page_pkgs_ndj();
+            break;
+        case DEVICE_TYPE_UART_XYJ:
+        case DEVICE_TYPE_UART_THXCJ:
+            lyy_tjc_page_pkgs_std();
+            break;
+        case DEVICE_TYPE_PULSE:
+            lyy_tjc_page_pkgs_pulse();
+            break;
+        default:
+            lyy_tjc_page_pkgs_std();
+            break;
     }
     #endif
+}
+/**
+ * @brief
+ * 更改显示套餐颜色   color_str
+ * @param
+ * @param
+ */
+void lyy_tjc_pkg_set_color(char *color_str, uint8_t pkg_num)
+{
+    char str[10]={0};
+    char cmdBuff[128] = {0};
+
+    if (color_str == NULL || strlen(color_str) != 7 || color_str[0] != '#')
+    {
+        LYY_LOGD("NO #RRGGBB");
+        return;
+    }
+
+    strcpy(str, color_str);
+
+    // 提取 R、G、B 三个通道的16进制值
+    uint8_t r = (str[1] >= 'A' ? (str[1] - 'A' + 10) : (str[1] - '0')) * 16 + (str[2] >= 'A' ? (str[2] - 'A' + 10) : (str[2] - '0'));
+    uint8_t g = (str[3] >= 'A' ? (str[3] - 'A' + 10) : (str[3] - '0')) * 16 + (str[4] >= 'A' ? (str[4] - 'A' + 10) : (str[4] - '0'));
+    uint8_t b = (str[5] >= 'A' ? (str[5] - 'A' + 10) : (str[5] - '0')) * 16 + (str[6] >= 'A' ? (str[6] - 'A' + 10) : (str[6] - '0'));
+
+    // 转换成 RGB565
+    uint16_t rgb565 = ((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3);
+
+    sprintf(cmdBuff, "pkg%d.bco=%d\xff\xff\xff", pkg_num, rgb565);
+
+    LYY_LOGD("rgb565[%s]", cmdBuff);
+
+    lyy_tjc_cmd_send(cmdBuff, strlen(cmdBuff));
 }
 /**
  * @brief 
@@ -589,6 +808,42 @@ void lyy_tjc_vis_pkg_std(uint8_t id)
     lyy_tjc_objHide(temp, 1);
     vTaskDelay(5 / portTICK_PERIOD_MS);  
 }
+
+/**
+ * @brief
+ * 洗衣机烘干机显示套餐页
+ * @param money
+ * @param value
+ * @param pkg_num
+ */
+void lyy_tjc_page_pkgs_xhj(void)
+{
+    PAY_PACKAGES_DEF *pkgs = get_pay_packages();
+    // char price[128]={0};
+    char money[128] = {0};
+    char mode_name[128] = {0};
+    uint8_t i = 0;
+    lyy_tjc_switch_page("pkg_std2"); // 切换页面
+    vTaskDelay(10 / portTICK_PERIOD_MS);
+    lyy_tjc_device_infor();
+    if (pkgs->sum < 6) // 隐藏不需要的套餐
+    {
+        for (i = pkgs->sum + 1; i <= 6; i++) // 套餐ID 从1 存储也是从1开始
+        {
+            lyy_tjc_clean_pkg_std(i); // 隐藏
+            vTaskDelay(10 / portTICK_PERIOD_MS);
+        }
+    }
+    for (i = 0; i < pkgs->sum; i++) //
+    {
+        lyy_tjc_vis_pkg_std(i + 1);
+        sprintf(money, "%s %s", pkgs->pkg[i].display_price, pkgs->currency_name);
+        // sprintf(price,"%s %s",pkgs->pkg[i].display_value,pkgs->pkg[i].unit);
+        sprintf(mode_name, "%s", pkgs->pkg[i].name);
+        lyy_tjc_pkg_std(money, mode_name, i + 1);
+        vTaskDelay(10 / portTICK_PERIOD_MS);
+    }
+}
 /**
  * @brief 
  * 显示套餐页
@@ -625,16 +880,39 @@ void lyy_tjc_page_pkgs_std(void)
 
 /**
  * @brief
- * 显示套餐页面-售货机
+ * 显示套餐页----脉冲
  * @param money
  * @param value
  * @param pkg_num
  */
-void lyy_tjc_page_pkgs_shj(void)
+void lyy_tjc_page_pkgs_pulse(void)
 {
-    lyy_tjc_switch_page("pkg_shj2"); // 切换页面
+    PAY_PACKAGES_DEF *pkgs = get_pay_packages();
+    uint8_t i = 0;
+    lyy_tjc_switch_page("pkg_std2"); // 切换页面
     vTaskDelay(10 / portTICK_PERIOD_MS);
     lyy_tjc_device_infor();
+    if (pkgs->sum < 6) // 隐藏不需要的套餐
+    {
+        for (i = pkgs->sum + 1; i <= 6; i++) // 套餐ID 从1 存储也是从1开始
+        {
+            lyy_tjc_clean_pkg_std(i); // 隐藏
+            vTaskDelay(10 / portTICK_PERIOD_MS);
+        }
+    }
+    for (i = 0; i < pkgs->sum; i++) //
+    {
+        lyy_tjc_vis_pkg_std(i + 1);
+        vTaskDelay(10 / portTICK_PERIOD_MS);
+
+        // 给套餐发颜色
+        lyy_tjc_pkg_set_color(pkgs->pkg[i].package_Color, i + 1);
+
+        //sprintf(money, "%s %s", pkgs->pkg[i].display_price, pkgs->currency_name);
+        //sprintf(price, "%s %s", pkgs->pkg[i].display_value, pkgs->pkg[i].unit);
+        lyy_tjc_pkg_std(pkgs->pkg[i].commodity_Desc, pkgs->pkg[i].price_Desc, i + 1);
+        vTaskDelay(10 / portTICK_PERIOD_MS);
+    }
 }
 
 /**
@@ -875,8 +1153,40 @@ void lyy_tjc_pay_result(uint16_t time,uint8_t next_status)
  */
 void lyy_tjc_page_pay_reuslt(void)
 {
-    lyy_tjc_pay_result(10,TJC_SHOW_PACKAGES);   
+
+    if (tjc_infor_t.point_config.point_enabled == 1)
+    {
+        lyy_tjc_pay_result(40, TJC_SHOW_PACKAGES);
+    }
+    else
+    {
+        lyy_tjc_pay_result(10, TJC_SHOW_PACKAGES);
+    }
+      
 }
+
+void lyy_tjc_page_earn_points_url_show(void)
+{
+#ifdef URL_TYPE_DEVELOP
+    // 开发环境
+#define DEV_URL_EARN_POINTS_START "https://dc.cadmem.com/gw/customer/page/scan/" // 开发地址
+
+#else
+
+    // 正式环境
+#define DEV_URL_EARN_POINTS_START "https://gc.starthing.com/gw/customer/page/scan/" // 生产地址
+
+#endif
+
+#define DEV_URL_EARN_POINTS_END "?scene=marketPointClaim"
+
+    char earn_points_url[200] = {0};
+    sprintf(earn_points_url, "%s%s%s", DEV_URL_EARN_POINTS_START, APP_pcGetParamDevId(), DEV_URL_EARN_POINTS_END);
+
+    lyy_tjc_objTxt("app_url", earn_points_url);
+    vTaskDelay(5 / portTICK_PERIOD_MS);
+}
+
 /**
  * @brief 
  * 操作控件
@@ -886,6 +1196,121 @@ void lyy_tjc_page_pay_reuslt(void)
 void lyy_tjc_page_obj_pay_result(void)
 {
     lyy_tjc_switch_page("result");//切换页面
+    lyy_tjc_device_infor();
+    lyy_tjc_page_earn_points_url_show();
+    tourist_to_consume_add_points_show();
+}
+
+void lyy_tjc_page_scan_points_ndj(void)
+{
+#ifdef URL_TYPE_DEVELOP
+    // 开发环境
+#define DEV_URL_SCAN_POINTS_START "https://dc.cadmem.com/gw/customer/page/scan/"
+#else
+// 正式环境
+#define DEV_URL_SCAN_POINTS_START "https://gc.starthing.com/gw/customer/page/scan/" //
+
+#endif
+
+#define DEV_URL_SCAN_POINTS_MIDDLE "?scene=marketPointAuthorize&uniqueCode="
+#define DEV_URL_SCAN_POINTS_END "&commodityId="
+    char scan_points_url[250] = {0};
+    PAY_PARAM_DEF *para = get_pay_param();
+
+    char id[6] = {0x00};
+    vRandomGet(id, sizeof(id));
+    memset(tjc_infor_t.unique_code, 0, sizeof(tjc_infor_t.unique_code));
+    utils_lhexToString(tjc_infor_t.unique_code, (const unsigned char *)id, sizeof(id));
+
+    // memcpy(tjc_infor_t.unique_code, get_random_string,6);
+    sprintf(scan_points_url, "%s%s/%d%s%s%s%s", DEV_URL_SCAN_POINTS_START, APP_pcGetParamDevId(), (tjc_infor_t.package_record+1), DEV_URL_SCAN_POINTS_MIDDLE, tjc_infor_t.unique_code, DEV_URL_SCAN_POINTS_END, para->pkgs.pkg[tjc_infor_t.package_record].id);
+
+    lyy_tjc_objTxt("app_pay_url", scan_points_url);
+    vTaskDelay(5 / portTICK_PERIOD_MS);
+}
+void lyy_tjc_page_scan_points_std(void){
+
+#ifdef URL_TYPE_DEVELOP
+    // 开发环境
+#define DEV_URL_SCAN_POINTS_START "https://dc.cadmem.com/gw/customer/page/scan/"
+#else
+    // 正式环境
+    #define DEV_URL_SCAN_POINTS_START   "https://gc.starthing.com/gw/customer/page/scan/"  //
+
+#endif
+
+#define DEV_URL_SCAN_POINTS_MIDDLE  "?scene=marketPointAuthorize&uniqueCode="
+#define DEV_URL_SCAN_POINTS_END     "&commodityId="
+    char scan_points_url[250] = {0};
+    PAY_PARAM_DEF *para = get_pay_param();
+
+    char id[6] = {0x00};
+    vRandomGet(id, sizeof(id));
+    memset(tjc_infor_t.unique_code, 0, sizeof(tjc_infor_t.unique_code));
+    utils_lhexToString(tjc_infor_t.unique_code, (const unsigned char *)id, sizeof(id));   
+
+    //memcpy(tjc_infor_t.unique_code, get_random_string,6);
+    sprintf(scan_points_url, "%s%s%s%s%s%s", DEV_URL_SCAN_POINTS_START, APP_pcGetParamDevId(), DEV_URL_SCAN_POINTS_MIDDLE,tjc_infor_t.unique_code, DEV_URL_SCAN_POINTS_END, para->pkgs.pkg[tjc_infor_t.package_record].id);
+
+    lyy_tjc_objTxt("app_pay_url", scan_points_url);
+    vTaskDelay(5 / portTICK_PERIOD_MS);
+}
+
+void lyy_tjc_page_scan_points(void)
+{
+    lyy_tjc_switch_page("scan_points");
+    vTaskDelay(5 / portTICK_PERIOD_MS);
+
+    lyy_tjc_device_infor();
+    device_get_points_show();
+
+    if (get_dev_type_code() == DEVICE_TYPE_UART_NDJ)
+    {
+        lyy_tjc_page_scan_points_ndj();
+    }
+    else
+    {
+        lyy_tjc_page_scan_points_std();
+    }
+}
+
+void lyy_tjc_page_scan_points_success(void)
+{
+    lyy_tjc_switch_page("scan_points_t");
+    vTaskDelay(5 / portTICK_PERIOD_MS);
+
+    lyy_tjc_device_infor();
+    member_to_consume_points_show();
+}
+
+void lyy_tjc_page_earn_points(void)
+{
+    lyy_tjc_switch_page("earn_points"); // 切换
+    vTaskDelay(5 / portTICK_PERIOD_MS);
+
+    lyy_tjc_page_earn_points_url_show();
+    lyy_tjc_device_infor();
+    device_get_points_show();
+
+    //lyy_tjc_page_obj_regist(regist_url);
+}
+
+void lyy_tjc_page_earn_points_success(void)
+{
+    lyy_tjc_switch_page("earn_points_re");
+    vTaskDelay(5 / portTICK_PERIOD_MS);
+
+    lyy_tjc_device_infor();
+    member_now_points_show();
+}
+
+void lyy_tjc_page_obj_pay_result_points(void)
+{
+    lyy_tjc_switch_page("result_points");
+    vTaskDelay(5 / portTICK_PERIOD_MS);
+
+    member_to_consume_add_points_show();
+
     lyy_tjc_device_infor();
 }
 
@@ -1232,8 +1657,6 @@ void lyy_tjc_touch_time_return(char *pack,uint16_t len)
 
     lyy_tjc_set_status(TJC_SHOW_PACKAGES);
 }
-
-
 /**
  * @brief 
  * 返回上一页
@@ -1249,13 +1672,74 @@ void tjc_touch_back(char *pack,uint16_t len)
     if(device_get_amy_err_Flag()) return;
     lyy_tjc_set_status(TJC_SHOW_PACKAGES);
 }
+
 /**
- * @brief 
- * 
- * @param pack 
- * @param len 
+ * @brief
+ * 点击获取积分
+ * @param pack
+ * @param len
  */
-void tjc_touch_regist_next(char *pack,uint16_t len)
+void lyy_tjc_touch_earn_points(char *pack, uint16_t len)
+{
+    (void)pack;
+    (void)len;
+    lyy_tjc_set_status(TJC_SHOW_EARN_POINTS);
+}
+
+/**
+ * @brief
+ * 点击正常套餐支付
+ * @param pack
+ * @param len
+ */
+void lyy_tjc_touch_pay_now(char *pack, uint16_t len)
+{
+    (void)pack;
+    (void)len;
+
+    lyy_tjc_packages_choose(tjc_infor_t.package_record, 0); // 默认第一个钱包 0
+}
+
+/**
+ * @brief
+ * 点击   会员正常套餐支付
+ * @param pack
+ * @param len
+ */
+void lyy_tjc_touch_pay_now_points(char *pack, uint16_t len)
+{
+    (void)pack;
+    (void)len;
+    tjc_infor_t.points_pay_flag = 2; // 标记积分抵扣登录会员，但是不使用积分消费
+    // 里面需要区分扭蛋机和非扭蛋机
+    lyy_tjc_packages_choose(tjc_infor_t.package_record, 0); // 默认第一个钱包 0
+
+
+}
+
+/**
+ * @brief
+ * 点击积分抵扣支付
+ * @param pack
+ * @param len
+ */
+void lyy_tjc_touch_pay_deduction(char *pack, uint16_t len)
+{
+    (void)pack;
+    (void)len;
+
+    tjc_infor_t.points_pay_flag = 1; // 标记积分抵扣消费
+
+    // 积分抵扣消费  里面需要区分扭蛋机和非扭蛋机
+    lyy_tjc_packages_choose(tjc_infor_t.package_record, 0); // 默认第一个钱包 0
+}
+/**
+ * @brief
+ *
+ * @param pack
+ * @param len
+ */
+void tjc_touch_regist_next(char *pack, uint16_t len)
 {
     (void)pack;
     (void)len;
@@ -1331,6 +1815,10 @@ int lyy_tjc_pay_id_isok(uint8_t package_id ,uint8_t wallet_id)
 void lyy_tjc_get_pay_url_ndj(uint8_t id,uint8_t wallet_id)
 {
     PAY_PARAM_DEF *para = get_pay_param();
+    TJC_POINT_AUTHORIZE_DEF *point_authorize_data = get_point_authorize();
+    cJSON_bool use_point_flag;
+
+
     char temp[64] = {0};
     LYY_LOGD("lyy_tjc_get_pay_url_ndj [package_id] :%d",id);
     LYY_LOGD("lyy_tjc_get_pay_url_ndj [wallet_id] :%d",wallet_id);   
@@ -1353,12 +1841,53 @@ void lyy_tjc_get_pay_url_ndj(uint8_t id,uint8_t wallet_id)
         lyy_tjc_page_waring_normal(temp);
         return ;
     }
-    event_post_query_dynamic_url_ndj(
-                        para->ndj_pkgs.lane[id].pkg.id,  //商品ID
-                        para->channel[wallet_id].code, //钱包编码  
-                        para->channel[wallet_id].channel_number, //渠道编号  
-                        para->ndj_pkgs.lane[id].x,
-                        para->ndj_pkgs.lane[id].y);  //获取动态支付二维码
+
+    if (point_authorize_data->deduct_enable == 1) // 判断是否可以开启积分抵扣
+    {
+        use_point_flag = true;
+    }
+    else
+    {
+        use_point_flag = false;
+    }
+
+    if (tjc_infor_t.points_pay_flag == 1)  //积分抵扣消费
+    {
+        event_post_query_dynamic_url_ndj_points(
+            para->ndj_pkgs.lane[id].pkg.id,          // 商品ID
+            para->channel[wallet_id].code,           // 钱包编码
+            para->channel[wallet_id].channel_number, // 渠道编号
+            para->ndj_pkgs.lane[id].x,
+            para->ndj_pkgs.lane[id].y,
+            use_point_flag,
+            point_authorize_data->auth_token,
+            point_authorize_data->deduct_points,
+            point_authorize_data->deduct_amount,
+            point_authorize_data->pay_amount); // 获取动态支付二维码
+    }
+    else if (tjc_infor_t.points_pay_flag == 2)  //会员普通消费
+    {
+        event_post_query_dynamic_url_ndj_points(
+            para->ndj_pkgs.lane[id].pkg.id,          // 商品ID
+            para->channel[wallet_id].code,           // 钱包编码
+            para->channel[wallet_id].channel_number, // 渠道编号
+            para->ndj_pkgs.lane[id].x,
+            para->ndj_pkgs.lane[id].y,
+            false,
+            point_authorize_data->auth_token,
+            point_authorize_data->deduct_points,
+            point_authorize_data->deduct_amount,
+            point_authorize_data->pay_amount); // 获取动态支付二维码
+    }
+    else //游客消费
+    {
+        event_post_query_dynamic_url_ndj(
+            para->ndj_pkgs.lane[id].pkg.id,          // 商品ID
+            para->channel[wallet_id].code,           // 钱包编码
+            para->channel[wallet_id].channel_number, // 渠道编号
+            para->ndj_pkgs.lane[id].x,
+            para->ndj_pkgs.lane[id].y); // 获取动态支付二维码
+    }
     LYY_LOGD("region :%s",para->channel[wallet_id].region);
     LYY_LOGD("channelCode :%s",para->channel[wallet_id].channel_code);
     LYY_LOGD("wallet_code :%s",para->channel[wallet_id].code);
@@ -1372,6 +1901,9 @@ void lyy_tjc_get_pay_url_ndj(uint8_t id,uint8_t wallet_id)
 void lyy_tjc_get_pay_url_std(uint8_t id,uint8_t wallet_id)
 {
     PAY_PARAM_DEF *para = get_pay_param();
+    TJC_POINT_AUTHORIZE_DEF *point_authorize_data = get_point_authorize();
+    cJSON_bool use_point_flag;
+
     char temp[64] = {0};
     LYY_LOGD("lyy_tjc_get_pay_url_std [package_id] :%d",id);
     LYY_LOGD("lyy_tjc_get_pay_url_std [wallet_id] :%d",wallet_id);   
@@ -1391,12 +1923,50 @@ void lyy_tjc_get_pay_url_std(uint8_t id,uint8_t wallet_id)
         LYY_LOGD("pakcage_id is error");
         //显示故障
         return ;
-    }   
-    event_post_query_dynamic_url_std(
-                            para->pkgs.pkg[id].id,  //商品ID
-                            para->channel[wallet_id].code, //钱包编码  //默认使用第一个钱包
-                            para->channel[wallet_id].channel_number//渠道编号  //默认使用第一个钱包
-                            );  //获取动态支付二维码  
+    }
+
+    if (point_authorize_data->deduct_enable==1)  //判断是否可以开启积分抵扣
+    {
+        use_point_flag = true;
+    }
+    else
+    {
+        use_point_flag = false;
+    }
+
+    if (tjc_infor_t.points_pay_flag == 1) // 积分抵扣消费
+    {
+        event_post_query_dynamic_url_std_points(
+            para->pkgs.pkg[id].id,                   // 商品ID
+            para->channel[wallet_id].code,           // 钱包编码  //默认使用第一个钱包
+            para->channel[wallet_id].channel_number, // 渠道编号  //默认使用第一个钱包
+            use_point_flag,
+            point_authorize_data->auth_token,
+            point_authorize_data->deduct_points,
+            point_authorize_data->deduct_amount,
+            point_authorize_data->pay_amount); // 获取动态支付二维码
+    }
+    else if (tjc_infor_t.points_pay_flag == 2) // 会员普通消费
+    {
+        event_post_query_dynamic_url_std_points(
+            para->pkgs.pkg[id].id,                  // 商品ID
+            para->channel[wallet_id].code,          // 钱包编码  //默认使用第一个钱包
+            para->channel[wallet_id].channel_number, // 渠道编号  //默认使用第一个钱包
+            false,
+            point_authorize_data->auth_token,
+            point_authorize_data->deduct_points,
+            point_authorize_data->deduct_amount,
+            point_authorize_data->pay_amount); // 获取动态支付二维码
+    }
+    else // 游客消费
+    {
+        event_post_query_dynamic_url_std(
+            para->pkgs.pkg[id].id,                  // 商品ID
+            para->channel[wallet_id].code,          // 钱包编码  //默认使用第一个钱包
+            para->channel[wallet_id].channel_number // 渠道编号  //默认使用第一个钱包
+        );                                          // 获取动态支付二维码
+    }
+ 
     LYY_LOGD("region :%s",para->channel[wallet_id].region);
     LYY_LOGD("channelCode :%s",para->channel[wallet_id].channel_code);
     LYY_LOGD("wallet_code :%s",para->channel[wallet_id].code);
@@ -1418,30 +1988,6 @@ void lyy_tjc_get_pay_qrcode(uint8_t id,uint8_t wallet_id)
     else
         lyy_tjc_get_pay_url_std(id,wallet_id);
 }
-
-/**
- * @brief
- * 售货机--获取支付二维码
- * @param id  手动输入的货到编号
- * @param wallet_id
- */
-void lyy_tjc_get_pay_qrcode_shj(uint16_t id, uint8_t wallet_id)
-{
-    char position[10]={0};
-    pay_url_wallet_number_set(wallet_id); // 默认使用第一个钱包
-    // pay_url_package_id_set(id);
-    PAY_PARAM_DEF *param = get_pay_param();
-    lyy_tjc_pay_page_set(wallet_id, param->chnl_sum);
-
-    sprintf(position, "%d", id);  //把货到编号转成字符串
-
-    event_post_query_dynamic_url_shj(
-        position,                                 //货道编号
-        param->channel[wallet_id].code,          // 钱包编码  //默认使用第一个钱包
-        param->channel[wallet_id].channel_number // 渠道编号  //默认使用第一个钱包
-    );                                           // 获取动态支付二维码
-}
-
 /**
  * @brief 
  * 选择套餐
@@ -1471,6 +2017,14 @@ int get_package_id(char *package)
     else if(strstr(package,"package8")!=NULL) return 7;
     else return 8;
 }
+
+void lyy_tjc_points_page_skip(void)
+{
+    lyy_tjc_switch_page("scan_points"); // 切换页面
+
+
+}
+
 /**
  * @brief 
  * 点击套餐
@@ -1480,9 +2034,19 @@ int get_package_id(char *package)
 void lyy_tjc_touch_package(char *pack,uint16_t len)
 {
 
-    (void)pack;
+    (void)pack;  
     (void)len;
-    lyy_tjc_packages_choose(get_package_id(pack),0); //默认第一个钱包 0
+
+    tjc_infor_t.package_record = get_package_id(pack);
+    if (tjc_infor_t.point_config.point_enabled==1) //是否开启积分消费 是进入积分消费模式
+    {
+        lyy_tjc_set_status(TJC_SHOW_SCAN_POINTS);
+    }
+    else
+    {
+        lyy_tjc_packages_choose(get_package_id(pack), 0); // 默认第一个钱包 0
+    }
+    
 }
 /**
  * @brief Get the package id object
@@ -1516,17 +2080,8 @@ void lyy_tjc_touch_wallet(char *pack,uint16_t len)
         LYY_LOGD("wallet number is error");
         return ;
     }
-    if (get_dev_type_code() == DEVICE_TYPE_UART_SHJ  || get_dev_type_code() == DEVICE_TYPE_UART_YUNANSHJ)
-    {
-        lyy_tjc_get_pay_qrcode_shj(tjc_infor_t.position, id);
-    }else{
+    lyy_tjc_get_pay_qrcode(pay_url_package_id_get(), id);
 
-        lyy_tjc_get_pay_qrcode(pay_url_package_id_get(), id);
-    }
-
-    
-
-    
 }
 
 
@@ -1741,14 +2296,6 @@ void tjc_recv_packet_handle(uint8_t *pack,uint32_t len)
     uint8_t i = 0;
     
     lyy_display_recvPic(pack,len);
-
-    if (pack[0] == 0x55 && pack[1] == 0x00 && pack[4] == 0x0d && pack [5] == 0x0a)  //售货机数字键盘输入
-    {
-       /*1、先判断是否在所需通道内，2、跳转到支付二维码页面，3、给服务器传数据请求该通道支付二维码，需要带价格、商品名称，展示在页面上。*/
-
-       tjc_infor_t.position = data_arrayTolittle16(&(pack[2]));
-       lyy_tjc_get_pay_qrcode_shj(tjc_infor_t.position,0);  //首次钱包默认用0
-    }
 
 #if 0
     uint8_t packetlen = 0;
@@ -1997,6 +2544,122 @@ int amy_time_redisplay(void)
     } 
     return 0x00;   
 }
+
+/**
+ * @brief
+ * 发送连接指令 -- 屏幕升级
+ * @param file_name
+ * @param sum
+ * @param num
+ * @param data_len
+ * @param context
+ */
+void lyy_tjc_connect_cmd_send(void)
+{
+    char pattern[] = {0x00, 0xff, 0xff, 0xff, 'c', 'o', 'n', 'n', 'e', 'c', 't', 0xff, 0xff, 0xff};
+    LYY_LOGD("lyy_tjc_cmd_send>%s", pattern);
+    lyy_printf_hex((uint8_t *)pattern, sizeof(pattern));
+    lyy_tjc_cmd_send(pattern, sizeof(pattern));
+}
+/**
+ * @brief 
+ * 显示屏业务
+ */
+void thread_screen_ota(void *arg)
+{
+
+    (void)arg;
+    // uint8_t ret, baudIndex = 0;
+    // uint8_t i = 0;
+    while(1)
+    {
+        // switch (board_ota_param_t.status)
+        // {
+        // case BOARD_OTA_STATUS_IDLE:
+        //     vTaskDelay(5000 / portTICK_PERIOD_MS);
+        //     break;                       
+        // case BOARD_OTA_STATUS_DATA_SEND: // 发送数据
+        //     vTaskDelay(5000 / portTICK_PERIOD_MS);
+        //     break;                                            // 发送数据
+        // case SCREEN_OTA_BAUD_SET:
+        // {
+        //     LYY_LOGD("os_uart_open ");
+        //     os_uart_open(UART_NAME_API_TJC, baudTable[baudIndex], UART_DATA_BITS_API_8, lyy_tjc_uart_cb);
+        //     vTaskDelay(200 / portTICK_PERIOD_MS);
+        //     LYY_LOGD("baudset %d", baudTable[baudIndex]);
+        //     lyy_tjc_baud_set(baudTable[baudIndex]);
+        //     baudIndex++;
+        //     if (baudIndex > 2)
+        //     {
+        //         board_ota_param_t.status = BOARD_OTA_STATUS_IDLE; // 空闲
+        //         LYY_LOGD("BOARD_OTA_STATUS_IDLE >>>>>");
+        //         para_deletefile(FILE_NAME_PARA_UPGRADE_SCREEN);
+        //         baudIndex = 0;
+        //         break;
+        //     }
+        //     LYY_LOGD("SCREEN_OTA_STATUS_INIT >>>>>");
+        //     board_ota_param_t.status = SCREEN_OTA_STATUS_INIT;
+        //     vTaskDelay(200 / portTICK_PERIOD_MS);
+        // }
+        // break;
+        // case SCREEN_OTA_STATUS_INIT: // 发送下载指令
+        //     for (i = 0; i < 3; i++)
+        //     {
+        //         lyy_semNewV2(&board_ota_param_t.sem_ota, 0);
+        //         lyy_tjc_connect_cmd_send();
+        //         ret = lyy_semWaitTryV2(board_ota_param_t.sem_ota, 500);
+        //         lyy_semFreeV2(board_ota_param_t.sem_ota);
+        //         if (ret > 0)
+        //             break;
+        //     }
+        //     if (ret > 0) // 设置成功
+        //     {
+        //         LYY_LOGD("baudset %d", baudTable[baudIndex]);
+        //         lyy_semNewV2(&board_ota_param_t.sem_ota, 0);
+        //         lyy_tjc_baud_set(921600);
+        //         ret = lyy_semWaitTryV2(board_ota_param_t.sem_ota, 500);
+        //         lyy_semNewV2(&board_ota_param_t.sem_ota, 0);
+        //         os_uart_open(UART_NAME_API_TJC, 921600, UART_DATA_BITS_API_8, lyy_tjc_uart_cb);
+        //         LYY_LOGD("file_size = %d baud = %d", board_ota_param_t.file_size, 921600);
+        //         lyy_tjc_ota_cmd_send(board_ota_param_t.file_size, 921600);
+        //         ret = lyy_semWaitTryV2(board_ota_param_t.sem_ota, 500);
+        //         lyy_semFreeV2(board_ota_param_t.sem_ota);
+        //         if (ret > 0) // 成功
+        //         {
+        //             LYY_LOGD("SCREEN_OTA_STATUS_DATA_SEND >>>>>");
+        //             board_ota_param_t.status = SCREEN_OTA_STATUS_DATA_SEND; // 空闲
+        //         }
+        //     }
+        //     else
+        //     { // 切换波特率
+        //         LYY_LOGD("change baud >>  SCREEN_OTA_BAUD_SET >>>>>");
+        //         board_ota_param_t.status = SCREEN_OTA_BAUD_SET;
+        //         vTaskDelay(500 / portTICK_PERIOD_MS);
+        //     }
+        //     break;
+        // case SCREEN_OTA_STATUS_DATA_SEND: // 发送数据
+        //     LYY_LOGD("start screen ota >>>>>>>>>");
+        //     ret = screen_ota_status_send();
+        //     LYY_LOGD("screen ota finished ret = %d | > 0 success", ret);
+        //     lyy_tjc_screen_type_get();
+        //     vTaskDelay(500 / portTICK_PERIOD_MS);
+        //     thing_ota_inform_version(tjc_infor_t.tjc_ver, THING_OTA_SCREEN); // 上报屏幕版本信息
+        //     // board_ota_param_t.status = BOARD_OTA_STATUS_IDLE;  //空闲
+        //     para_deletefile(FILE_NAME_PARA_UPGRADE_SCREEN);
+        //     // 屏幕升级完成 重启盒子
+        //     LYY_LOGD("system restart");
+        //     vTaskDelay(1500 / portTICK_PERIOD_MS);
+        //     lyy_softReset();
+        //     break; // 发送数据
+        // default:
+        //     vTaskDelay(5000 / portTICK_PERIOD_MS);
+        //     break;
+        // }
+        vTaskDelay(5000 / portTICK_PERIOD_MS); //开发时删除掉
+    }
+}
+
+
 /**
  * @brief 
  * 处理串口屏显示状态机
@@ -2036,7 +2699,10 @@ void thread_page_display(void *arg)
             }break;
             case TJC_SHOW_PACKAGES:
             {
+                tjc_infor_t.points_pay_flag = 0; //清空积分抵扣消费标记
+
                 lyy_tjc_packages_show();
+                device_get_points_show(); //可以得到的积分展示   先放这里，后续改位置
                 memset(&tjc_infor_t.count_down,0x00,sizeof(TJC_COUNT_DOWN_DEF));
                 tjc_infor_t.status = TJC_SHOW_UPDATE_NET;
             }break; 
@@ -2121,6 +2787,7 @@ void thread_page_display(void *arg)
             {
                 lyy_tjc_page_amy_time_work();       
             }break;
+
             case TJC_SHOW_LOG_DEBUG: //日志打印
             {
                 //todo...
@@ -2147,7 +2814,36 @@ void thread_page_display(void *arg)
             {
                 vTaskDelay(20 / portTICK_PERIOD_MS); 
             }break;
-
+            case TJC_SHOW_SCAN_POINTS: // 扫描抵扣积分
+            {
+                lyy_tjc_page_scan_points();
+                lyy_tjc_count_down(PAY_COUNTDOWN_MAX, TJC_SHOW_PACKAGES, TJC_SHOW_SCAN_POINTS);
+            }
+            break;
+            case TJC_SHOW_SCAN_POINTS_SUCCESS: // 扫描抵扣积分,登录成功
+            {
+                lyy_tjc_page_scan_points_success();
+                lyy_tjc_count_down(PAY_COUNTDOWN_MAX, TJC_SHOW_PACKAGES, TJC_SHOW_SCAN_POINTS_SUCCESS);
+            }
+            break;
+            case TJC_SHOW_EARN_POINTS: // 获取积分页面
+            {
+                lyy_tjc_page_earn_points();
+                lyy_tjc_count_down(PAY_COUNTDOWN_MAX, TJC_SHOW_PACKAGES, TJC_SHOW_EARN_POINTS);
+            }
+            break;
+            case TJC_SHOW_EARN_POINTS_SUCCESS: // 获取积分成功
+            {
+                lyy_tjc_page_earn_points_success();
+                lyy_tjc_count_down(PAY_COUNTDOWN_MAX, TJC_SHOW_PACKAGES, TJC_SHOW_EARN_POINTS_SUCCESS);
+            }
+            break;
+            case TJC_SHOW_PAY_RESULT_POINTS: // 积分抵扣付款成功
+            {
+                lyy_tjc_page_obj_pay_result_points();
+                lyy_tjc_count_down(10, TJC_SHOW_PACKAGES, TJC_SHOW_PAY_RESULT_POINTS);
+            }
+            break;
             default: //未知状态 显示套餐
             {
                 vTaskDelay(100 / portTICK_PERIOD_MS);
@@ -2289,7 +2985,6 @@ void thread_screen_init(void *arg)
 void lyy_init_tjc(void)
 {
 
-
     tjc_infor_t.step = SCREEN_START_STEP_HOMEPAGE;
     strcpy(tjc_infor_t.tjc_ver,"tjc_default_v3.0.0");
     
@@ -2306,6 +3001,12 @@ void lyy_init_tjc(void)
                     TJC_THREAD_STACK, 
                     NULL, 
                     5,
-                    NULL); 
+                    NULL);
 
+    xTaskCreate(thread_screen_ota,
+                "TJC_OTA_THREAD",
+                TJC_THREAD_STACK,
+                NULL,
+                5,
+                NULL);
 }

@@ -7,6 +7,8 @@
 
 #include "HAL_Gpio.h"
 
+#include "gpio_irq_api.h" // mbed
+#include "gpio_api.h"
 
 typedef struct {
 
@@ -37,10 +39,10 @@ static const GPIO_INFO_T g_pxGpioInfo[] = {
     GPIO_INIT_OUT(LED_RED,          GPIO_PuPd_NOPULL),
     GPIO_INIT_OUT(LED_GREEN,        GPIO_PuPd_NOPULL),
 
-/* 配网按键 */
-#define    NETWORK_TRIGGER          (_PA_27)   
+ /* 配网按键 */
+ #define    NETWORK_TRIGGER          (_PA_27)   
 
-    GPIO_INIT_IN(NETWORK_TRIGGER,   GPIO_PuPd_DOWN),
+ GPIO_INIT_IN(NETWORK_TRIGGER,   GPIO_PuPd_UP),
 
 /* 常开、常闭检测控制 */
 #define     COIN_CTR                (_PB_19)
@@ -76,6 +78,11 @@ uint8_t HAL_vGpioGet(uint32_t ulIoType)
 }
 
 
+/********************************************************************************/
+
+
+/********************************************************************************/
+
 void HAL_vGpioRegister(void)
 {
 
@@ -83,19 +90,19 @@ void HAL_vGpioRegister(void)
     uint16_t            usGpioNum = sizeof(g_pxGpioInfo)/sizeof(GPIO_INFO_T);
 
     GPIO_InitTypeDef   xIoConf;
-
     RCC_PeriphClockCmd(APBPeriph_GPIO, APBPeriph_GPIO_CLOCK, ENABLE);
 
-    for( ; usCount < usGpioNum ; usCount++) {
+    for (; usCount < usGpioNum; usCount++)
+    {
 
         xIoConf.GPIO_Pin   = g_pxGpioInfo[usCount].ulGpioPin;
         xIoConf.GPIO_Mode  = g_pxGpioInfo[usCount].ulGpioMode;
         xIoConf.GPIO_PuPd  = g_pxGpioInfo[usCount].ulGpioPupd;
 
+        //PAD_PullCtrl(xIoConf.GPIO_Pin, xIoConf.GPIO_PuPd);  //前后都设置一下
         GPIO_Init(&xIoConf);
-
-    } 
-
+        //PAD_PullCtrl(xIoConf.GPIO_Pin, xIoConf.GPIO_PuPd); // 前后都设置一下
+    }
 }
 
 

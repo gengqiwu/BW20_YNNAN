@@ -426,6 +426,8 @@ void device_ndj_ack_set_laneInfor(uint8_t *packet,uint16_t len)
 void device_ndj_update_startResult(uint8_t *packet,uint16_t len)
 {
     uint8_t lane_id = packet[6]; //仓位ID
+    if (lane_id >= 1)
+        lane_id -= 1;
     PNDJ_UPDATE_EVENT_DEF infor = get_update_event_infor();
     device_ndj_update_event_rsp(packet,len);
     if(memcmp(infor->start[lane_id].start_result_cmd.pack_id,packet+7,6)==0) //指令唯一码一样
