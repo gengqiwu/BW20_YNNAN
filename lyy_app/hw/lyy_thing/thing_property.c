@@ -53,7 +53,7 @@ int property_read_infor_net(cJSON* reply);
 int property_read_login_flag(cJSON* reply);
 int property_read_dev_infor(cJSON* reply);
 /**
- * @brief 
+ * @brief
  * 属性操作
  */
 const PROPER_METHOD_DEF method_property[] = 
@@ -96,6 +96,8 @@ void thing_property_set(cJSON* params)
     cJSON* object               = NULL;
     uint8_t i                   = 0;
     int res                     = -1;
+    uint8_t handled             = 0;
+    uint8_t failed              = 0;
     PROPER_METHOD_DEF *method   = NULL;
     char id[6]                  = {0x00,};
     char id_str[15]             = {0x00,};
@@ -106,16 +108,24 @@ void thing_property_set(cJSON* params)
         object = cJSON_GetObjectItem(params, method->method);
         if(object != NULL)
         {
+            handled = 1;
             if(method->pro_write != NULL)
+            {
                 res = method->pro_write(object);
+                if(res < 0)
+                {
+                    failed = 1;
+                }
+            }
             else
             {
                 LYY_LOGD("pro_write[%s] is null",method->method);
+                failed = 1;
             }
-            break;
         }
     }
     //id-相当于指令唯一码
+    res = (handled && !failed) ? 1 : -1;
     vRandomGet(id, sizeof(id));
     utils_lhexToString(id_str, (const unsigned char*)id, sizeof(id));
     thing_property_set_reply(((res>=0)?"success":"fail"),id_str);
