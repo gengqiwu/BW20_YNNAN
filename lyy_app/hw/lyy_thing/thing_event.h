@@ -8,6 +8,8 @@
 #ifndef __MODEL_EVENT_H__ 
 #define __MODEL_EVENT_H__
 
+#include <string.h>
+#include "cJSON.h"
 
 //账目类型
 enum acc_type
@@ -31,10 +33,11 @@ extern void event_post_account_ndj(uint16_t coin,uint32_t coins,uint16_t gift,ui
 extern void event_post_board_err_ndj(uint8_t error,uint8_t x,uint8_t y);
 extern void event_post_start_result_ndj(uint16_t result,uint8_t x,uint8_t y,char *order);
 
-extern void event_post_query_dynamic_url_ndj(char *package_id,char *channel,char *channel_number,uint32_t x,uint32_t y);
+extern void event_post_account_dbj_uart_change(char *type, uint32_t acc_sum, uint32_t acc_inc, char *unqueId);
+
+extern void event_post_query_dynamic_url_ndj(char *package_id, char *channel, char *channel_number, uint32_t x, uint32_t y);
 extern void event_post_query_dynamic_url_std(char *package_id,char *channel,char *channel_number);
-extern void event_post_query_dynamic_url_shj(char *position, char *channel, char *channel_number);
-extern void event_post_out_coin_result(char *result, uint32_t out_coins, char *unique_code, float pay_amount);
+extern void event_post_out_coin_result(char *result, uint32_t out_coins, char *unique_code,float pay_amount);
 extern void event_post_account_dbj_uart(char *type,uint32_t acc_sum,uint32_t acc_inc,uint32_t out_sum,uint32_t out_inc,char *unqueId);
 extern void event_post_account_wwj_uart(char *pay_method,uint32_t coin_sum,uint32_t coin_inc,uint32_t gift_sum,uint32_t gift_inc, char *order);
 extern void event_post_account_pulse(uint32_t inc,uint32_t sum,char *pay_mode,char *order,char *event_id);
@@ -42,7 +45,10 @@ extern void event_post_account_amy_uart(char *pay_method,uint32_t coin_sum,uint3
 extern void event_post_start_result_wwj(uint32_t gifts,uint32_t coins,uint32_t refund,char *order);
 extern void event_post_err_message(char *language, int login);
 
-extern void event_post_loge(char *loge);
+extern void event_post_log(char *log);
 extern void event_post_log_hextostring(uint8_t *data, uint16_t len);
-
+extern void event_post_start_result_dfssj(uint16_t volume, uint8_t x, uint8_t y, char *order);
+extern void event_post_query_marketing_point_config(void);
+extern void event_post_query_dynamic_url_std_points(char *package_id, char *channel, char *channel_number, cJSON_bool use_point_flag, char *auth_token, char *expected_deduct_points, char *expected_deduct_amount, char *expected_pay_amount);
+extern void event_post_query_dynamic_url_ndj_points(char *package_id, char *channel, char *channel_number, uint32_t x, uint32_t y, cJSON_bool use_point_flag, char *auth_token, char *expected_deduct_points, char *expected_deduct_amount, char *expected_pay_amount);
 #endif // !

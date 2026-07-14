@@ -75,7 +75,7 @@ extern int          APP_lParamSetBaundRate(uint32_t ulBaundRate);
 extern int          APP_lPulseParamSetInfo(uint32_t pxAppParam);
 
 /* WIFI信息 */
-extern WIFI_MODE_T  APP_xGetParamWifiMode(void);
+extern WIFI_MODE_T APP_xGetParamWifiMode(void);
 extern char         *APP_pcGetParamWifiPwd(void);
 extern char         *APP_pcGetParamWifiSsid(void);
 extern void         APP_vSetParamWifiMode(WIFI_MODE_T xWifiMode);

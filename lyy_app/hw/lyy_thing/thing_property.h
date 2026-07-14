@@ -69,7 +69,7 @@ extern void pay_package_update(void *package,cJSON *body);
 
 extern void property_post_csq_level(void);
 extern void property_post_lbs_cell(void *para);
-extern void property_post_vending_drop_detection(uint8_t enable);
+extern void property_post_wifi_info(void);
 extern char *get_fault_msg(uint16_t code);
 extern void dev_fault_init(void);
 extern DEV_FAULT *get_dev_fault_para(void);

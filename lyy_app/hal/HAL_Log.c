@@ -15,24 +15,23 @@
 #include "HAL_Log.h"
 #include "hal_uart.h"
 
-#define HAL_XLOG_BUFF_SIZE_MAX (512U)
+#define HAL_XLOG_BUFF_SIZE_MAX   	(512U)
 
-static char g_cDbgBuf[HAL_XLOG_BUFF_SIZE_MAX] = {
-	0x00,
-};
+static char g_cDbgBuf[HAL_XLOG_BUFF_SIZE_MAX] = {0x00, };
 
 void HAL_vLogWrite(const char *cFormat, ...)
 {
 
 	memset(g_cDbgBuf, 0x00, HAL_XLOG_BUFF_SIZE_MAX);
-
+	
 	va_list xArg;
 	va_start(xArg, cFormat);
 	vsnprintf(g_cDbgBuf, HAL_XLOG_BUFF_SIZE_MAX - 1, cFormat, xArg);
 
-	printf("%s", g_cDbgBuf);
+	printf("%s", g_cDbgBuf);  
 
 	va_end(xArg);
+
 }
 
 /**

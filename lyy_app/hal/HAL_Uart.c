@@ -279,6 +279,11 @@ void HAL_vUartRecvProc(uint8_t ucPort, vRecvFunc xRecvFunc)
 void HAL_vUartSend(uint8_t ucPort, uint8_t *pucData, uint32_t ulLen, uint32_t ulTimeout)
 {
 
+    if (g_xHalUartConfig[ucPort].xTxSem == NULL || g_xHalUartConfig[ucPort].xRxSem == NULL)
+    {
+        return;
+    }
+
     DCache_CleanInvalidate((u32)pucData, ulLen);
 
     GDMA_InitTypeDef xGDMATxInitStruct = g_xHalUartConfig[ucPort].xGDMATxInitStruct;
@@ -317,13 +322,13 @@ void HAL_vUartSend(uint8_t ucPort, uint8_t *pucData, uint32_t ulLen, uint32_t ul
     UART_TXDMAConfig(g_xHalUartConfig[ucPort].pxUart,   HAL_DMA_TX_BURST_SIZE);
     UART_TXDMACmd(g_xHalUartConfig[ucPort].pxUart,      ENABLE);
 
-    if(ulTimeout) {
+    if (ulTimeout)
+    {
 
         g_xHalUartConfig[ucPort].ucTxSemSta = 0x01;
         xSemaphoreTake(g_xHalUartConfig[ucPort].xTxSem, ulTimeout);
         g_xHalUartConfig[ucPort].ucTxSemSta = 0x00;
     }
-
 }
 
 
@@ -454,7 +459,6 @@ void HAL_vUartInit(uint8_t ucPort, uint32_t ulBaud)
 	Pinmux_Config(  g_xHalUartConfig[ucPort].ucUartRxPin, 
                     g_xHalUartConfig[ucPort].ucUartRxFunc);
 
-	PAD_PullCtrl(g_xHalUartConfig[ucPort].ucUartTxPin, GPIO_PuPd_UP); 
 	PAD_PullCtrl(g_xHalUartConfig[ucPort].ucUartRxPin, GPIO_PuPd_UP); 
 
     UART_StructInit(&xUartInitStruct);

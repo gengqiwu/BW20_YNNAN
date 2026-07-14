@@ -28,12 +28,18 @@
 #include "lyy_amy.h"
 #include "lyy_wwj.h"
 #include "lyy_dbj.h"
-#include "lyy_adh814e.h"
-#include "lyy_yunanshj.h"
 #include "lyy_para.h"
 #include "lyy_start.h"
 #include "lyy_device.h"
-
+#include "lyy_xyj.h"
+#include "lyy_hgj.h"
+#include "lyy_cwhgj.h"
+#include "lyy_cwxyj.h"
+#include "lyy_cwxhj.h"
+#include "lyy_mshgj.h"
+#include "lyy_tclxyj.h"
+#include "lyy_dfssj.h"
+#include "lyy_xcj.h"
 
 GET_PAY_URL_PARAM_DEF pay_url_param_t;  //获取动态二维码参数
 
@@ -193,26 +199,72 @@ void lyy_start_pay_apply(uint8_t *pucData, uint32_t ulLen)
             else
                 thing_service_reply_pay_apply(pxPayApply->uniqueid,0,pxPayApply->pay_apply_id);   // 其他状态为失败
         }break;
-
-        case DEVICE_TYPE_UART_SHJ: // 售货机
+        case DEVICE_TYPE_UART_LJXYJ: // 乔禾洗衣机
+        case DEVICE_TYPE_UART_QHXYJ: // 乔禾洗衣机
         {
-
-            ret = (device_adh814e_pay_apply() > 0) ? g_xlyyHwMark.applyResult : PAY_START_RESULT_TIMEOUT; //
-
-            thing_service_reply_pay_apply(pxPayApply->uniqueid, ret, pxPayApply->pay_apply_id); // 1成功，0超时
+            ret = (device_qhxyj_pay_apply() > 0) ? apply_start_t.apply_result : PAY_START_RESULT_TIMEOUT; //
+            /*是否应答超时--》有应答，是否设备正常*/
+            thing_service_reply_pay_apply_qhxyj(pxPayApply->uniqueid, ret, pxPayApply->pay_apply_id);
         }
         break;
-
-        case DEVICE_TYPE_UART_YUNANSHJ: // 宇楠售货机
+        case DEVICE_TYPE_UART_LJHGJ: // 乔禾烘干机
+        case DEVICE_TYPE_UART_QHHGJ: // 乔禾烘干机
         {
-            g_xlyyHwMark.ucPaySem = 0x01;//当前有支付申请在等待结果
-            g_xlyyHwMark.applyResult=0;
-            ret = (device_yunanshj_pay_apply(pxPayApply->number) > 0) ? g_xlyyHwMark.applyResult : PAY_START_RESULT_TIMEOUT;
-            g_xlyyHwMark.ucPaySem = 0x00;//清除标志，表示支付申请流程已结束
-            thing_service_reply_pay_apply(pxPayApply->uniqueid, ret, pxPayApply->pay_apply_id);
+            ret = (device_qhhgj_pay_apply() > 0) ? apply_start_t.apply_result : PAY_START_RESULT_TIMEOUT; //
+            /*是否应答超时--》有应答，是否设备正常*/
+            thing_service_reply_pay_apply_qhhgj(pxPayApply->uniqueid, ret, pxPayApply->pay_apply_id);
         }
         break;
-
+        case DEVICE_TYPE_UART_SKYWORTH_GTXYJ: // 创维滚筒洗衣机
+        {
+            ret = (skyworth_qhxyj_pay_apply() > 0) ? apply_start_t.apply_result : PAY_START_RESULT_TIMEOUT; //
+            /*是否应答超时--》有应答，是否设备正常*/
+            thing_service_reply_pay_apply_qhxyj(pxPayApply->uniqueid, ret, pxPayApply->pay_apply_id);
+        }
+        break;
+        case DEVICE_TYPE_UART_SKYWORTH_GTHGJ: //
+        {
+            ret = (skyworth_qhhgj_pay_apply() > 0) ? apply_start_t.apply_result : PAY_START_RESULT_TIMEOUT; //
+            /*是否应答超时--》有应答，是否设备正常*/
+            thing_service_reply_pay_apply_qhxyj(pxPayApply->uniqueid, ret, pxPayApply->pay_apply_id);
+        }
+        break;
+        case DEVICE_TYPE_UART_SKYWORTH_GTXHJ: //
+        {
+            ret = (skyworth_qhxhj_pay_apply() > 0) ? apply_start_t.apply_result : PAY_START_RESULT_TIMEOUT; //
+            /*是否应答超时--》有应答，是否设备正常*/
+            thing_service_reply_pay_apply_qhxyj(pxPayApply->uniqueid, ret, pxPayApply->pay_apply_id);
+        }
+        break;
+        case DEVICE_TYPE_UART_MSHGJ: // 
+        {
+            LYY_LOGD("mshgj_pay_apply");
+            ret = (mshgj_pay_apply() > 0) ? apply_start_t.apply_result : PAY_START_RESULT_TIMEOUT; //
+            /*是否应答超时--》有应答，是否设备正常*/
+            thing_service_reply_pay_apply_qhxyj(pxPayApply->uniqueid, ret, pxPayApply->pay_apply_id);
+        }
+        break;
+        case DEVICE_TYPE_UART_TCLXYJ: // TCL洗衣机
+        {
+            LYY_LOGD("device_tclxyj_pay_apply");
+            ret = (device_tclxyj_pay_apply() > 0) ? apply_start_t.apply_result : PAY_START_RESULT_TIMEOUT; //
+            /*是否应答超时--》有应答，是否设备正常*/
+            thing_service_reply_pay_apply_qhxyj(pxPayApply->uniqueid, ret, pxPayApply->pay_apply_id);
+        }
+        break;
+        case DEVICE_TYPE_UART_DFSSJ: // 售水机
+        {
+            ret = (device_dfssj_pay_apply(pxPayApply->x + 1) > 0) ? 1 : 0;
+            LYY_LOGD("ret:%d",ret);
+            thing_service_reply_pay_apply_ndj(pxPayApply->x + 1, pxPayApply->uniqueid, ret, pxPayApply->pay_apply_id);  
+        }
+        break;
+        case DEVICE_TYPE_UART_THXCJ: // 洗车机
+        {
+            ret = (xcj_pay_apply() > 0) ? 1 : 0; //
+            thing_service_reply_pay_apply_qhxyj(pxPayApply->uniqueid, ret, pxPayApply->pay_apply_id);
+        }
+        break;
         default:break;
     }
 
@@ -228,8 +280,6 @@ void lyy_start_pay_start(uint8_t *pucData, uint32_t ulLen)
     int result = 0;
     int ret = 0;
     int refund = 0;
-    uint8_t i = 24;
-    uint8_t gift_number = 0;
 
     HW_PAY_APPLY *pxPayApply = (HW_PAY_APPLY *)pucData;
     
@@ -338,131 +388,95 @@ void lyy_start_pay_start(uint8_t *pucData, uint32_t ulLen)
             thing_service_reply_pay_start_amy(pxPayApply->uniqueid ,ret, pxPayApply->pay_apply_id);
 
         }break;
-        case DEVICE_TYPE_UART_SHJ:  //售货机
+        case DEVICE_TYPE_UART_LJXYJ: // 蓝鲸洗衣机
+        case DEVICE_TYPE_UART_QHXYJ: // 乔禾洗衣机
         {
-            g_xlyyHwMark.startResult = 0;
-
-            g_xlyyHwMark.ucPaySem = 0x01;
-            start_ret = (device_adh814e_pay_statr(pxPayApply->number) > 0) ? g_xlyyHwMark.startResult : PAY_START_RESULT_TIMEOUT;
-            g_xlyyHwMark.ucPaySem = 0x00;
-
-            if (start_ret!= 1)   //不等于1，标识启动失败，直接上报结果
-            {
-                LYY_LOGD("start_ret[SHJ111]:%d",start_ret);
-                thing_service_reply_pay_start_shj(pxPayApply->uniqueid,
-                                                  shj_pay_start_t.order_item[0].itemOrder,
-                                                  shj_pay_start_t.order_item[0].positionId,
-                                                  shj_pay_start_t.order_item[0].positionX,
-                                                  shj_pay_start_t.order_item[0].positionY,
-                                                  start_ret,
-                                                  0,
-                                                  shj_pay_start_t.order_item[0].stock,
-                                                  pxPayApply->pay_apply_id);
-            }
-            else
-            {
-                while (--i)
-                {
-                    vTaskDelay(800 / portTICK_PERIOD_MS);
-                    if (checkSta_flag == 1)  //防止通信失败
-                    {
-                        if (state_814_t.state == 1 && state_814_t.result == 0)
-                        {
-                            continue;
-                        }
-
-                        if (state_814_t.result != 0)
-                        {
-                            // 出货失败。
-
-                            if (state_814_t.result == 0x04)
-                            {
-                                //start_ret = 10;  //其他 other  有调货检测的需要开启
-                                start_ret = 1;  //  无掉货检测，直接成功
-                                gift_number = 1; //出礼固定为1
-                            }
-                            else
-                            {
-                                start_ret = 2;
-                                gift_number = 0;
-                            }
-
-                            thing_service_reply_pay_start_shj(pxPayApply->uniqueid,
-                                                              shj_pay_start_t.order_item[0].itemOrder,
-                                                              shj_pay_start_t.order_item[0].positionId,
-                                                              shj_pay_start_t.order_item[0].positionX,
-                                                              shj_pay_start_t.order_item[0].positionY,
-                                                              start_ret,
-                                                              gift_number,
-                                                              (shj_pay_start_t.order_item[0].stock - gift_number),
-                                                              pxPayApply->pay_apply_id);
-                            break;
-                        }
-
-                        if (state_814_t.result == 0)
-                        {
-                            //出货成功
-
-                            thing_service_reply_pay_start_shj(pxPayApply->uniqueid,
-                                                              shj_pay_start_t.order_item[0].itemOrder,
-                                                              shj_pay_start_t.order_item[0].positionId,
-                                                              shj_pay_start_t.order_item[0].positionX,
-                                                              shj_pay_start_t.order_item[0].positionY,
-                                                              1,
-                                                              1,
-                                                              (shj_pay_start_t.order_item[0].stock-1),
-                                                              pxPayApply->pay_apply_id);
-                            break;
-                        }
-                    }
-                    
-                } 
-                
-                if(i<=0)  //出货超，表示出货失败
-                {
-                    LYY_LOGD("start_ret[SHJ222]:%d", start_ret);
-                    start_ret = 5;  //超时
-                    thing_service_reply_pay_start_shj(pxPayApply->uniqueid,
-                                                      shj_pay_start_t.order_item[0].itemOrder,
-                                                      shj_pay_start_t.order_item[0].positionId,
-                                                      shj_pay_start_t.order_item[0].positionX,
-                                                      shj_pay_start_t.order_item[0].positionY,
-                                                      start_ret,
-                                                      0,
-                                                      shj_pay_start_t.order_item[0].stock,
-                                                      pxPayApply->pay_apply_id);
-                }
-                 
-            }
-            adh814e_cmd_ack();
-            shj_pay_start_t.startflag = 0;   //更新标识，可以进行下次售货机支付启动
+            apply_start_t.start_result = 0x00;
+            start_ret = device_qhxyj_pay_start(pxPayApply->number);
+            LYY_LOGD("start_ret[qhxyj]:%d", start_ret);
+            ret = start_ret > 0 ? apply_start_t.start_result : PAY_START_RESULT_TIMEOUT; //
+            thing_service_reply_pay_start_qhxyj(pxPayApply->uniqueid, ret, pxPayApply->pay_apply_id);
         }
         break;
-
-        case DEVICE_TYPE_UART_YUNANSHJ:  //宇楠售货机
+        case DEVICE_TYPE_UART_LJHGJ: // 蓝鲸烘干机
+        case DEVICE_TYPE_UART_QHHGJ: // 乔禾烘干机
         {
-            g_xlyyHwMark.startResult = 0;
-            g_xlyyHwMark.ucPaySem = 0x01;
-            start_ret = (device_yunanshj_pay_start() > 0) ? g_xlyyHwMark.startResult : PAY_START_RESULT_TIMEOUT;
-            g_xlyyHwMark.ucPaySem = 0x00;
-
-            LYY_LOGD("start_ret[YUNANSHJ]:%d", start_ret);
-
-            // 上报出货结果
-            thing_service_reply_pay_start_shj(pxPayApply->uniqueid,
-                                              shj_pay_start_t.order_item[0].itemOrder,
-                                              shj_pay_start_t.order_item[0].positionId,
-                                              shj_pay_start_t.order_item[0].positionX,
-                                              shj_pay_start_t.order_item[0].positionY,
-                                              start_ret,
-                                              (start_ret == PAY_START_RESULT_SUCCESS) ? 1 : 0,  // 成功出货数
-                                              shj_pay_start_t.order_item[0].stock,
-                                              pxPayApply->pay_apply_id);
-
-            shj_pay_start_t.startflag = 0;   //更新标识，可以进行下次售货机支付启动
+            apply_start_t.start_result = 0x00;
+            start_ret = device_qhhgj_pay_start(pxPayApply->number);
+            LYY_LOGD("start_ret[qhhgj]:%d", start_ret);
+            ret = start_ret > 0 ? apply_start_t.start_result : PAY_START_RESULT_TIMEOUT; //
+            thing_service_reply_pay_start_qhhgj(pxPayApply->uniqueid, ret, pxPayApply->pay_apply_id);
         }
         break;
+        case DEVICE_TYPE_UART_SKYWORTH_GTXYJ: // 创维滚筒洗衣机
+        {
+            start_ret = skyworth_xyj_pay_start(pxPayApply->number);
+            LYY_LOGD("start_ret[cwxyj]:%d", start_ret);
+            ret = start_ret > 0 ? apply_start_t.start_result : PAY_START_RESULT_TIMEOUT; //
+            thing_service_reply_pay_start_qhxyj(pxPayApply->uniqueid, ret, pxPayApply->pay_apply_id);
 
+            if (apply_start_t.start_result == 1)
+            { // 洗衣机启动成功，启动加液机
+                CYJYJ_start(15, 15);
+            }
+        }
+        break;
+        case DEVICE_TYPE_UART_SKYWORTH_GTHGJ: //
+        {
+            start_ret = skyworth_hgj_pay_start(pxPayApply->number);
+            LYY_LOGD("start_ret[cwxyj]:%d", start_ret);
+            ret = start_ret > 0 ? apply_start_t.start_result : PAY_START_RESULT_TIMEOUT; //
+            thing_service_reply_pay_start_qhxyj(pxPayApply->uniqueid, ret, pxPayApply->pay_apply_id);
+        }
+        break;
+        case DEVICE_TYPE_UART_SKYWORTH_GTXHJ: //
+        {
+            start_ret = skyworth_xhj_pay_start(pxPayApply->number);
+            LYY_LOGD("start_ret[cwxhj]:%d", start_ret);
+            ret = start_ret > 0 ? apply_start_t.start_result : PAY_START_RESULT_TIMEOUT; //
+            thing_service_reply_pay_start_qhxyj(pxPayApply->uniqueid, ret, pxPayApply->pay_apply_id);
+        }
+        break;
+        case DEVICE_TYPE_UART_MSHGJ: //麦穗烘干机
+        {
+            start_ret = mshgj_pay_start(pxPayApply->number);
+            LYY_LOGD("start_ret[cwxyj]:%d", start_ret);
+            ret = start_ret > 0 ? apply_start_t.start_result : PAY_START_RESULT_TIMEOUT; //
+            thing_service_reply_pay_start_qhxyj(pxPayApply->uniqueid, ret, pxPayApply->pay_apply_id);
+        }
+        break;
+        case DEVICE_TYPE_UART_TCLXYJ: //
+        {
+            start_ret = device_tclxyj_pay_start(pxPayApply->number);
+            LYY_LOGD("start_ret[cwxyj]:%d", start_ret);
+            ret = start_ret > 0 ? apply_start_t.start_result : PAY_START_RESULT_TIMEOUT; //
+            thing_service_reply_pay_start_qhxyj(pxPayApply->uniqueid, ret, pxPayApply->pay_apply_id);
+        }
+        break;
+        case DEVICE_TYPE_UART_DFSSJ:
+        {
+            PDFSSJ_UPDATE_EVENT_DEF infor = dfssj_get_update_event_infor();
+            g_xlyyHwMark.startResult = 0;
+            memset(infor->start[pxPayApply->x].order, 0, sizeof(infor->start[pxPayApply->x].order));
+            strcpy(infor->start[pxPayApply->x].order, pxPayApply->uniqueid); // 缓存订单号
+            infor->start[pxPayApply->x].flag = false;                        // 清零上报标识
+            g_xlyyHwMark.ucPaySem = 0x01;
+            result = (deivce_dfssj_pay_start(pxPayApply->x + 1, pxPayApply->number) > 0) ? g_xlyyHwMark.startResult : PAY_START_RESULT_TIMEOUT;
+            g_xlyyHwMark.ucPaySem = 0x00;
+
+            LYY_LOGD("result[ndj]:%d", result);
+            thing_service_reply_pay_start_dfssj(pxPayApply->x + 1, pxPayApply->uniqueid, result, pxPayApply->pay_apply_id);
+        }
+        break;
+        case DEVICE_TYPE_UART_THXCJ:
+        {
+            apply_start_t.start_result = 0x00;
+            start_ret = xcj_pay_start(10,pxPayApply->number);
+            LYY_LOGD("start_ret[cwxyj]:%d", start_ret);
+            ret = start_ret > 0 ? apply_start_t.start_result : PAY_START_RESULT_TIMEOUT; //
+            thing_service_reply_pay_start_qhxyj(pxPayApply->uniqueid, ret, pxPayApply->pay_apply_id);
+        }
+        break;
         default:break;
     }          
 }
@@ -529,6 +543,7 @@ int api_std_start_entryQue(uint8_t type,uint16_t num,char *order , uint16_t x, u
 
     return 1;
 }
+
 
 
 

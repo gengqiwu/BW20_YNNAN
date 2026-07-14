@@ -163,18 +163,17 @@ void box_get_cloud_pay_param(void)
 
     event_post_query_pay_channels(); //支付渠道
     vTaskDelay(500  / portTICK_PERIOD_MS);
+    event_post_query_marketing_point_config(); //获取积分营销配置
+    vTaskDelay(500 / portTICK_PERIOD_MS);
 
-    //ndj_add
-    if(get_dev_type_code() == DEVICE_TYPE_UART_NDJ) //扭蛋机
+    
+    // ndj_add
+    if (get_dev_type_code() == DEVICE_TYPE_UART_NDJ) // 扭蛋机
     {
         event_post_query_lane_info_post();
         vTaskDelay(1000  / portTICK_PERIOD_MS);
         event_post_query_pay_packages_ndj("CONSUMPTION",1,0,"true");
         vTaskDelay(1000  / portTICK_PERIOD_MS);
-    }
-    else if (get_dev_type_code() == DEVICE_TYPE_UART_SHJ || get_dev_type_code() == DEVICE_TYPE_UART_YUNANSHJ)  //售货机不获取套餐
-    {
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
     }   
     else  //其他都是一样的方式
     {
@@ -209,6 +208,9 @@ void box_post_cloud_device_infor(void)
 
     property_post_uart_brt_infor(); //上报波特率
     vTaskDelay(1000  / portTICK_PERIOD_MS);
+
+    property_post_wifi_info(); // 上报WIFI账号密码
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
 
     thing_ota_inform_version(CFG_APP_VERSION , THING_OTA_DEFAULT);  //上报版本信息
     vTaskDelay(2000  / portTICK_PERIOD_MS);//延时等待获取设备品类  

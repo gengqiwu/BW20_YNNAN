@@ -28,12 +28,14 @@ PAY_PARAM_DEF               pay_param_t;
 //ndj_add
 LANE_INFOR_TABLE_DEF        lane_net = {0};         //线上仓位参数主要禁止状态
 
-SHJ_PAY_START_DEF           shj_pay_start_t = {0};  //售货机启动订单
+
+
+
 /**
- * @brief
+ * @brief 
  * 设备类型
  * 返回值：
- * DEVICE_TYPE_PULSE：脉冲版本
+ * DEVICE_TYPE_PULSE：脉冲版本 
  * DEVICE_TYPE_LEVEL：电平版本
  * DEVICE_TYPE_UART_DBJ：兑币机
  * DEVICE_TYPE_UART_WWJ：娃娃机
@@ -42,7 +44,7 @@ SHJ_PAY_START_DEF           shj_pay_start_t = {0};  //售货机启动订单
  * DEVICE_TYPE_UART_NDJ: 扭蛋机
  * DEVICE_TYPE_UART_NOTE: 纸钞机
  * DEVICE_TYPE_DEFAULT :缺省工厂测试模式
- * @return lyy_uint8_t
+ * @return lyy_uint8_t 
  * < 0 无匹配
  * 其他成功
  */
@@ -61,9 +63,17 @@ int get_dev_type_code(void)
             {"dev_type_uart_amy_lyy"},
             {"dev_type_uart_xyj_lyy"},
             {"dev_type_uart_note_lyy"},
-            {"dev_type_uart_czf_lyy"},
-            {"dev_type_uart_shj_lyy"},
-            {"dev_type_uart_ynshj_lyy"},//宇楠售货机
+            {"dev_type_uart_qhxyj_lyy"}, /*乔禾洗衣机 add by dxw,20241010*/
+            {"dev_type_uart_qhhgj_lyy"}, /*乔禾烘干机 add by dxw,20241010*/
+            {"dev_type_uart_ljxyj_lyy"}, /*蓝鲸洗衣机 add by dxw,20241210*/
+            {"dev_type_uart_ljhgj_lyy"}, /*蓝鲸烘干机 add by dxw,20241210*/
+            {"dev_type_uart_cwxyj_lyy"}, /*创维滚筒洗衣机 add by zyl,20250605*/
+            {"dev_type_uart_mshgj_lyy"},
+            {"dev_type_uart_cwhgj_lyy"},  /*创维烘干机*/
+            {"dev_type_uart_cwxhj_lyy"},  /*创维洗烘机*/
+            {"dev_type_uart_tclxyj_lyy"}, /*TCL洗衣机*/
+            {"dev_type_uart_dfssj_lyy"},  /*德锋售水机*/
+            {"dev_type_uart_thxcj_lyy"},  /*探虎洗车机*/
         };
 
     for(uint8_t i=0;i<sizeof(dev_type_t)/sizeof(dev_type_t[0]);i++)

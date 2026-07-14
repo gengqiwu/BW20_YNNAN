@@ -353,7 +353,7 @@ void HAL_vHttpGet(const char *pcUrl, vHttpDataCd xHttpDataCd, vHttpRes xHttpRes)
 
         if(g_HalHttpC.xHttpRes) {
 
-            g_HalHttpC.xHttpRes(HTTP_GET_ERR, g_HalHttpC.ulHttpRvDataLen);
+            g_HalHttpC.xHttpRes(HTTP_GET_ERR, g_HalHttpC.ulHttpRvDataLen);  
         }
         LYY_LOGE("Invalid URL format\n");
         return ;

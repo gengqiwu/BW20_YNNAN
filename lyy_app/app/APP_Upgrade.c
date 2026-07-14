@@ -49,7 +49,10 @@ void APP_UpgradeDelNetWorkDev(  uint8_t ucUpgradeType,
 
                 HAL_vHttpGet((const char *)pucData, vDataFunc, vRes);
             }
-            
+            else if (APP_UPGRADE_SCREEN == ucDataType)
+            {
+                HAL_vHttpGet((const char *)pucData, vDataFunc, vRes);
+            }
         }break;
 
         case APP_UPGRADE_TCP : {
@@ -99,6 +102,7 @@ void APP_UpgradeDel(uint8_t *pucData, uint32_t ulLen)
 
 void APP_UpgradeInit(void)
 {
+
 
 }
 
