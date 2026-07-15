@@ -2830,9 +2830,9 @@ void thread_screen_ota(void *arg)
             LYY_LOGD("screen ota finished ret = %d | > 0 success", ret);
             if (ret > 0) // 升级成功：上报版本、清文件、重启
             {
-                lyy_tjc_screen_type_get();
-                vTaskDelay(500 / portTICK_PERIOD_MS);
-                thing_ota_inform_version(tjc_infor_t.tjc_ver, THING_OTA_SCREEN); // 上报屏幕版本信息
+                board_ota_param_t.status = BOARD_OTA_STATUS_IDLE;
+                vTaskDelay(5000 / portTICK_PERIOD_MS);
+                thing_ota_inform_version(board_ota_param_t.version, THING_OTA_SCREEN); // 上报屏幕版本信息
 
                 HAL_vFileClear(THING_IOT_SCREEN_PATH);
                 // 屏幕升级完成 重启盒子
