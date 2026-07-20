@@ -99,7 +99,7 @@ extern uint8_t qhxyj_report_change_status(uint8_t force);
 extern void qhxyj_ctlb_post_up_raw_global(uint8_t *data, int datalen);    //-- done
 extern void qhxyj_ctlb_post_up_raw_step(uint8_t step, uint8_t *data, int datalen); //-- done
 extern int terminal_device_data(uint8_t *buff, uint16_t len);
-
+extern int device_qhxyj_stop(void);
 #endif
 
 

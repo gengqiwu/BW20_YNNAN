@@ -104,5 +104,5 @@ extern uint8_t qhhgj_report_change_status(uint8_t force);
 extern void qhhgj_ctlb_post_up_raw(uint8_t *data, int datalen);
 extern void qhhgj_ctlb_post_up_raw_err(uint8_t errCode);
 extern void qhhgj_event_post_account(void);
-
+extern int device_qhhgj_stop(void);
 #endif

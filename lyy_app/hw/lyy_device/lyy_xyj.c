@@ -441,6 +441,11 @@ int transmit_cmd_stopDevice(void)
     return terminal_device_data((uint8_t*)CMD,sizeof(CMD));
 }
 
+int device_qhxyj_stop(void)
+{
+    return transmit_cmd_stopDevice();
+}
+
 /**
  * @brief
  * 乔禾洗衣机下发厂家参数查询指令

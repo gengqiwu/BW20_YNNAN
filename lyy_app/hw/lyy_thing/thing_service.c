@@ -33,6 +33,8 @@
 #include "lyy_para.h"
 #include "lyy_start.h"
 #include "lyy_dfssj.h"
+#include "lyy_xyj.h"
+#include "lyy_hgj.h"
 
 int thing_service_pay_apply_ndj(cJSON* params, char *id);
 int thing_service_pay_start_ndj(cJSON* params, char *id);
@@ -55,6 +57,7 @@ int thing_service_pay_start_wwj(cJSON* params, char *id);
 int thing_service_pay_start_amy(cJSON* params, char *id);
 int thing_service_pay_apply_dfssj(cJSON *params, char *id);
 int thing_service_pay_start_dfssj(cJSON *params, char *id);
+int thing_service_stop(cJSON* params, char *id);
 /**
  * @brief
  * 服务
@@ -75,6 +78,7 @@ const SERVICE_METHOD_DEF moethod_service[] =
         {"event_notification", NULL},
         {"equipment_binding", thing_service_equipment_binding},     // 设备绑定通知
         {"equipment_unbinding", thing_service_equipment_unbinding}, // 设备解绑通知
+        {"stop", thing_service_stop},                                 // 停止服务
 };
 
 char pay_start_type[64] = {0};
@@ -249,6 +253,41 @@ int thing_service_pay_start(cJSON* params, char *id)
         default:return -1;break;
     }
     return 1;
+}
+
+int thing_service_stop(cJSON* params, char *id)
+{
+    int ret = -1;
+    cJSON* data = NULL;
+
+    (void)params;
+
+    switch(get_dev_type_code())
+    {
+        case DEVICE_TYPE_UART_QHXYJ:
+        case DEVICE_TYPE_UART_LJXYJ:
+            ret = device_qhxyj_stop();
+            break;
+        case DEVICE_TYPE_UART_QHHGJ:
+        case DEVICE_TYPE_UART_LJHGJ:
+            ret = device_qhhgj_stop();
+            vTaskDelay(400 / portTICK_PERIOD_MS);
+            ret |= device_qhhgj_stop();
+            break;
+        default:
+            LYY_LOGD("stop service unsupported dev_type:%d", get_dev_type_code());
+            break;
+    }
+
+    data = cJSON_CreateObject();
+    if(data != NULL)
+    {
+        cJSON_AddStringToObject(data, "result", (ret == 0) ? "success" : "fail");
+    }
+
+    thing_service_invoke_reply(data, (ret == 0) ? "success" : "fail", id, "stop");
+
+    return (ret == 0) ? 1 : -1;
 }
 
 /***********************************ndj*************************************/

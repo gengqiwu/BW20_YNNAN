@@ -540,6 +540,17 @@ static int transmit_cmd_start_hgj(void) // done
     return terminal_device_data((uint8_t *)CMD, sizeof(CMD));
 }
 
+static int transmit_cmd_stop_hgj(void)
+{
+    const uint8_t CMD[] = {0x01 ,0x10 ,0x01 ,0x2F ,0x00 ,0x01 ,0x02 ,0x00 ,0x01 ,0x70 ,0xCF};
+    timeout_to_checkSta = PERIOD_FOR_CHECKSTA/TIME_INTERRUPT_MS;
+    return terminal_device_data((uint8_t*)CMD,sizeof(CMD));
+}
+
+int device_qhhgj_stop(void)
+{
+    return transmit_cmd_stop_hgj();
+}
 #if 0
 /**
  * @brief
