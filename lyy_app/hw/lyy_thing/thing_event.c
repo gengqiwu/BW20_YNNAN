@@ -579,3 +579,24 @@ void event_post_log_hextostring(uint8_t *data, uint16_t len)
 
     event_post_log(out_str);
 }
+
+/**
+ * @brief
+ *  售货机向云端请求货道信息
+ * @param current 当前批次
+ * @param size 每批大小
+ * @param query_commodity_icon 是否加载商品图片
+ * @param sale 仅查询可销售的货道
+ */
+void event_post_query_position_info(uint16_t current, uint16_t size, bool query_commodity_icon, bool sale)
+{
+    cJSON *value = cJSON_CreateObject();
+    if (value != NULL)
+    {
+        cJSON_AddNumberToObject(value, "current", current);
+        cJSON_AddNumberToObject(value, "size", size);
+        cJSON_AddBoolToObject(value, "query_commodity_icon", query_commodity_icon);
+        cJSON_AddBoolToObject(value, "sale", sale);
+        thing_event_post(value, "query_position_info");
+    }
+}

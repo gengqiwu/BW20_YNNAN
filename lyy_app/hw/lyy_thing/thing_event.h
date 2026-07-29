@@ -8,6 +8,7 @@
 #ifndef __MODEL_EVENT_H__ 
 #define __MODEL_EVENT_H__
 
+#include <stdbool.h>
 
 //账目类型
 enum acc_type
@@ -44,5 +45,6 @@ extern void event_post_err_message(char *language, int login);
 
 extern void event_post_loge(char *loge);
 extern void event_post_log_hextostring(uint8_t *data, uint16_t len);
+extern void event_post_query_position_info(uint16_t current, uint16_t size, bool query_commodity_icon, bool sale);
 
 #endif // !

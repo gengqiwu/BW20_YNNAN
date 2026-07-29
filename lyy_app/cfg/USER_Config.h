@@ -63,11 +63,11 @@
 #define CFG_PM_MODEL		(CFG_PM_DWIN)
 
 // 屏蔽了，生产环境，打开测试环境
-//#define URL_TYPE_DEVELOP
+#define URL_TYPE_DEVELOP
 
 
 /* 版本信息 */
-#define CFG_APP_VERSION                         "BW20_YN_V1.06"
+#define CFG_APP_VERSION                         "BW20_YN_V1.07"
 #define CFG_SDK_VERSION                         "AMEBA_RTOS_SDK_V1.0.1"
 #define CFG_HARD_VERSION                        "BW20_LYY_V1.00"
 

@@ -175,6 +175,8 @@ void box_get_cloud_pay_param(void)
     else if (get_dev_type_code() == DEVICE_TYPE_UART_SHJ || get_dev_type_code() == DEVICE_TYPE_UART_YUNANSHJ)  //售货机不获取套餐
     {
         vTaskDelay(1000 / portTICK_PERIOD_MS);
+        event_post_query_position_info(1, 12, false, false);
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
     }   
     else  //其他都是一样的方式
     {
