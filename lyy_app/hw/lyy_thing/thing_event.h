@@ -29,6 +29,7 @@ extern void event_post_query_pay_packages(char *package_type);
 extern void event_post_query_pay_packages_ndj(char *package_type,int x,int y,char *package_all);
 extern void event_post_query_lane_info_post(void);
 extern void event_post_account_ndj(uint16_t coin,uint32_t coins,uint16_t gift,uint32_t gifts,uint8_t lane_id,char *order);
+extern void event_post_account_ynshj(double cash_increment, uint32_t gift_inc, uint8_t position_x, uint8_t position_y, char *pay_method, char *unique_code);
 extern void event_post_board_err_ndj(uint8_t error,uint8_t x,uint8_t y);
 extern void event_post_start_result_ndj(uint16_t result,uint8_t x,uint8_t y,char *order);
 
