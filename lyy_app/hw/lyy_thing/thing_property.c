@@ -842,9 +842,15 @@ void ndj_lane_param_update(LANE_INFOR_TABLE_DEF *lane, cJSON *body,uint8_t cnt)
 int property_write_ndj_lane(cJSON* params)
 {
 
+    uint8_t i;
+
+    if(get_dev_type_code() == DEVICE_TYPE_UART_YUNANSHJ)
+    {
+        return yunanshj_set_channel_stock_and_price_from_position_info(params);
+    }
+
     //ndj_add
     PLANE_INFOR_TABLE_DEF lane = ndj_net_lane_infor();
-    uint8_t i;
     if((params == NULL) || (params->type != cJSON_Array))
     {
         LYY_LOGD("lane infor error");

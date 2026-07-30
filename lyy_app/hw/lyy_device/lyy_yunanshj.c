@@ -6,8 +6,11 @@
  * @Description: 宇楠售货机设备驱动
  */
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
+
+#include "cJSON.h"
 
 #include "APP_Param.h"
 #include "APP_DrillingMode.h"
@@ -48,6 +51,10 @@ static volatile uint8_t g_yunanshj_detect_property_report_pending = 0;
 #define YUNANSHJ_DETECT_QUERY_TIMEOUT_MS 1000
 #define YUNANSHJ_DISPENSE_RESULT_TIMEOUT_MS 25000
 #define YUNANSHJ_WAIT_STEP_MS 100
+#define YUNANSHJ_CHANNEL_MAX 12
+#define YUNANSHJ_STOCK_MAX 255
+#define YUNANSHJ_PRICE_MAX 65535
+#define YUNANSHJ_PRICE_SCALE 100
 
 static uint8_t g_yunanshj_rx_buffer[YUNANSHJ_RX_BUFFER_SIZE] = {0};
 static uint16_t g_yunanshj_rx_len = 0;
@@ -259,6 +266,12 @@ void yunanshj_cmd_read_current_amount(void)
  */
 void yunanshj_cmd_set_channel_stock_and_price(uint8_t *ucCh, uint8_t *ucSt, uint8_t *ucPriceH, uint8_t *ucPriceL, uint8_t n)
 {
+    if (ucCh == NULL || ucSt == NULL || ucPriceH == NULL || ucPriceL == NULL || n == 0)
+    {
+        LYY_LOGD("set channel stock and price param error");
+        return;
+    }
+
     uint8_t cmd_data[7 + 4 * n];
     cmd_data[0] = 0xFA;
     cmd_data[1] = 0x00;
@@ -275,6 +288,158 @@ void yunanshj_cmd_set_channel_stock_and_price(uint8_t *ucCh, uint8_t *ucSt, uint
     cmd_data[5 + 4 * n] = ucCrcVal(&cmd_data[1], 4 + 4 * n); // 校验位，从从机地址到数据信息进行异或得到的值
     cmd_data[6 + 4 * n] = 0xAF;
     HAL_vUartSend(HAL_UART_MAIN_BOARD, cmd_data, sizeof(cmd_data), 500);
+}
+
+static uint8_t yunanshj_number_to_u8(cJSON *item, const char *name, uint8_t max)
+{
+    cJSON *value = cJSON_GetObjectItem(item, name);
+    if (value == NULL || value->type != cJSON_Number)
+    {
+        return 0;
+    }
+
+    if (value->valueint <= 0)
+    {
+        return 0;
+    }
+
+    if (value->valueint > max)
+    {
+        return max;
+    }
+
+    return (uint8_t)value->valueint;
+}
+
+static uint16_t yunanshj_price_to_u16(cJSON *item)
+{
+    cJSON *value = cJSON_GetObjectItem(item, "price");
+    double price = 0;
+    double scaled_price = 0;
+
+    if (value == NULL)
+    {
+        return 0;
+    }
+
+    if (value->type == cJSON_Number)
+    {
+        price = value->valuedouble;
+    }
+    else if (value->type == cJSON_String)
+    {
+        price = atof(value->valuestring);
+    }
+    else
+    {
+        return 0;
+    }
+
+    if (price <= 0)
+    {
+        return 0;
+    }
+
+    scaled_price = price * YUNANSHJ_PRICE_SCALE;
+    if (scaled_price >= YUNANSHJ_PRICE_MAX)
+    {
+        return YUNANSHJ_PRICE_MAX;
+    }
+
+    return (uint16_t)(scaled_price + 0.5);
+}
+
+int yunanshj_set_channel_stock_and_price_from_position_info(cJSON *position_info)
+{
+    cJSON *root = NULL;
+    cJSON *records = NULL;
+    uint8_t ch[YUNANSHJ_CHANNEL_MAX] = {0};
+    uint8_t stock[YUNANSHJ_CHANNEL_MAX] = {0};
+    uint8_t price_h[YUNANSHJ_CHANNEL_MAX] = {0};
+    uint8_t price_l[YUNANSHJ_CHANNEL_MAX] = {0};
+    uint8_t cnt = 0;
+
+    if (position_info == NULL)
+    {
+        return -1;
+    }
+
+    if (position_info->type == cJSON_String)
+    {
+        root = cJSON_Parse(position_info->valuestring);
+        if (root == NULL)
+        {
+            LYY_LOGD("yunanshj position_info parse fail");
+            return -2;
+        }
+    }
+    else
+    {
+        root = position_info;
+    }
+
+    if (root->type == cJSON_Array)
+    {
+        records = root;
+    }
+    else
+    {
+        records = cJSON_GetObjectItem(root, "records");
+    }
+
+    if (records == NULL || records->type != cJSON_Array)
+    {
+        if (position_info->type == cJSON_String)
+        {
+            cJSON_Delete(root);
+        }
+        LYY_LOGD("yunanshj position records error");
+        return -3;
+    }
+
+    for (uint8_t i = 0; i < cJSON_GetArraySize(records) && cnt < YUNANSHJ_CHANNEL_MAX; i++)
+    {
+        cJSON *item = cJSON_GetArrayItem(records, i);
+        uint8_t channel = 0;
+        uint16_t price = 0;
+
+        if (item == NULL || item->type != cJSON_Object)
+        {
+            continue;
+        }
+
+        cJSON *channel_value = cJSON_GetObjectItem(item, "positionX");
+        if (channel_value == NULL || channel_value->type != cJSON_Number ||
+            channel_value->valueint <= 0 || channel_value->valueint > YUNANSHJ_CHANNEL_MAX)
+        {
+            continue;
+        }
+        channel = (uint8_t)channel_value->valueint;
+
+        stock[cnt] = yunanshj_number_to_u8(item, "stock", YUNANSHJ_STOCK_MAX);
+        price = yunanshj_price_to_u16(item);
+        ch[cnt] = channel;
+        price_h[cnt] = (uint8_t)((price >> 8) & 0xFF);
+        price_l[cnt] = (uint8_t)(price & 0xFF);
+        g_yunanshj_stock[channel - 1] = stock[cnt];
+
+        LYY_LOGD("Yunanshj lane %d stock=%d price=%d", ch[cnt], stock[cnt], price);
+        cnt++;
+    }
+
+    if (position_info->type == cJSON_String)
+    {
+        cJSON_Delete(root);
+    }
+
+    if (cnt == 0)
+    {
+        LYY_LOGD("yunanshj no valid channel data");
+        return -4;
+    }
+
+    yunanshj_cmd_set_channel_stock_and_price(ch, stock, price_h, price_l, cnt);
+    return cnt;
 }
 
 /**
