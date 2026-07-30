@@ -687,10 +687,8 @@ int thing_service_packages_set_ndj(cJSON *params, char *id)
 int thing_service_lane_infor_set(cJSON *params, char *id)
 {
 
-    (void)id;
     // ndj_add
     uint8_t lane_id = 0;
-    PLANE_INFOR_TABLE_DEF lane = ndj_net_lane_infor();
     uint8_t i, cnt;
     cJSON *temp = NULL;
     cJSON *data = NULL;
@@ -700,6 +698,26 @@ int thing_service_lane_infor_set(cJSON *params, char *id)
         LYY_LOGD("lane infor error");
         return -1;
     }
+
+    temp = cJSON_GetObjectItem(params, "param");
+    if (get_dev_type_code() == DEVICE_TYPE_UART_YUNANSHJ &&
+        temp != NULL && temp->type == cJSON_String)
+    {
+        cJSON *ack = cJSON_CreateObject();
+        if (ack == NULL)
+        {
+            return -2;
+        }
+
+        cJSON_AddStringToObject(ack, "param", "");
+        LYY_LOGD("update_position_info empty param");
+        thing_service_invoke_reply(ack, "success", id, "update_position_info");
+        vTaskDelay(500 / portTICK_PERIOD_MS);
+        event_post_query_position_info(1, 12, false, false);
+        return 1;
+    }
+
+    PLANE_INFOR_TABLE_DEF lane = ndj_net_lane_infor();
     cJSON *postion = cJSON_GetObjectItem(params, "position_info");
     if (postion == NULL)
     {
