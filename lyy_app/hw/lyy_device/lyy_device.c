@@ -796,7 +796,6 @@ void opposite_packetParse(uint8_t *package, uint16_t len)
 void lyy_DevDataParse(uint8_t *pdata,uint32_t len)
 {
     uint32_t pack_len = 0;
-    event_post_log_hextostring(pdata, (uint16_t)len);
     if(len < 4) return ;
     if (get_dev_type_code() == DEVICE_TYPE_UART_SHJ)
     {
@@ -804,6 +803,7 @@ void lyy_DevDataParse(uint8_t *pdata,uint32_t len)
     }
     else if (get_dev_type_code() == DEVICE_TYPE_UART_YUNANSHJ)
     {
+        event_post_log_hextostring(pdata, (uint16_t)len);
         device_yunanshj_stream_parse(pdata,len);
     }
     else

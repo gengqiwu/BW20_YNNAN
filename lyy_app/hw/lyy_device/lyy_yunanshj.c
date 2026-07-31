@@ -45,6 +45,11 @@ static volatile uint8_t g_yunanshj_detect_query_waiting = 0;
 static volatile uint8_t g_yunanshj_detect_query_done = 0;
 static volatile uint8_t g_yunanshj_drop_detect_enabled = 1;
 static volatile uint8_t g_yunanshj_detect_property_report_pending = 0;
+static uint8_t g_yunanshj_offline_pay_pending = 0;//标识是否有离线支付信息待上报
+static uint8_t g_yunanshj_offline_pay_index = 0;//标识离线支付序号，避免重复上报
+static uint16_t g_yunanshj_offline_pay_amount = 0;
+static uint8_t g_yunanshj_offline_pay_cmd = 0; 
+static char g_yunanshj_offline_pay_method[16] = "offline_pay";
 
 #define YUNANSHJ_MIN_PACKET_LEN 7
 #define YUNANSHJ_RX_BUFFER_SIZE 256
@@ -75,6 +80,82 @@ int ucCrcVal(uint8_t *data, uint16_t len)
         crc ^= data[i];
     }
     return crc;
+}
+
+/**
+ * @brief 记录离线支付信息
+ *
+ * @param cmd 支付命令
+ * @param amount 支付金额
+ * @param index 支付序号
+ */
+static void yunanshj_record_offline_payment(uint8_t cmd, uint16_t amount, uint8_t index)
+{
+    if (g_yunanshj_offline_pay_pending &&
+        g_yunanshj_offline_pay_index == index &&
+        g_yunanshj_offline_pay_cmd == cmd)
+    {
+        if ((YUNANSHJ_PRICE_MAX - g_yunanshj_offline_pay_amount) > amount)
+        {
+            g_yunanshj_offline_pay_amount += amount;
+        }
+        else
+        {
+            g_yunanshj_offline_pay_amount = YUNANSHJ_PRICE_MAX;
+        }
+    }
+    else
+    {
+        g_yunanshj_offline_pay_amount = amount;
+    }
+
+    g_yunanshj_offline_pay_cmd = cmd;
+    g_yunanshj_offline_pay_index = index;
+    g_yunanshj_offline_pay_pending = 1;
+
+    memset(g_yunanshj_offline_pay_method, 0, sizeof(g_yunanshj_offline_pay_method));
+    if (cmd == 0x37)
+    {
+        strcpy(g_yunanshj_offline_pay_method, "pos_pay");
+    }
+    else
+    {
+        strcpy(g_yunanshj_offline_pay_method, "offline_pay");
+    }
+}
+
+/**
+ * @brief 上报离线账目信息
+ *
+ * @param channel 货道号
+ * @param index 支付序号
+ */
+static void yunanshj_report_offline_account(uint8_t channel, uint8_t index)
+{
+    double cash_increment = 0;
+
+    if (!g_yunanshj_offline_pay_pending)
+    {
+        return;
+    }
+
+    if (g_yunanshj_offline_pay_index != index)
+    {
+        LYY_LOGD("Offline account index mismatch, pay=%d dispense=%d", g_yunanshj_offline_pay_index, index);
+        return;
+    }
+
+    cash_increment = ((double)g_yunanshj_offline_pay_amount) / YUNANSHJ_PRICE_SCALE;
+    event_post_account_ynshj(cash_increment, 1, channel, 0, g_yunanshj_offline_pay_method, NULL);
+    if (channel >= 1 && channel <= YUNANSHJ_CHANNEL_MAX && g_yunanshj_stock[channel - 1] > 0)
+    {
+        g_yunanshj_stock[channel - 1]--;
+    }
+
+    g_yunanshj_offline_pay_pending = 0;
+    g_yunanshj_offline_pay_index = 0;
+    g_yunanshj_offline_pay_amount = 0;
+    g_yunanshj_offline_pay_cmd = 0;
 }
 
 /**
@@ -557,6 +638,8 @@ void device_yunanshj_packet_parse(uint8_t *data, uint16_t len)
                         g_xlyyHwMark.ucPaySem = 0;
                     }
                 }
+
+                yunanshj_report_offline_account(data[5], data[6]);
             }
             break;
         case 0x26: // 售货板返回FA 00 13 00 26 data1 data2 …… data12 ucCrc AF,售货板报告给上位机库存数据
@@ -717,6 +800,7 @@ void device_yunanshj_packet_parse(uint8_t *data, uint16_t len)
                 uint16_t money = data[5] * 256 + data[6];
                 uint8_t index = data[7];
                 LYY_LOGD("Cash inserted, amount: %d, index: %d", money, index);
+                yunanshj_record_offline_payment(0x36, money, index);
                 //发送FA 00 08 00 36 ucStatus ucCrc AF给售货板
                 uint8_t cmd_data[8] = {0xFA, 0x00, 0x08, 0x00, 0x36, 0x01,0x00, 0xAF};
                 cmd_data[6] = ucCrcVal(&cmd_data[1], 5); // 校验位，从从机地址到数据信息进行异或得到的值
@@ -728,6 +812,7 @@ void device_yunanshj_packet_parse(uint8_t *data, uint16_t len)
                 uint16_t money = data[5] * 256 + data[6];
                 uint8_t index = data[7];
                 LYY_LOGD("Card payment, amount: %d, index: %d", money, index);
+                yunanshj_record_offline_payment(0x37, money, index);
                 //发送FA 00 08 00 37 ucStatus ucCrc AF给售货板
                 uint8_t cmd_data[8] = {0xFA, 0x00, 0x08, 0x00, 0x37, 0x01,0x00, 0xAF};
                 cmd_data[6] = ucCrcVal(&cmd_data[1], 5); // 校验位，从从机地址到数据信息进行异或得到的值
@@ -739,6 +824,7 @@ void device_yunanshj_packet_parse(uint8_t *data, uint16_t len)
                 uint16_t money = data[5] * 256 + data[6];
                 uint8_t index = data[7];
                 LYY_LOGD("Coin inserted, amount: %d, index: %d", money, index);
+                yunanshj_record_offline_payment(0x38, money, index);
                 //发送FA 00 08 00 38 ucStatus ucCrc AF给售货板
                 uint8_t cmd_data[8] = {0xFA, 0x00, 0x08, 0x00, 0x38, 0x01,0x00, 0xAF};
                 cmd_data[6] = ucCrcVal(&cmd_data[1], 5); // 校验位，从从机地址到数据信息进行异或得到的值

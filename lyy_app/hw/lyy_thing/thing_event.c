@@ -608,11 +608,13 @@ void event_post_query_position_info(uint16_t current, uint16_t size, bool query_
  * @param gift_inc        出礼增量 int整数
  * @param position_x     货道x int整数
  * @param position_y     货道y int整数 
- * @param pay_method     支付方式 enum枚举:online_pay,offline_pay,pos_debit_card_pay,pos_credit_card_pay,pos_pay
+ * @param pay_method     支付方式 enum枚举:online_pay,offline_pay,pos_pay
  * @param unique_code    支付订单号 string字符串
  */
 void event_post_account_ynshj(double cash_increment, uint32_t gift_inc, uint8_t position_x, uint8_t position_y, char *pay_method, char *unique_code)
 {
+    char id[6] = {0x00,};
+    char id_str[15] = {0x00,};
     cJSON *value = cJSON_CreateObject();
     if (value != NULL)
     {
@@ -620,8 +622,17 @@ void event_post_account_ynshj(double cash_increment, uint32_t gift_inc, uint8_t 
         cJSON_AddNumberToObject(value, "gift_inc", gift_inc);
         cJSON_AddNumberToObject(value, "position_x", position_x);
         cJSON_AddNumberToObject(value, "position_y", position_y);
-        cJSON_AddStringToObject(value, "pay_method", pay_method);
-        cJSON_AddStringToObject(value, "unique_code", unique_code);
+        cJSON_AddStringToObject(value, "pay_method", (pay_method == NULL) ? "offline_pay" : pay_method);
+        if (unique_code == NULL)
+        {
+            vRandomGet(id, sizeof(id));
+            utils_lhexToString(id_str, (const unsigned char *)id, sizeof(id));
+            cJSON_AddStringToObject(value, "unique_code", id_str);
+        }
+        else
+        {
+            cJSON_AddStringToObject(value, "unique_code", unique_code);
+        }
         thing_event_post(value, "accounts");
     }
 }
