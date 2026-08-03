@@ -48,7 +48,7 @@ static volatile uint8_t g_yunanshj_detect_property_report_pending = 0;
 static uint8_t g_yunanshj_offline_pay_pending = 0;//标识是否有离线支付信息待上报
 static uint8_t g_yunanshj_offline_pay_index = 0;//标识离线支付序号，避免重复上报
 static uint16_t g_yunanshj_offline_pay_amount = 0;
-static uint8_t g_yunanshj_offline_pay_cmd = 0; 
+static uint8_t g_yunanshj_offline_pay_cmd = 0;
 static char g_yunanshj_offline_pay_method[16] = "offline_pay";
 
 #define YUNANSHJ_MIN_PACKET_LEN 7
@@ -59,7 +59,6 @@ static char g_yunanshj_offline_pay_method[16] = "offline_pay";
 #define YUNANSHJ_CHANNEL_MAX 12
 #define YUNANSHJ_STOCK_MAX 255
 #define YUNANSHJ_PRICE_MAX 65535
-#define YUNANSHJ_PRICE_SCALE 100
 
 static uint8_t g_yunanshj_rx_buffer[YUNANSHJ_RX_BUFFER_SIZE] = {0};
 static uint16_t g_yunanshj_rx_len = 0;
@@ -145,7 +144,7 @@ static void yunanshj_report_offline_account(uint8_t channel, uint8_t index)
         return;
     }
 
-    cash_increment = ((double)g_yunanshj_offline_pay_amount) / YUNANSHJ_PRICE_SCALE;
+    cash_increment = (double)g_yunanshj_offline_pay_amount;
     event_post_account_ynshj(cash_increment, 1, channel, 0, g_yunanshj_offline_pay_method, NULL);
     if (channel >= 1 && channel <= YUNANSHJ_CHANNEL_MAX && g_yunanshj_stock[channel - 1] > 0)
     {
@@ -396,7 +395,6 @@ static uint16_t yunanshj_price_to_u16(cJSON *item)
 {
     cJSON *value = cJSON_GetObjectItem(item, "price");
     double price = 0;
-    double scaled_price = 0;
 
     if (value == NULL)
     {
@@ -421,13 +419,17 @@ static uint16_t yunanshj_price_to_u16(cJSON *item)
         return 0;
     }
 
-    scaled_price = price * YUNANSHJ_PRICE_SCALE;
-    if (scaled_price >= YUNANSHJ_PRICE_MAX)
+    if (price < 1)
+    {
+        return 1;
+    }
+
+    if (price >= YUNANSHJ_PRICE_MAX)
     {
         return YUNANSHJ_PRICE_MAX;
     }
 
-    return (uint16_t)(scaled_price + 0.5);
+    return (uint16_t)(price + 0.5);
 }
 
 int yunanshj_set_channel_stock_and_price_from_position_info(cJSON *position_info)
