@@ -391,45 +391,33 @@ static uint8_t yunanshj_number_to_u8(cJSON *item, const char *name, uint8_t max)
     return (uint8_t)value->valueint;
 }
 
-static uint16_t yunanshj_price_to_u16(cJSON *item)
+/**
+ * @brief 从云端下发的 records[*] 中读取 protocolPrice（整数，价格协议值），转为 16Bit 价格
+ *
+ * @param item records 中的单条货道 JSON 对象
+ * @return uint16_t 协议价格。0 表示该字段缺失/非法（视作禁用）。
+ *                 云端合法下发的最小值为 1，超过 65535 会被截断到 65535。
+ */
+static uint16_t yunanshj_protocol_price_to_u16(cJSON *item)
 {
-    cJSON *value = cJSON_GetObjectItem(item, "price");
-    double price = 0;
+    cJSON *value = cJSON_GetObjectItem(item, "protocolPrice");
 
-    if (value == NULL)
+    if (value == NULL || value->type != cJSON_Number)
     {
         return 0;
     }
 
-    if (value->type == cJSON_Number)
-    {
-        price = value->valuedouble;
-    }
-    else if (value->type == cJSON_String)
-    {
-        price = atof(value->valuestring);
-    }
-    else
+    if (value->valueint <= 0)
     {
         return 0;
     }
 
-    if (price <= 0)
-    {
-        return 0;
-    }
-
-    if (price < 1)
-    {
-        return 1;
-    }
-
-    if (price >= YUNANSHJ_PRICE_MAX)
+    if (value->valueint > YUNANSHJ_PRICE_MAX)
     {
         return YUNANSHJ_PRICE_MAX;
     }
 
-    return (uint16_t)(price + 0.5);
+    return (uint16_t)value->valueint;
 }
 
 int yunanshj_set_channel_stock_and_price_from_position_info(cJSON *position_info)
@@ -500,13 +488,13 @@ int yunanshj_set_channel_stock_and_price_from_position_info(cJSON *position_info
         channel = (uint8_t)channel_value->valueint;
 
         stock[cnt] = yunanshj_number_to_u8(item, "stock", YUNANSHJ_STOCK_MAX);
-        price = yunanshj_price_to_u16(item);
+        price = yunanshj_protocol_price_to_u16(item);
         ch[cnt] = channel;
         price_h[cnt] = (uint8_t)((price >> 8) & 0xFF);
         price_l[cnt] = (uint8_t)(price & 0xFF);
         g_yunanshj_stock[channel - 1] = stock[cnt];
 
-        LYY_LOGD("Yunanshj lane %d stock=%d price=%d", ch[cnt], stock[cnt], price);
+        LYY_LOGD("Yunanshj lane %d stock=%d protocolPrice=%d", ch[cnt], stock[cnt], price);
         cnt++;
     }
 

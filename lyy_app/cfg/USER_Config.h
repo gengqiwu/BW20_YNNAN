@@ -67,7 +67,7 @@
 
 
 /* 版本信息 */
-#define CFG_APP_VERSION                         "BW20_SHJ_V1.07"
+#define CFG_APP_VERSION                         "BW20_SHJ_V1.08"
 #define CFG_SDK_VERSION                         "AMEBA_RTOS_SDK_V1.0.1"
 #define CFG_HARD_VERSION                        "BW20_LYY_V1.00"
 
