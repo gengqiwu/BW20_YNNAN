@@ -482,14 +482,17 @@ void device_ndj_update_infor(void)
     {
         infor->acc.flag = 0;
         LYY_LOGD("post account gift:%d,sum_gift:%d",infor->acc.gift_inc,infor->acc.gift_sum);
-        event_post_account_ndj(
-                            infor->acc.coin_inc,
-                            infor->acc.coin_sum,
-                            infor->acc.gift_inc,
-                            infor->acc.gift_sum,
-                            infor->acc.lane_id,
-                            order);    
-    } 
+        // event_post_account_ndj(
+        //                     infor->acc.coin_inc,
+        //                     infor->acc.coin_sum,
+        //                     infor->acc.gift_inc,
+        //                     infor->acc.gift_sum,
+        //                     infor->acc.lane_id,
+        //                     order);
+        offline_accounts_save_ndj(infor->acc.coin_inc, infor->acc.coin_sum, infor->acc.lane_id, MSG_TYPE_COIN_IN, PAY_METHOD_OFFLINE);
+        vTaskDelay(100 / portTICK_PERIOD_MS);
+        offline_accounts_save_ndj(infor->acc.gift_inc, infor->acc.gift_sum, infor->acc.lane_id, MSG_TYPE_GIFT_OUT, PAY_METHOD_OFFLINE);
+    }
     vTaskDelay(100 / portTICK_PERIOD_MS);   
     //故障
     if(infor->fault.flag == 1)

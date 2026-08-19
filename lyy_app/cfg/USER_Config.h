@@ -13,7 +13,7 @@
 #define CFG_NO_OS     
 
 
-/* 正式固件 */
+/* 打开正式固件 */
 #define CFG_RELEASE    
 
 #ifndef CFG_RELEASE
@@ -22,6 +22,7 @@
 //#define CFG_TEST_MODE  
                                       
 /* 监控打印内存使用 */
+
 #define CFG_HEAP_DEBUG
 
 #endif
@@ -66,7 +67,7 @@
 
 
 /* 版本信息 */
-#define CFG_APP_VERSION                         "BW20_POINTS_V1.0.15"
+#define CFG_APP_VERSION                         "BW20_POINTS_V1.0.22"
 #define CFG_SDK_VERSION                         "AMEBA_RTOS_SDK_V1.0.1"    
 #define CFG_HARD_VERSION                        "BW20_LYY_V1.00"  
 

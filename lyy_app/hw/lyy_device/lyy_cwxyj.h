@@ -26,6 +26,7 @@ extern int skyworth_xyj_pay_start(uint16_t mode);
 extern int skyworth_qhxyj_pay_apply(void);
 extern uint8_t CYJYJ_start(uint8_t data1, uint8_t data2);
 extern void skyworth_xyj_packet_parse(uint8_t *package, uint16_t len);
+extern int terminal_skyworthXYJ_stop(void);
 
 #endif
 

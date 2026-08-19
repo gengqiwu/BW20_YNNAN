@@ -330,6 +330,8 @@ int property_write_marketing_point_config(cJSON *params)
 
     device_get_points_show();   //积分更新
 
+    tourist_to_consume_add_points_show();  //游客支付成功，数据更新
+
     return 1;
 }
 
@@ -434,6 +436,14 @@ void pay_package_update(void *package, cJSON *body)
     {
         strcpy(pkgs->package_Color, pkgs_data->valuestring);
         LYY_LOGD("pkgs->package_Color=%s", pkgs->package_Color);
+    }
+
+    // 积分最大可抵扣金额
+    pkgs_data = cJSON_GetObjectItem(body, "orderMaxDeductAmout");
+    if (pkgs_data != NULL && pkgs_data->type == cJSON_String)
+    {
+        strcpy(pkgs->orderMaxDeductAmout, pkgs_data->valuestring);
+        LYY_LOGD("pkgs->orderMaxDeductAmout=%s", pkgs->orderMaxDeductAmout);
     }
 
     /* 未使用到的参数，节约资源 */

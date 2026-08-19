@@ -7,15 +7,19 @@
  */
 
 #include <stdio.h>
+#include <stdint.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include "HAL_System.h"
+
 
 #include "thing_iot.h"
 #include "thing_init.h"
 #include "thing_event.h"
 #include "thing_service.h"
 #include "thing_property.h"
+
 
 #include "lyy_start.h"
 
@@ -647,6 +651,86 @@ void event_post_query_marketing_point_config(void)
 }
 
 /**
+ * @brief POS机订单创建结果通知事件
+ *
+ * @param  result 1成功 2失败
+ */
+void event_post_pos_order_create_result(char *transaction_number, uint8_t result)
+{
+    cJSON *value = NULL;
+    value = cJSON_CreateObject();
+    if (value != NULL)
+    {
+        cJSON_AddStringToObject(value, "transaction_number", transaction_number);
+        cJSON_AddNumberToObject(value, "create_result", result);
+
+        // char *json_str = cJSON_Print(value);
+        char *json_str = cJSON_PrintUnformatted(value);
+        cJSON_Delete(value);
+
+        cJSON *value_2 = NULL;
+        value_2 = cJSON_CreateObject();
+        if (value_2 != NULL)
+        {
+            cJSON_AddStringToObject(value_2, "payload", json_str); // 渠道交易流水号
+
+            free(json_str);
+        }
+
+        thing_event_post(value_2, "pos_order_create_result_event");
+    }
+}
+
+/**
+ * @brief POS机订单明细通知事件
+ *
+ * @param  transaction_result 0交易中  1交易成功  2交易失败
+ */
+void event_post_pos_order_detail(char *transaction_number, uint8_t transaction_result)  
+{
+    cJSON *value = NULL;
+    value = cJSON_CreateObject();
+    if (value != NULL)
+    {
+        cJSON_AddStringToObject(value, "transaction_number", transaction_number);
+        cJSON_AddNumberToObject(value, "transaction_result", transaction_result);
+        cJSON_AddStringToObject(value, "channel_transaction_number", transaction_number);
+
+        // char *json_str = cJSON_Print(value);
+        char *json_str = cJSON_PrintUnformatted(value);
+        cJSON_Delete(value);
+
+        cJSON *value_2 = NULL;
+        value_2 = cJSON_CreateObject();
+        if (value_2 != NULL)
+        {
+            cJSON_AddStringToObject(value_2, "payload", json_str); // 渠道交易流水号
+
+            free(json_str);
+        }
+
+        thing_event_post(value_2, "pos_order_detail_event");
+    }
+}
+
+/**
+ * @brief POS机订单缓存清除
+ *
+ * @param  transaction_result 0交易中  1交易成功  2交易失败
+ */
+void event_post_pos_order_cleaing(char *transaction_number)
+{
+    cJSON *value = NULL;
+    value = cJSON_CreateObject();
+    if (value != NULL)
+    {
+        cJSON_AddStringToObject(value, "transaction_number", transaction_number);
+        cJSON_AddBoolToObject(value, "result", 1);
+        thing_event_post(value, "pos_order_cleaing_event");
+    }
+}
+
+/**
  * @brief
  * LOG 日志上报
  * @param coin
@@ -697,4 +781,37 @@ void event_post_log_hextostring(uint8_t *data, uint16_t len)
     }
 
     event_post_log(out_str);
+}
+
+void event_post_ntp_req(uint64_t timestamp)
+{
+    cJSON *value = NULL;
+    char timestamp_str[21] = {0};
+    snprintf(timestamp_str, sizeof(timestamp_str), "%llu", timestamp);
+    value = cJSON_CreateObject();
+    if (value != NULL)
+    {
+        cJSON_AddStringToObject(value, "device_send_time", timestamp_str);
+        thing_event_post(value, "ntp_req");
+    }
+}
+
+void event_post_new_offline_accounts(BillCacheItem_t *item)
+{
+    cJSON *value = NULL;
+    char timestamp_str[21] = {0};
+    snprintf(timestamp_str, sizeof(timestamp_str), "%llu", item->time);
+    value = cJSON_CreateObject();
+    if (value != NULL)
+    {
+        cJSON_AddNumberToObject(value, "increment", item->increment); // 增量
+        cJSON_AddNumberToObject(value, "total", item->total);         // 总量
+        cJSON_AddNumberToObject(value, "position_x", item->position_x); // id
+        cJSON_AddNumberToObject(value, "position_y", item->position_y); // 
+        cJSON_AddStringToObject(value, "type", get_offline_accounts_data_type(item->type));                     // 类型
+        cJSON_AddStringToObject(value, "pay_method", get_offline_accounts_pay_method_type(item->pay_method)); // 支付方式
+        cJSON_AddStringToObject(value, "unique_code", item->unique_code); // 唯一码
+        cJSON_AddStringToObject(value, "time", timestamp_str); // 时间
+        thing_event_post(value, "offline_accounts");
+    }
 }

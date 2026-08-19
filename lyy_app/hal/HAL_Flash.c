@@ -55,7 +55,8 @@ int HAL_vFileWrite(const char *pcStore, uint8_t *pucDuf, size_t xSize)
 
     }
 
-    lRet = fwrite(pucDuf, xSize, 1, (FILE *)pxFd);
+    //lRet = fwrite(pucDuf, xSize, 1, (FILE *)pxFd);
+    lRet = fwrite(pucDuf, 1, xSize, (FILE *)pxFd);
 
     LYY_LOGD("write : [%d]", lRet);
 
@@ -86,7 +87,8 @@ int HAL_vFileRead(const char *pcStore, uint8_t *pucDuf, size_t xSize)
 
     }
 
-    lRet = fread(pucDuf, xSize, 1, (FILE *)pxFd);
+    //lRet = fread(pucDuf, xSize, 1, (FILE *)pxFd);
+    lRet = fread(pucDuf, 1, xSize, (FILE *)pxFd);
 
     LYY_LOGD("read : [%d]", lRet);
 
@@ -128,20 +130,25 @@ int HAL_vFileWriteOffset(const char *pcStore, uint8_t *pucDuf, size_t xSize, siz
                             pcPath, 
                             HAL_FLASH_VFS_PATH_MAX_LEN);
 
-    vfs_file *pxFd = (vfs_file *)fopen(pcPath, "ab+");
-
-    if (pxFd == NULL) {
-        
-        LYY_LOGE("Failed to open file for writing");
-
-        return lRet;
-
+    vfs_file *pxFd = (vfs_file *)fopen(pcPath, "rb+");
+    if (pxFd == NULL)
+    {
+        pxFd = (vfs_file *)fopen(pcPath, "wb+"); // 文件不存在时创建
     }
+
+    // if (pxFd == NULL)
+    // {
+
+    //     LYY_LOGE("Failed to open file for writing");
+
+    //     return lRet;
+    // }
 
     // 文件头开始进行偏移
     fseek((FILE *)pxFd, xOffset, SEEK_SET);
 
-    lRet = fwrite(pucDuf, xSize, 1, (FILE *)pxFd);
+    //lRet = fwrite(pucDuf, xSize, 1, (FILE *)pxFd);
+    lRet = fwrite(pucDuf, 1, xSize, (FILE *)pxFd);
 
     LYY_LOGD("write : [%d]", lRet);
 
@@ -176,7 +183,8 @@ int HAL_vFileReadOffset(const char *pcStore, uint8_t *pucDuf, size_t xSize, size
     // 文件头开始进行偏移
     fseek((FILE *)pxFd, xOffset, SEEK_SET);
 
-    lRet = fread(pucDuf, xSize, 1, (FILE *)pxFd);
+    //lRet = fread(pucDuf, xSize, 1, (FILE *)pxFd);
+    lRet = fread(pucDuf, 1, xSize, (FILE *)pxFd);
 
     LYY_LOGD("read : [%d]", lRet);
 

@@ -9,7 +9,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
-
+#include <stdlib.h>
 
 #include "utils.h"
 #include "cJSON.h"
@@ -22,7 +22,8 @@
 #include "HAL_Wifi.h"
 #include "HAL_Uart.h"
 #include "HAL_System.h"
-#include "HAL_Sem.h"
+#include "hal_sem.h"
+#include "HAL_Flash.h"
 
 #include "thing_mqtt.h"
 #include "thing_event.h"
@@ -43,7 +44,6 @@
 
 #define NET_RETURN_RESULT(x)  ((x == 0x01) ? "online":"offline")
 
-
 enum
 {
     SCREEN_START_STEP_HOMEPAGE = 0,
@@ -54,13 +54,18 @@ enum
     SCREEN_START_STEP_REGIST,
     SCREEN_START_STEP_UPDATE_NET,
     SCREEN_START_STEP_END,
-}SCREEN_START_STEP;
-
+    SCREEN_START_STEP_OTA,
+} SCREEN_START_STEP;
 
 TJC_INFOR_DEF   tjc_infor_t;
 
 static uint8_t      g_SemSta;
 SemaphoreHandle_t   hw_httpDowloadSem    = NULL;
+int baudTable[3] = {115200, 9600, 921600};
+static SEM_TYPE screen_ota_connect_cmd_send = NULL;
+static SEM_TYPE screen_ota_baud_set = NULL;
+static SEM_TYPE screen_ota_ota_cmd_send = NULL;
+
 
 void lyy_tjc_pay_package_ndj(void);
 void lyy_tjc_page_pkgs_ndj(void);
@@ -82,7 +87,6 @@ void lyy_tjc_vlaue_screen_type(char *pack,uint16_t len);
 void tjc_touch_regist_next(char *pack,uint16_t len);
 void tjc_touch_device_status_display(char *pack,uint16_t len);
 void lyy_tjc_touch_pay_now_points(char *pack, uint16_t len);
-void lyy_tjc_packages_choose(uint8_t id, uint8_t wallet_number);
 
 const TJC_PACKET_PARSE_DEF tjc_packet_parse_t[] =
     {
@@ -189,6 +193,47 @@ void member_now_points_show(void)
 
 /**
  * @brief
+ * 积分最大可以抵扣多少钱展示
+ * @return
+ */
+void points_deduction_max_amount_show(void)
+{
+
+    char str[200] = {0};
+    char str_2[200] = {0};
+
+    if(1)
+    {
+        PAY_PACKAGES_NDJ_DEF *pkgs = get_pay_ndj_packages();
+
+        // 拼接样例  RMB
+        sprintf(str, "%s", pkgs->currency_name);
+        lyy_tjc_objTxt("currency_code", str);
+        vTaskDelay(2 / portTICK_PERIOD_MS);
+
+        // 拼接样例  0.02
+        sprintf(str_2, "%s", pkgs->lane[tjc_infor_t.package_record].pkg.orderMaxDeductAmout);
+        lyy_tjc_objTxt("MaxDeductAmout", str_2);
+        vTaskDelay(2 / portTICK_PERIOD_MS);
+    }
+    else
+    {
+        PAY_PACKAGES_DEF *pkgs = get_pay_packages();
+
+        // 拼接样例  RMB
+        sprintf(str, "%s", pkgs->currency_name);
+        lyy_tjc_objTxt("currency_code", str);
+        vTaskDelay(2 / portTICK_PERIOD_MS);
+
+        // 拼接样例  0.02
+        sprintf(str_2, "%s", pkgs->pkg[tjc_infor_t.package_record].orderMaxDeductAmout);
+        lyy_tjc_objTxt("MaxDeductAmout", str_2);
+        vTaskDelay(2 / portTICK_PERIOD_MS);
+    }
+}
+
+/**
+ * @brief
  * 会员去消费积分展示  
  * @return
  */
@@ -242,19 +287,46 @@ void member_to_consume_add_points_show(void)
 
 /**
  * @brief
- * 游客支付，显示待领取积分
+ * 游客支付，显示待领取积分  和可抵扣金额
  * @return
  */
 void tourist_to_consume_add_points_show(void)
 {
 
     char str[200] = {0};
-    // TJC_POINT_AUTHORIZE_DEF *point_authorize_data = get_point_authorize();
+    char str_2[200] = {0};
+
+    TJC_POINT_CONFIG_DEF *point_config_data = get_point_config();
 
     // 拼接样例Pending points  100.02Points
-    sprintf(str, "Pending points\\r%sPoints", tjc_infor_t.pay_claimed_points);
+    // sprintf(str, "Pending points\\r%sPoints", tjc_infor_t.pay_claimed_points);
+    // lyy_tjc_objTxt("pending_points", str);
+    // vTaskDelay(5 / portTICK_PERIOD_MS);
+
+    // 拼接样例 100.02Pt
+    sprintf(str, "%sPt", point_config_data->equipment_available_point);
     lyy_tjc_objTxt("pending_points", str);
-    vTaskDelay(2 / portTICK_PERIOD_MS);
+    vTaskDelay(5 / portTICK_PERIOD_MS);
+
+    // 拼接样例 Convertible to 10RMB
+    sprintf(str_2, "Convertible to %s%s", point_config_data->equipment_available_deduct_amount, point_config_data->currency_code);
+    lyy_tjc_objTxt("convertible", str_2);
+    vTaskDelay(5 / portTICK_PERIOD_MS);
+}
+
+/**
+ * @brief
+ * 游客支付，显示待领取积分  和可抵扣金额  loading(支付成功时，不会立刻显示所以添加loading字符)
+ * @return
+ */
+void tourist_to_consume_add_points_show_loading(void)
+{
+
+    char str[200] = {0};
+
+    sprintf(str, "%s", "Loading");
+    lyy_tjc_objTxt("pending_points", str);
+    vTaskDelay(5 / portTICK_PERIOD_MS);
 }
 
 /**
@@ -1197,8 +1269,9 @@ void lyy_tjc_page_obj_pay_result(void)
 {
     lyy_tjc_switch_page("result");//切换页面
     lyy_tjc_device_infor();
+    //tourist_to_consume_add_points_show();
+    tourist_to_consume_add_points_show_loading();
     lyy_tjc_page_earn_points_url_show();
-    tourist_to_consume_add_points_show();
 }
 
 void lyy_tjc_page_scan_points_ndj(void)
@@ -1223,7 +1296,7 @@ void lyy_tjc_page_scan_points_ndj(void)
     utils_lhexToString(tjc_infor_t.unique_code, (const unsigned char *)id, sizeof(id));
 
     // memcpy(tjc_infor_t.unique_code, get_random_string,6);
-    sprintf(scan_points_url, "%s%s/%d%s%s%s%s", DEV_URL_SCAN_POINTS_START, APP_pcGetParamDevId(), (tjc_infor_t.package_record+1), DEV_URL_SCAN_POINTS_MIDDLE, tjc_infor_t.unique_code, DEV_URL_SCAN_POINTS_END, para->pkgs.pkg[tjc_infor_t.package_record].id);
+    sprintf(scan_points_url, "%s%s/%d%s%s%s%s", DEV_URL_SCAN_POINTS_START, APP_pcGetParamDevId(), (tjc_infor_t.package_record + 1), DEV_URL_SCAN_POINTS_MIDDLE, tjc_infor_t.unique_code, DEV_URL_SCAN_POINTS_END, para->ndj_pkgs.lane[tjc_infor_t.package_record].pkg.id);
 
     lyy_tjc_objTxt("app_pay_url", scan_points_url);
     vTaskDelay(5 / portTICK_PERIOD_MS);
@@ -1263,6 +1336,8 @@ void lyy_tjc_page_scan_points(void)
 
     lyy_tjc_device_infor();
     device_get_points_show();
+    vTaskDelay(5 / portTICK_PERIOD_MS);
+    points_deduction_max_amount_show();
 
     if (get_dev_type_code() == DEVICE_TYPE_UART_NDJ)
     {
@@ -1288,9 +1363,10 @@ void lyy_tjc_page_earn_points(void)
     lyy_tjc_switch_page("earn_points"); // 切换
     vTaskDelay(5 / portTICK_PERIOD_MS);
 
-    lyy_tjc_page_earn_points_url_show();
+
     lyy_tjc_device_infor();
     device_get_points_show();
+    lyy_tjc_page_earn_points_url_show();
 
     //lyy_tjc_page_obj_regist(regist_url);
 }
@@ -2120,6 +2196,59 @@ void lyy_tjc_page_regist_set(void)
 {
     lyy_tjc_set_status(TJC_SHOW_DEVICE_REGIST); 
 }
+
+static int lyy_tjc_screen_version_format(char *dst, size_t dst_size, const char *pack, uint16_t len)
+{
+    char raw[sizeof(tjc_infor_t.tjc_ver)] = {0};
+    uint16_t copy_len = 0;
+    const char *ver = NULL;
+    const char *p = NULL;
+
+    if ((dst == NULL) || (dst_size == 0) || (pack == NULL) || (len == 0))
+    {
+        return 0;
+    }
+
+    for (uint16_t i = 0; (i < len) && (copy_len < sizeof(raw) - 1); i++)
+    {
+        uint8_t ch = (uint8_t)pack[i];
+
+        if ((ch == 0x00) || (ch == 0xFF) || (ch == '\r') || (ch == '\n'))
+        {
+            break;
+        }
+
+        raw[copy_len++] = (char)ch;
+    }
+
+    if (copy_len <= 1)
+    {
+        return 0;
+    }
+
+    ver = raw;
+    p = strchr(ver, ':');
+    if (p != NULL)
+    {
+        ver = p + 1;
+    }
+
+    // p = strchr(ver, '_');
+    // if ((strncmp(ver, "TJC", 3) == 0) && (p != NULL) && (*(p + 1) != '\0'))
+    // {
+    //     ver = p + 1;
+    // }
+
+    if (strlen(ver) <= 1)
+    {
+        return 0;
+    }
+
+    memset(dst, 0, dst_size);
+    strncpy(dst, ver, dst_size - 1);
+    return 1;
+}
+
 /**
  * @brief 
  * 定时发送版本
@@ -2186,9 +2315,10 @@ void lyy_tjc_time_version(char *pack,uint16_t len)
     // if(p != NULL)  strcpy(ver_screen,p+1);
     if(strlen(pack)>1&&strlen(pack)<100)
     {
-        memset(tjc_infor_t.tjc_ver,0,sizeof(tjc_infor_t.tjc_ver));
-        strcpy(tjc_infor_t.tjc_ver,pack);
-        LYY_LOGD(" tjc_ver : %s",tjc_infor_t.tjc_ver);
+        // memset(tjc_infor_t.tjc_ver,0,sizeof(tjc_infor_t.tjc_ver));
+        // strcpy(tjc_infor_t.tjc_ver,pack);
+        lyy_tjc_screen_version_format(tjc_infor_t.tjc_ver, sizeof(tjc_infor_t.tjc_ver), pack, len);
+        LYY_LOGD(" tjc_ver : %s", tjc_infor_t.tjc_ver);
     }    
     lyy_tjc_time_en("tm0", 0);
 }
@@ -2254,12 +2384,13 @@ void lyy_tjc_vlaue_screen_type(char *pack,uint16_t len)
     */
     // p = strchr(pack,':');
     // if(p != NULL)  strcpy(ver_screen,p+1);
-    if(strlen(pack)>1&&strlen(pack)<100)
+    if (strlen(pack) > 1 && strlen(pack) < 100)
     {
-        memset(tjc_infor_t.tjc_ver,0,sizeof(tjc_infor_t.tjc_ver));
-        strcpy(tjc_infor_t.tjc_ver,pack);
-        LYY_LOGD("screen_type : %s",tjc_infor_t.tjc_ver);
-    }    
+        // memset(tjc_infor_t.tjc_ver,0,sizeof(tjc_infor_t.tjc_ver));
+        // strcpy(tjc_infor_t.tjc_ver,pack);
+        lyy_tjc_screen_version_format(tjc_infor_t.tjc_ver, sizeof(tjc_infor_t.tjc_ver), pack, len);
+        LYY_LOGD(" tjc_ver : %s", tjc_infor_t.tjc_ver);
+    }
 }
 
 
@@ -2295,7 +2426,28 @@ void tjc_recv_packet_handle(uint8_t *pack,uint32_t len)
 
     uint8_t i = 0;
     
-    lyy_display_recvPic(pack,len);
+    //lyy_display_recvPic(pack,len);
+
+    if (board_ota_param_t.status >= SCREEN_OTA_BAUD_SET) // 屏幕升级响应ACK
+    {
+        lyy_printf_hex(pack, len);
+        if (pack[0] == 0x05) // 传输成功
+        {
+            lyy_semSignalV2(screen_ota_ota_cmd_send); // 继续传输
+        }
+        else if (pack[0] == 0x1A) // 设置成功
+        {
+            lyy_semSignalV2(screen_ota_baud_set); // 设置成功
+        }
+        else if (strstr((char *)pack, "comok")) // 连接成功
+        {
+            lyy_semSignalV2(screen_ota_connect_cmd_send); // 连接成功
+        }
+    }
+    else
+    {
+        lyy_display_recvPic(pack, len);
+    }
 
 #if 0
     uint8_t packetlen = 0;
@@ -2554,12 +2706,154 @@ int amy_time_redisplay(void)
  * @param data_len
  * @param context
  */
+void lyy_tjc_baud_set(int baud)
+{
+    char *dataBuf = NULL;
+    dataBuf = malloc(100);
+    if (dataBuf == NULL)
+    {
+        LYY_LOGD("mallco is fail");
+        return;
+    }
+
+    memset(dataBuf, 0, 100);
+    sprintf(dataBuf, "baud=%d\xff\xff\xff", baud);
+    LYY_LOGD("lyy_tjc_cmd_send>%s", dataBuf);
+    lyy_tjc_cmd_send(dataBuf, strlen(dataBuf));
+    free(dataBuf);
+}
+
+/**
+ * @brief
+ * 发送连接指令 -- 屏幕升级
+ * @param file_name
+ * @param sum
+ * @param num
+ * @param data_len
+ * @param context
+ */
 void lyy_tjc_connect_cmd_send(void)
 {
     char pattern[] = {0x00, 0xff, 0xff, 0xff, 'c', 'o', 'n', 'n', 'e', 'c', 't', 0xff, 0xff, 0xff};
-    LYY_LOGD("lyy_tjc_cmd_send>%s", pattern);
-    lyy_printf_hex((uint8_t *)pattern, sizeof(pattern));
+    //LYY_LOGD("lyy_tjc_cmd_send>%s", pattern);
+    //LYY_LOGD_hex(pattern, sizeof(pattern));
     lyy_tjc_cmd_send(pattern, sizeof(pattern));
+}
+
+/**
+ * @brief
+ * 发送下载指令 -- 屏幕升级
+ * @param file_name
+ * @param sum
+ * @param num
+ * @param data_len
+ * @param context
+ */
+// void lyy_tjc_ota_cmd_send(uint32_t file_size, uint32_t baud)
+// {
+//     char *dataBuf = NULL;
+//     dataBuf = malloc(100);
+//     if (dataBuf == NULL)
+//     {
+//         LYY_LOGD("mallco is fail");
+//         return;
+//     }
+
+//     memset(dataBuf, 0, 100);
+//     LYY_LOGD("file_size = %d baud = %d", file_size, baud);
+//     sprintf(dataBuf, "whmi-wri %d,%d,0\xff\xff\xff", (int)file_size, (int)baud);
+//     LYY_LOGD("dataBuf =test");
+//     lyy_tjc_cmd_send(dataBuf, strlen(dataBuf));
+//     LYY_LOGD("dataBuf =test2222");
+//     free(dataBuf);
+// }
+
+#define TJC_OTA_BUF_LEN 100
+void lyy_tjc_ota_cmd_send(uint32_t file_size, uint32_t baud)
+{
+    char *dataBuf = NULL;
+    dataBuf = malloc(TJC_OTA_BUF_LEN);
+    if (dataBuf == NULL)
+    {
+        LYY_LOGD("mallco is fail");
+        return;
+    }
+
+    memset(dataBuf, 0, TJC_OTA_BUF_LEN);
+
+    LYY_LOGD("file_size = %lu baud = %lu", file_size, baud);
+    // snprintf获取真实发送长度，避免丢失尾部0xff
+    int send_len = snprintf(dataBuf, TJC_OTA_BUF_LEN,
+                             "whmi-wri %lu,%lu,0\xff\xff\xff",
+                             file_size, baud);
+    if (send_len <= 0 || send_len >= TJC_OTA_BUF_LEN)
+    {
+        LYY_LOGE("ota cmd format length error, len:%d", send_len);
+        free(dataBuf);
+        return;
+    }
+
+    LYY_LOGD("send_len =%d", send_len);
+    lyy_tjc_cmd_send(dataBuf, send_len);
+    free(dataBuf);
+}
+
+/**
+ * @brief
+ * 发送数据包 -- 屏幕升级
+ * @param file_name
+ * @param sum
+ * @param num
+ * @param data_len
+ * @param context
+ */
+void lyy_tjc_ota_data_send(uint16_t len, uint8_t *context)
+{
+    lyy_tjc_cmd_send((char *)context, len);
+}
+
+/**
+ * @brief
+ * 发送屏幕ota数据包
+ */
+int screen_ota_status_send(void)
+{
+    uint32_t offset = 0;
+    uint8_t *buffer = NULL;
+    uint32_t len;
+    int8_t ret;
+    uint16_t read_size;
+    //uint16_t size = board_ota_param_t.file_size >= 0xffff ? 0xffff : board_ota_param_t.file_size;
+    LYY_LOGD("file_name = %s  para->file_size = %d", THING_IOT_SCREEN_PATH, board_ota_param_t.file_size);
+    buffer = malloc(4096);
+    if (buffer == NULL)
+    {
+        LYY_LOGD("mallco is fail");
+        return -1;
+    }
+    for (uint16_t i = 1; i <= board_ota_param_t.sum; i++)
+    {
+        len = board_ota_param_t.file_size - offset;
+        len = (len > 4096) ? 4096 : len;
+        read_size = HAL_vFileReadOffset(THING_IOT_SCREEN_PATH, buffer, len, offset);
+        if (read_size != len)
+        {
+            LYY_LOGD("board read file fail");
+            return -1;
+        }
+
+        offset += len; // 中间帧
+        //lyy_printf_hex(buffer, 512);
+        lyy_semNewV2(&screen_ota_ota_cmd_send, 0);
+        lyy_tjc_ota_data_send(len, buffer);
+        ret = lyy_semWaitTryV2(screen_ota_ota_cmd_send, 1000);
+        lyy_semFreeV2(screen_ota_ota_cmd_send);
+        screen_ota_ota_cmd_send = NULL;
+        vTaskDelay(10 / portTICK_PERIOD_MS); // 延时读取文件
+        if (ret == 0)
+            return -1;
+    }
+    return 1;
 }
 /**
  * @brief 
@@ -2569,93 +2863,124 @@ void thread_screen_ota(void *arg)
 {
 
     (void)arg;
-    // uint8_t ret, baudIndex = 0;
-    // uint8_t i = 0;
+    int8_t ret;
+    uint8_t baudIndex = 0;
+    uint8_t i = 0;
     while(1)
     {
-        // switch (board_ota_param_t.status)
-        // {
-        // case BOARD_OTA_STATUS_IDLE:
-        //     vTaskDelay(5000 / portTICK_PERIOD_MS);
-        //     break;                       
-        // case BOARD_OTA_STATUS_DATA_SEND: // 发送数据
-        //     vTaskDelay(5000 / portTICK_PERIOD_MS);
-        //     break;                                            // 发送数据
-        // case SCREEN_OTA_BAUD_SET:
-        // {
-        //     LYY_LOGD("os_uart_open ");
-        //     os_uart_open(UART_NAME_API_TJC, baudTable[baudIndex], UART_DATA_BITS_API_8, lyy_tjc_uart_cb);
-        //     vTaskDelay(200 / portTICK_PERIOD_MS);
-        //     LYY_LOGD("baudset %d", baudTable[baudIndex]);
-        //     lyy_tjc_baud_set(baudTable[baudIndex]);
-        //     baudIndex++;
-        //     if (baudIndex > 2)
-        //     {
-        //         board_ota_param_t.status = BOARD_OTA_STATUS_IDLE; // 空闲
-        //         LYY_LOGD("BOARD_OTA_STATUS_IDLE >>>>>");
-        //         para_deletefile(FILE_NAME_PARA_UPGRADE_SCREEN);
-        //         baudIndex = 0;
-        //         break;
-        //     }
-        //     LYY_LOGD("SCREEN_OTA_STATUS_INIT >>>>>");
-        //     board_ota_param_t.status = SCREEN_OTA_STATUS_INIT;
-        //     vTaskDelay(200 / portTICK_PERIOD_MS);
-        // }
-        // break;
-        // case SCREEN_OTA_STATUS_INIT: // 发送下载指令
-        //     for (i = 0; i < 3; i++)
-        //     {
-        //         lyy_semNewV2(&board_ota_param_t.sem_ota, 0);
-        //         lyy_tjc_connect_cmd_send();
-        //         ret = lyy_semWaitTryV2(board_ota_param_t.sem_ota, 500);
-        //         lyy_semFreeV2(board_ota_param_t.sem_ota);
-        //         if (ret > 0)
-        //             break;
-        //     }
-        //     if (ret > 0) // 设置成功
-        //     {
-        //         LYY_LOGD("baudset %d", baudTable[baudIndex]);
-        //         lyy_semNewV2(&board_ota_param_t.sem_ota, 0);
-        //         lyy_tjc_baud_set(921600);
-        //         ret = lyy_semWaitTryV2(board_ota_param_t.sem_ota, 500);
-        //         lyy_semNewV2(&board_ota_param_t.sem_ota, 0);
-        //         os_uart_open(UART_NAME_API_TJC, 921600, UART_DATA_BITS_API_8, lyy_tjc_uart_cb);
-        //         LYY_LOGD("file_size = %d baud = %d", board_ota_param_t.file_size, 921600);
-        //         lyy_tjc_ota_cmd_send(board_ota_param_t.file_size, 921600);
-        //         ret = lyy_semWaitTryV2(board_ota_param_t.sem_ota, 500);
-        //         lyy_semFreeV2(board_ota_param_t.sem_ota);
-        //         if (ret > 0) // 成功
-        //         {
-        //             LYY_LOGD("SCREEN_OTA_STATUS_DATA_SEND >>>>>");
-        //             board_ota_param_t.status = SCREEN_OTA_STATUS_DATA_SEND; // 空闲
-        //         }
-        //     }
-        //     else
-        //     { // 切换波特率
-        //         LYY_LOGD("change baud >>  SCREEN_OTA_BAUD_SET >>>>>");
-        //         board_ota_param_t.status = SCREEN_OTA_BAUD_SET;
-        //         vTaskDelay(500 / portTICK_PERIOD_MS);
-        //     }
-        //     break;
-        // case SCREEN_OTA_STATUS_DATA_SEND: // 发送数据
-        //     LYY_LOGD("start screen ota >>>>>>>>>");
-        //     ret = screen_ota_status_send();
-        //     LYY_LOGD("screen ota finished ret = %d | > 0 success", ret);
-        //     lyy_tjc_screen_type_get();
-        //     vTaskDelay(500 / portTICK_PERIOD_MS);
-        //     thing_ota_inform_version(tjc_infor_t.tjc_ver, THING_OTA_SCREEN); // 上报屏幕版本信息
-        //     // board_ota_param_t.status = BOARD_OTA_STATUS_IDLE;  //空闲
-        //     para_deletefile(FILE_NAME_PARA_UPGRADE_SCREEN);
-        //     // 屏幕升级完成 重启盒子
-        //     LYY_LOGD("system restart");
-        //     vTaskDelay(1500 / portTICK_PERIOD_MS);
-        //     lyy_softReset();
-        //     break; // 发送数据
-        // default:
-        //     vTaskDelay(5000 / portTICK_PERIOD_MS);
-        //     break;
-        // }
-        vTaskDelay(5000 / portTICK_PERIOD_MS); //开发时删除掉
+        switch (board_ota_param_t.status)
+        {
+        case BOARD_OTA_STATUS_IDLE:
+            vTaskDelay(5000 / portTICK_PERIOD_MS);
+            break;                       
+        case BOARD_OTA_STATUS_DATA_SEND: // 发送数据
+            vTaskDelay(5000 / portTICK_PERIOD_MS);
+            break;                                            // 发送数据
+        case SCREEN_OTA_BAUD_SET:
+        {
+            LYY_LOGD("os_uart_open ");
+
+            HAL_vUartSetParam(HAL_UART_SCREEN, baudTable[baudIndex]);
+
+            vTaskDelay(200 / portTICK_PERIOD_MS);
+            LYY_LOGD("baudset %d", baudTable[baudIndex]);
+            lyy_tjc_baud_set(baudTable[baudIndex]);
+            baudIndex++;
+            if (baudIndex > 2)
+            {
+                board_ota_param_t.status = BOARD_OTA_STATUS_IDLE; // 空闲
+                LYY_LOGD("BOARD_OTA_STATUS_IDLE >>>>>");
+                HAL_vFileClear(THING_IOT_SCREEN_PATH);
+                baudIndex = 0;
+                break;
+            }
+            LYY_LOGD("SCREEN_OTA_STATUS_INIT >>>>>");
+            board_ota_param_t.status = SCREEN_OTA_STATUS_INIT;
+            vTaskDelay(200 / portTICK_PERIOD_MS);
+        }
+        break;
+        case SCREEN_OTA_STATUS_INIT: // 发送下载指令
+
+            tjc_infor_t.step = SCREEN_START_STEP_OTA;
+            tjc_infor_t.status = TJC_SHOW_SCREEN_OTA;
+
+            for (i = 0; i < 3; i++)
+            {
+                lyy_semNewV2(&screen_ota_connect_cmd_send, 0);
+                lyy_tjc_connect_cmd_send();
+                ret = lyy_semWaitTryV2(screen_ota_connect_cmd_send, 500);
+                lyy_semFreeV2(screen_ota_connect_cmd_send);
+                screen_ota_connect_cmd_send = NULL;
+                if (ret > 0)
+                    break;
+            }
+            if (ret > 0) // 设置成功
+            {
+                vTaskDelay(2000 / portTICK_PERIOD_MS);
+                LYY_LOGD("baudset %d", baudTable[baudIndex]);
+                lyy_semNewV2(&screen_ota_baud_set, 0);
+                lyy_tjc_baud_set(921600); // 921600
+                ret = lyy_semWaitTryV2(screen_ota_baud_set, 500);
+                lyy_semFreeV2(screen_ota_baud_set);
+                screen_ota_baud_set = NULL;
+
+                HAL_vUartSetParam(HAL_UART_SCREEN, 921600);
+
+                vTaskDelay(2000 / portTICK_PERIOD_MS);
+                LYY_LOGD("file_size = %d baud = %d", board_ota_param_t.file_size, 921600);
+                lyy_semNewV2(&screen_ota_ota_cmd_send, 0);
+                lyy_tjc_ota_cmd_send(board_ota_param_t.file_size, 921600);
+                ret = lyy_semWaitTryV2(screen_ota_ota_cmd_send, 500);
+                lyy_semFreeV2(screen_ota_ota_cmd_send);
+                screen_ota_ota_cmd_send = NULL;
+                if (ret > 0) // 成功
+                {
+                    LYY_LOGD("SCREEN_OTA_STATUS_DATA_SEND >>>>>");
+                    board_ota_param_t.status = SCREEN_OTA_STATUS_DATA_SEND; //
+                }
+                else // ota 启动指令失败，回退换波特率重试
+                {
+                    LYY_LOGD("ota_cmd fail >> SCREEN_OTA_BAUD_SET >>>>>");
+                    board_ota_param_t.status = SCREEN_OTA_BAUD_SET;
+                    vTaskDelay(500 / portTICK_PERIOD_MS);
+                }
+            }
+            else
+            { // 切换波特率
+                LYY_LOGD("change baud >>  SCREEN_OTA_BAUD_SET >>>>>");
+                board_ota_param_t.status = SCREEN_OTA_BAUD_SET;
+                vTaskDelay(500 / portTICK_PERIOD_MS);
+            }
+            break;
+        case SCREEN_OTA_STATUS_DATA_SEND: // 发送数据
+            LYY_LOGD("start screen ota >>>>>>>>>");
+            ret = screen_ota_status_send();
+            LYY_LOGD("screen ota finished ret = %d | > 0 success", ret);
+            if (ret > 0) // 升级成功：上报版本、清文件、重启
+            {
+
+                vTaskDelay(5000 / portTICK_PERIOD_MS);
+                //lyy_tjc_screen_type_get();
+                vTaskDelay(500 / portTICK_PERIOD_MS);
+                //thing_ota_inform_version(tjc_infor_t.tjc_ver, THING_OTA_SCREEN); // 上报屏幕版本信息
+
+                HAL_vFileClear(THING_IOT_SCREEN_PATH);
+                // 屏幕升级完成 重启盒子
+                HAL_vReset("screen ota", 1000);
+            }
+            else // 升级失败：不清文件、不重启，回到 INIT 重新握手并重发
+            {
+                LYY_LOGE("### screen ota send fail, retry from INIT");
+                board_ota_param_t.status = SCREEN_OTA_STATUS_INIT;
+                vTaskDelay(500 / portTICK_PERIOD_MS);
+            }
+
+            break; // 发送数据
+        default:
+            vTaskDelay(5000 / portTICK_PERIOD_MS);
+            break;
+        }
+
     }
 }
 
@@ -2844,6 +3169,11 @@ void thread_page_display(void *arg)
                 lyy_tjc_count_down(10, TJC_SHOW_PACKAGES, TJC_SHOW_PAY_RESULT_POINTS);
             }
             break;
+            case TJC_SHOW_SCREEN_OTA:
+            {
+                vTaskDelay(4000 / portTICK_PERIOD_MS);
+            }
+            break;
             default: //未知状态 显示套餐
             {
                 vTaskDelay(100 / portTICK_PERIOD_MS);
@@ -2961,6 +3291,11 @@ void thread_screen_init(void *arg)
                 lyy_tjc_device_infor(); 
                 vTaskDelay(4000 / portTICK_PERIOD_MS);   
             }break;
+            case SCREEN_START_STEP_OTA:
+            {
+                vTaskDelay(4000 / portTICK_PERIOD_MS);
+            }
+            break;
             default:
             {
             }break;
@@ -2986,7 +3321,7 @@ void lyy_init_tjc(void)
 {
 
     tjc_infor_t.step = SCREEN_START_STEP_HOMEPAGE;
-    strcpy(tjc_infor_t.tjc_ver,"tjc_default_v3.0.0");
+    //strcpy(tjc_infor_t.tjc_ver,"tjc_default_v3.0.0");
     
 #define SCAN_UART_BRT               115200
 #define TJC_THREAD_NAME             "TJC_THREAD"

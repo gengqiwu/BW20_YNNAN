@@ -69,11 +69,12 @@ int get_dev_type_code(void)
             {"dev_type_uart_ljhgj_lyy"}, /*蓝鲸烘干机 add by dxw,20241210*/
             {"dev_type_uart_cwxyj_lyy"}, /*创维滚筒洗衣机 add by zyl,20250605*/
             {"dev_type_uart_mshgj_lyy"},
-            {"dev_type_uart_cwhgj_lyy"},  /*创维烘干机*/
-            {"dev_type_uart_cwxhj_lyy"},  /*创维洗烘机*/
-            {"dev_type_uart_tclxyj_lyy"}, /*TCL洗衣机*/
-            {"dev_type_uart_dfssj_lyy"},  /*德锋售水机*/
-            {"dev_type_uart_thxcj_lyy"},  /*探虎洗车机*/
+            {"dev_type_uart_cwhgj_lyy"},    /*创维烘干机*/
+            {"dev_type_uart_cwxhj_lyy"},    /*创维洗烘机*/
+            {"dev_type_uart_tclxyj_lyy"},   /*TCL洗衣机*/
+            {"dev_type_uart_dfssj_lyy"},    /*德锋售水机*/
+            {"dev_type_uart_thxcj_lyy"},    /*探虎洗车机*/
+            {"dev_type_uart_koreapos_lyy"}, /*韩国POS*/
         };
 
     for(uint8_t i=0;i<sizeof(dev_type_t)/sizeof(dev_type_t[0]);i++)
@@ -152,7 +153,7 @@ PAY_PARAM_DEF *get_pay_param(void)
  * @brief Get the pay package object
  * 扭蛋机套餐
  * @return PAY_PACKAGES_NDJ_DEF* 
- */
+ */  
 PAY_PACKAGES_NDJ_DEF *get_pay_ndj_packages(void)
 {
     //ndj_add

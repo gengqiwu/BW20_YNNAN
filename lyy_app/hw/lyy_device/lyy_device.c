@@ -22,6 +22,7 @@
 #include "HAL_Flash.h"
 
 #include "USER_Config.h"
+#include "thing_init.h"
 
 #include "thing_iot.h"
 #include "thing_mqtt.h"
@@ -43,6 +44,7 @@
 #include "lyy_tclxyj.h"
 #include "lyy_dfssj.h"
 #include "thing_event.h"
+#include "lyy_koreapos.h"
 
 #include "utils.h"
 
@@ -61,6 +63,9 @@ DEVICE_COM_DEF  tdevCom = {0};
 
 BOARD_OTA_PARAM_DEF     board_ota_param_t;
 APPLY_START_DEF apply_start_t;
+
+DEVICE_ACCOUNT_DEF account_data_t = {0};
+DEVICE_NTP_DEF  ntp_time_t = {0};
 
 /**
  * @brief 
@@ -258,6 +263,39 @@ void board_ota_param_init(char *version,char *file_name,uint32_t file_size)
     board_ota_param_t.sum = file_size/512;
     if(file_size%512 != 0) board_ota_param_t.sum++; //不是整数需+1数据包
 
+}
+
+/**
+ * @brief
+ *
+ * @param version
+ * @param file_name
+ */
+void screen_ota_param_init(char *version, char *file_name, uint32_t file_size)
+{
+
+    (void)file_name;
+
+    memset(&board_ota_param_t, 0, sizeof(BOARD_OTA_PARAM_DEF));
+    int len = strnlen(version, sizeof(board_ota_param_t.version) - 1);
+
+    if (len > 20)
+        len = 20;
+    memcpy(board_ota_param_t.version, version, len);
+    LYY_LOGI("board_ota_param_t.version=[%s]", board_ota_param_t.version);
+
+#if 0
+	len = strlen(file_name);
+	if(len > 20) len = 20;
+    strncpy(board_ota_param_t.file_name,file_name,len);
+    LYY_LOGI("file_name=[%s]", board_ota_param_t.file_name);
+#endif
+
+    board_ota_param_t.file_size = file_size;
+    board_ota_param_t.number = 1;
+    board_ota_param_t.sum = file_size / 4096;
+    if (file_size % 4096 != 0)
+        board_ota_param_t.sum++; // 不是整数需+1数据包
 }
 
 /**
@@ -969,6 +1007,9 @@ void lyy_DevDataParse(uint8_t *pdata,uint32_t len)
         case DEVICE_TYPE_UART_THXCJ:
             xcj_packet_parse(pdata, len);
             break;
+        case DEVICE_TYPE_UART_KOREAPOS:
+            koreapos_packet_parse(pdata, len);
+            break;
         default:
             device_overlap_qh(recvpakg, recvindex, qh_packetParse);
             break;
@@ -1075,6 +1116,414 @@ void APP_query_point_Task(void *arg)
     }
 }
 
+
+uint64_t get_timestamp(void)
+{
+    return ntp_time_t.timestamp;
+}
+
+void ntp_get_timestamp(void)  
+{
+    static uint8_t first_flag = 0;
+    static uint64_t timestamp_new = 0;
+
+    if (first_flag == 0 && lyy_mqtt_get_status()) // 首次联网获取时间
+    {
+        first_flag = 1;
+        event_post_ntp_req(ntp_time_t.timestamp);
+    }
+
+    if ((ntp_time_t.timestamp - timestamp_new) > (1 * 60 * 60 * 1000) && lyy_mqtt_get_status()) // 超过1小时重新获取时间
+    {
+        timestamp_new = ntp_time_t.timestamp;
+        event_post_ntp_req(ntp_time_t.timestamp);
+    }
+}
+
+void APP_ntp_req_Task(void *arg)
+{
+    (void)arg;
+    ntp_time_t.timestamp +=10;
+}
+
+// 全局文件互斥锁，防止业务/补发任务并发读写Flash文件
+static SemaphoreHandle_t s_xBillFileMutex = NULL;
+
+static void bill_cache_lock(void)
+{
+    if (s_xBillFileMutex == NULL)
+        s_xBillFileMutex = xSemaphoreCreateMutex();
+    if (s_xBillFileMutex)
+        xSemaphoreTake(s_xBillFileMutex, portMAX_DELAY);
+}
+
+static void bill_cache_unlock(void)
+{
+    if (s_xBillFileMutex)
+        xSemaphoreGive(s_xBillFileMutex);
+}
+
+// 写入头部元数据
+static int bill_meta_save(CacheMeta_t *meta)
+{
+    bill_cache_lock();
+    // 偏移0位置写入元数据
+    int ret = HAL_vFileWriteOffset(OFFLINE_ACCOUNT_PATH, (uint8_t *)meta, sizeof(CacheMeta_t), 0);
+    bill_cache_unlock();
+    if (ret != sizeof(CacheMeta_t))
+    {
+        LYY_LOGE("meta write fail %d", ret);
+        return -1;
+    }
+    return 0;
+}
+
+// 读取头部元数据
+static int bill_meta_load(CacheMeta_t *meta)
+{
+    bill_cache_lock();
+    int ret = HAL_vFileReadOffset(OFFLINE_ACCOUNT_PATH, (uint8_t *)meta, sizeof(CacheMeta_t), 0);
+    bill_cache_unlock();
+    if (ret != sizeof(CacheMeta_t))
+        return -1;
+    // 校验魔数，非法分区直接重置
+    if (meta->mark != OFFLINE_ACCOUNT_MARK_INIT)
+        return -2;
+    return 0;
+}
+
+// 根据下标读写单条账单条目
+static int bill_item_write(uint32_t idx, BillCacheItem_t *item)
+{
+    if (idx >= MAX_BILL_NUM)
+        return -1;
+    size_t offset = sizeof(CacheMeta_t) + idx * BILL_ITEM_LEN;
+    bill_cache_lock();
+    int ret = HAL_vFileWriteOffset(OFFLINE_ACCOUNT_PATH, (uint8_t *)item, BILL_ITEM_LEN, offset);
+    bill_cache_unlock();
+    return (ret == BILL_ITEM_LEN) ? 0 : -1;
+}
+
+static int bill_item_read(uint32_t idx, BillCacheItem_t *item)
+{
+    if (idx >= MAX_BILL_NUM)
+        return -1;
+    size_t offset = sizeof(CacheMeta_t) + idx * BILL_ITEM_LEN;
+    bill_cache_lock();
+    int ret = HAL_vFileReadOffset(OFFLINE_ACCOUNT_PATH, (uint8_t *)item, BILL_ITEM_LEN, offset);
+    bill_cache_unlock();
+    return (ret == BILL_ITEM_LEN) ? 0 : -1;
+}
+
+uint32_t bill_cache_get_pending(void) // 查询当前积压条数（用于云端状态上报）
+{
+    CacheMeta_t meta;
+    if (bill_meta_load(&meta) != 0)
+        return 0;
+    return meta.total_pending;
+}
+
+/**
+ * @brief 删除整个账单缓存区域
+ *        擦除OFFLINE_ACCOUNT_PATH文件并重置元数据，调用后write_idx/read_idx/total_pending全部归零
+ *        适用场景：云端下发清空指令、设备复位、文件损坏后恢复
+ *        沿用bill_item_read的lock/unlock保护模式，避免与补发任务并发冲突
+ * @return 0 成功；-1 失败
+ */
+int bill_cache_clear(void)
+{
+    CacheMeta_t meta;
+    memset(&meta, 0, sizeof(CacheMeta_t));
+    meta.mark = OFFLINE_ACCOUNT_MARK_INIT; // 重置为有效分区标记
+
+    bill_cache_lock();
+    HAL_vFileClear(OFFLINE_ACCOUNT_PATH); // 擦除整个区域：meta + 全部条目
+    bill_cache_unlock();
+
+    if (bill_meta_save(&meta) != 0)
+    {
+        LYY_LOGE("bill cache clear meta save fail");
+        return -1;
+    }
+
+    LYY_LOGI("bill cache cleared");
+    return 0;
+}
+
+/**
+ * @brief 新增账单存入环形缓存（设备产生账目时调用）
+ * @param item 待写入的账单条目指针，由调用方填充unique_code/time/total等字段
+ * @return 0 成功；-1 失败（参数空或Flash写入失败）
+ */
+int bill_cache_push(BillCacheItem_t *item)
+{
+    if (item == NULL)
+    {
+        LYY_LOGE("bill push null item");
+        return -1;
+    }
+
+    CacheMeta_t meta;
+    // 元数据非法（首次使用 / 文件损坏 / mark不符）：重建分区
+    if (bill_meta_load(&meta) != 0)
+    {
+       return -1;
+    }
+
+    if (meta.write_idx >= MAX_BILL_NUM)
+    {
+        return -1;
+    }
+    // 将新账单写入write_idx槽位
+    LYY_LOGE("meta.write_idx = [%d]", meta.write_idx);
+    if (bill_item_write(meta.write_idx, item) != 0)
+    {
+        LYY_LOGE("bill push write fail idx=%u", meta.write_idx);
+        return -1;
+    }
+
+    meta.write_idx += 1;
+    if (meta.total_pending==0 && meta.write_idx>0) // 如果之前没有积压数据，read_idx也要跟着更新
+    {
+        meta.read_idx = meta.write_idx - 1;
+    }
+    meta.total_pending++;
+    account_data_t.account_infor_flag = 0; // 标记设备可以上报数据了
+
+    return bill_meta_save(&meta);
+}
+
+void offline_accounts_save(uint32_t increment, uint32_t total,uint8_t data_type,uint8_t pay_method)
+{
+
+    if (increment <= 0 || data_type <= 0 || pay_method <= 0)
+        return;
+
+    BillCacheItem_t item;
+    memset(&item, 0, sizeof(BillCacheItem_t));
+    item.increment = increment;
+    item.total = total;
+    item.position_x = 0;
+    item.position_y = 0;
+    item.type = data_type;
+    item.pay_method = pay_method;
+
+    char id[6] = {0x00};
+    char unique_code[13] = {0x00};
+    vRandomGet(id, sizeof(id));
+    utils_lhexToString(unique_code, (const unsigned char *)id, sizeof(id));
+    LYY_LOGE("unique_code=%s", unique_code);
+    memcpy(item.unique_code, unique_code, 6);
+    LYY_LOGE("item.unique_code=%s", item.unique_code);
+
+    item.time = get_timestamp();
+    bill_cache_push(&item);
+}
+
+void offline_accounts_save_ndj(uint32_t increment, uint32_t total, uint8_t position_x, uint8_t data_type, uint8_t pay_method)
+{
+
+    if (increment <= 0 || data_type <= 0 || pay_method <= 0)
+        return;
+
+    BillCacheItem_t item;
+    memset(&item, 0, sizeof(BillCacheItem_t));
+    item.increment = increment;
+    item.total = total;
+    item.position_x = position_x;
+    item.position_y = 0;
+    item.type = data_type;
+    item.pay_method = pay_method;
+
+    char id[6] = {0x00};
+    char unique_code[13] = {0x00};
+    vRandomGet(id, sizeof(id));
+    utils_lhexToString(unique_code, (const unsigned char *)id, sizeof(id));
+    LYY_LOGE("unique_code=%s", unique_code);
+    memcpy(item.unique_code, unique_code, 6);
+    LYY_LOGE("item.unique_code=%s", item.unique_code);
+
+    item.time = get_timestamp();
+    bill_cache_push(&item);
+}
+
+/**
+ * @brief
+ * 获取离线账目支付方式类型
+ * @param code
+ * @return char*
+ */
+char *
+get_offline_accounts_pay_method_type(uint8_t code)
+{
+    static char  rsl[30]={0};
+    memset(rsl,0,sizeof(rsl));
+    if (code == PAY_METHOD_ONLINE)
+        strcpy(rsl, "online_pay");
+    else if(code == PAY_METHOD_OFFLINE) strcpy(rsl,"offline_pay");
+    else if(code == PAY_METHOD_POS_DEBIT_CARD)
+        strcpy(rsl, "pos_debit_card_pay");
+    else if(code == PAY_METHOD_POS_CREDIT_CARD)
+        strcpy(rsl, "pos_credit_card_pay");
+    else if(code == PAY_METHOD_POS_ALL)
+        strcpy(rsl, "pos_pay");
+    else if(code == PAY_METHOD_CHANGE)
+        strcpy(rsl, "give_change");
+    else  strcpy(rsl,"other");
+    return  rsl;  
+}
+
+/**
+ * @brief
+ * 获取离线账目数据类型
+ * @param code
+ * @return char*
+ */
+char *get_offline_accounts_data_type(uint8_t code)
+{
+    static char rsl[30] = {0};
+    memset(rsl, 0, sizeof(rsl));
+    if (code == MSG_TYPE_COIN_OUT)
+        strcpy(rsl, "out_coins");
+    else if (code == MSG_TYPE_AMOUNT)
+        strcpy(rsl, "money");
+    else if (code == MSG_TYPE_GIFT_OUT)
+        strcpy(rsl, "gift");
+    else if (code == MSG_TYPE_COIN_IN)
+        strcpy(rsl, "in_coins");
+    else if (code == MSG_TYPE_PULSE_COIN)
+        strcpy(rsl, "pulse_coins");
+    else if (code == MSG_TYPE_PULSE_GIFT)
+        strcpy(rsl, "pulse_gift");
+    else
+        strcpy(rsl, "other");
+    return rsl;
+}
+
+void device_offline_account_upload(void)
+{
+    CacheMeta_t meta;
+    int ret = bill_meta_load(&meta);
+
+    if (ret!=0)
+    {
+        event_post_log("bill meta load fail");
+        //event_post_log_hextostring(&meta.total_pending, 4);
+        LYY_LOGE("bill meta load fail %d", ret);
+        return;
+    }
+
+    LYY_LOGE("meta.total_pending =%d", meta.total_pending);
+    if (meta.total_pending == 0)
+    {
+        account_data_t.account_infor_flag = 1;
+        return;
+    }
+
+    LYY_LOGE("meta.read_idx = [%d]", meta.read_idx);
+    LYY_LOGE("meta.write_idx = [%d]", meta.write_idx);
+
+    BillCacheItem_t item;
+    ret = bill_item_read(meta.read_idx, &item);
+
+    if (ret != 0)
+    {
+        event_post_log("bill read fail");
+        LYY_LOGE("bill read fail %d", ret);
+        return;
+    }
+
+    if (strncmp(item.unique_code, account_data_t.unique_code, 6) != 0)
+    {
+       //上报账目
+       LYY_LOGE("item.unique_code=%s", item.unique_code);
+       event_post_new_offline_accounts(&item);
+    }
+    else
+    {
+        if (meta.write_idx<=0)
+        {
+            LYY_LOGE("meta.write_idx=0 fail");
+            meta.total_pending = 0;
+            bill_meta_save(&meta);
+        }
+        else if (meta.read_idx < meta.write_idx-1)  
+        {
+            meta.total_pending = meta.write_idx - meta.read_idx;
+            meta.read_idx++;
+            LYY_LOGE("meta.write_idx = [%d] meta.read_idx = [%d]", meta.write_idx, meta.read_idx);
+            bill_meta_save(&meta);
+        }
+        else if (meta.write_idx > 1500)  //防止多次擦除flash  当写入超过1500条数据后，且没有积压数据了，就清空文件系统。最大为2000条数据
+        {
+            LYY_LOGE("bill_cache_clear()");
+            bill_cache_clear();
+        }else
+        {
+            meta.total_pending = 0;
+            LYY_LOGE("clear meta.total_pending");
+            bill_meta_save(&meta);
+        }
+    }
+}
+/**
+ * @brief
+ *
+ * @param arg
+ */
+void thread_offine_account_infor(void *arg)
+{
+    (void)arg;
+    while (1)
+    {
+        vTaskDelay(4000 / portTICK_PERIOD_MS);
+        if (lyy_mqtt_get_status() == 1 && account_data_t.account_infor_flag == 0)
+        {
+           device_offline_account_upload();
+        }
+        else if (lyy_mqtt_get_status() == 0)
+        {
+            account_data_t.account_infor_flag = 0; // 设备离线后重置为0，等待下次设备上线后上报
+        }
+
+        //时间戳获取
+        ntp_get_timestamp();
+
+        //上报当前时间戳
+        // char timestamp_str[21] = {0};
+        // snprintf(timestamp_str, sizeof(timestamp_str), "%llu", get_timestamp());
+        // event_post_log(timestamp_str);
+    }
+}
+
+void lyy_device_offine_account_init(void)
+{
+
+    //读取元数据
+    CacheMeta_t meta;
+    int ret = bill_meta_load(&meta);
+    if (meta.mark != OFFLINE_ACCOUNT_MARK_INIT)
+    {
+        //bill_cache_clear();
+        LYY_LOGE("bill_meta_load fail %d, reset", ret);
+        memset(&meta, 0, sizeof(CacheMeta_t));
+        meta.mark = OFFLINE_ACCOUNT_MARK_INIT;
+        bill_meta_save(&meta);
+    }
+
+#define ACCOUNT_THREAD_NAME "NDJ_INFOR"
+#define ACCOUNT_THREAD_STACK (1024 * 4)
+
+    xTaskCreate(thread_offine_account_infor,
+                ACCOUNT_THREAD_NAME,
+                ACCOUNT_THREAD_STACK,
+                NULL,
+                5,
+                NULL);
+}
+
+
+
 /**
  * @brief
  * 初始化设备
@@ -1092,7 +1541,7 @@ void lyy_init_device(void)
 
     g_xlyyHwMark.pxPayApply = xSemaphoreCreateBinary();
 
-#define APP_DEV_LOGIN_TASK_TIME (2 * 1000)
+#define APP_DEV_LOGIN_TASK_TIME (2 * 1000)    //单位是10ms
 
     static struct HalSoftTimer DevLoginTask;
 
@@ -1106,6 +1555,13 @@ void lyy_init_device(void)
     HAL_vSoftTimeInit(&query_marketing_point_config_Task,
                       APP_query_point_Task,
                       1000,
+                      NULL);
+
+    static struct HalSoftTimer ntp_req_Task;
+
+    HAL_vSoftTimeInit(&ntp_req_Task,
+                      APP_ntp_req_Task,
+                      1,
                       NULL);
 
     if ((get_dev_type_code() == DEVICE_TYPE_UART_QHXYJ) || ((get_dev_type_code() == DEVICE_TYPE_UART_LJXYJ)))
@@ -1128,6 +1584,9 @@ void lyy_init_device(void)
         lyy_device_xcj_init(); /*add by zyl 20260402*/
 
     lyy_device_ndj_init();
+
+    lyy_device_offine_account_init();
+
 }
 
 

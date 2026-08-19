@@ -16,10 +16,10 @@
 
 #include "thing_mqtt.h"
 #include "thing_event.h"
+#include "lyy_device.h"
 
 #include "lyy_start.h"
-
-
+#include "lyy_para.h"
 
 enum {
 
@@ -43,46 +43,55 @@ typedef struct {
 static APP_DRILL_STA_T g_DrillSta;
 
 
-static void APP_prvAccOp(uint32_t ulCoinIn, uint32_t ulCoinOut, uint32_t ulGiftOut, uint8_t ucAccType)
-{
+// static void APP_prvAccOp(uint32_t ulCoinIn, uint32_t ulCoinOut, uint32_t ulGiftOut, uint8_t ucAccType)
+// {
 
-    g_DrillSta.ucAccUpdate          =  0x01;
-    g_DrillSta.ucAccType            =  ucAccType;
+//     g_DrillSta.ucAccUpdate          =  0x01;
+//     g_DrillSta.ucAccType            =  ucAccType;
 
-    if(ulCoinIn) {
+//     if(ulCoinIn) {
 
-        g_DrillSta.xAcc.ulCoinInSum     += ulCoinIn;
-        g_DrillSta.pxAcc->ulCoinInSum   += ulCoinIn;
-    }
+//         g_DrillSta.xAcc.ulCoinInSum     += ulCoinIn;
+//         g_DrillSta.pxAcc->ulCoinInSum   += ulCoinIn;
+//     }
 
 
-    if(ulCoinOut) {
+//     if(ulCoinOut) {
         
-        g_DrillSta.xAcc.ulCoinOutSum     += ulCoinOut;
-        g_DrillSta.pxAcc->ulCoinOutSum   += ulCoinOut;
-    }
+//         g_DrillSta.xAcc.ulCoinOutSum     += ulCoinOut;
+//         g_DrillSta.pxAcc->ulCoinOutSum   += ulCoinOut;
+//     }
 
-    if(ulGiftOut) {
+//     if(ulGiftOut) {
         
-        g_DrillSta.xAcc.ulGiftOutSum     += ulGiftOut;
-        g_DrillSta.pxAcc->ulGiftOutSum   += ulGiftOut;
-    }
+//         g_DrillSta.xAcc.ulGiftOutSum     += ulGiftOut;
+//         g_DrillSta.pxAcc->ulGiftOutSum   += ulGiftOut;
+//     }
 
-}
+// }
 
 
 void APP_vCoinIn(void *pvArg)
 {
     
-    APP_prvAccOp(*((uint32_t *)pvArg), 
-                 0x00, 
-                 0x00, 
-                 APP_PULSE_ACC);
+    // APP_prvAccOp(*((uint32_t *)pvArg), 
+    //              0x00, 
+    //              0x00, 
+    //              APP_PULSE_ACC);
+    if (get_dev_type_code() == DEVICE_TYPE_PULSE)  
+    {
+        offline_accounts_save(*((uint32_t *)pvArg), 0, MSG_TYPE_PULSE_COIN, PAY_METHOD_OFFLINE);
+    }
+    else
+    {
+        offline_accounts_save(*((uint32_t *)pvArg), 0, MSG_TYPE_COIN_IN, PAY_METHOD_OFFLINE);  //大概率用不上
+    }
+    
+    
 
-    START_TYPE_LEVEL == APP_pxlGetParamePulse()->ulPulsetype ? 
-                APP_vPulseStart(APP_COIN_LEVEL, *((uint32_t *)pvArg)) : 
-                        APP_vPulseStart(APP_COIN_PLUSE, *((uint32_t *)pvArg));
-                            
+    START_TYPE_LEVEL == APP_pxlGetParamePulse()->ulPulsetype
+        ? APP_vPulseStart(APP_COIN_LEVEL, *((uint32_t *)pvArg))
+        : APP_vPulseStart(APP_COIN_PLUSE, *((uint32_t *)pvArg));
 
     LYY_LOGD(">>> CoinIn sum : [%d][%d]",  g_DrillSta.pxAcc->ulCoinInSum, 
                                             *((uint32_t *)pvArg));
@@ -94,10 +103,21 @@ void APP_vCoinIn(void *pvArg)
 void APP_vGiftOut(void *pvArg)
 {
 
-    APP_prvAccOp(0x00, 
-                 0x00, 
-                 *((uint32_t *)pvArg), 
-                 APP_PULSE_ACC);
+    // APP_prvAccOp(0x00, 
+    //              0x00, 
+    //              *((uint32_t *)pvArg), 
+    //              APP_PULSE_ACC);
+
+    if (get_dev_type_code() == DEVICE_TYPE_PULSE)
+    {
+        offline_accounts_save(*((uint32_t *)pvArg), 0, MSG_TYPE_PULSE_GIFT, PAY_METHOD_OFFLINE);
+    }
+    else
+    {
+        offline_accounts_save(*((uint32_t *)pvArg), 0, MSG_TYPE_GIFT_OUT, PAY_METHOD_OFFLINE); // 大概率用不上
+    }
+
+
 
     LYY_LOGD(">>> GiftOut sum : [%d][%d]",  g_DrillSta.pxAcc->ulGiftOutSum, 
                                             *((uint32_t *)pvArg));
@@ -108,10 +128,12 @@ void APP_vGiftOut(void *pvArg)
 void APP_vWwjCoinIn(uint32_t ulCoinIn)
 {
 
-    APP_prvAccOp(ulCoinIn, 
-                 0x00, 
-                 0x00, 
-                 APP_WWJ_ACC);
+    // APP_prvAccOp(ulCoinIn, 
+    //              0x00, 
+    //              0x00, 
+    //              APP_WWJ_ACC);
+
+    offline_accounts_save(ulCoinIn, 0, MSG_TYPE_COIN_IN, PAY_METHOD_OFFLINE);
 
     LYY_LOGD(">>> CoinIn sum : [%d][%d]",   g_DrillSta.pxAcc->ulCoinInSum, 
                                             ulCoinIn);
@@ -122,10 +144,11 @@ void APP_vWwjCoinIn(uint32_t ulCoinIn)
 void APP_vWwjGiftOut(uint32_t ulGiftOut)
 {
 
-    APP_prvAccOp(0x00, 
-                 0x00, 
-                 ulGiftOut,
-                 APP_WWJ_ACC);
+    // APP_prvAccOp(0x00, 
+    //              0x00, 
+    //              ulGiftOut,
+    //              APP_WWJ_ACC);  
+    offline_accounts_save(ulGiftOut, 0, MSG_TYPE_GIFT_OUT, PAY_METHOD_OFFLINE);
 
     LYY_LOGD(">>> GiftOut sum : [%d][%d]",  g_DrillSta.pxAcc->ulGiftOutSum, 
                                             ulGiftOut);
@@ -136,10 +159,12 @@ void APP_vWwjGiftOut(uint32_t ulGiftOut)
 void APP_vDbjCoinIn(uint32_t ulCoinIn)
 {
 
-    APP_prvAccOp(ulCoinIn, 
-                 0x00, 
-                 0x00, 
-                 APP_DBJ_ACC);
+    // APP_prvAccOp(ulCoinIn, 
+    //              0x00, 
+    //              0x00, 
+    //              APP_DBJ_ACC);
+
+    offline_accounts_save(ulCoinIn, 0, MSG_TYPE_AMOUNT, PAY_METHOD_OFFLINE);
 
     LYY_LOGD(">>> CoinIn sum : [%d][%d]",   g_DrillSta.pxAcc->ulCoinInSum, 
                                             ulCoinIn);
@@ -150,10 +175,12 @@ void APP_vDbjCoinIn(uint32_t ulCoinIn)
 void APP_vDbjCoinOut(uint32_t ulCoinOut)
 {
 
-    APP_prvAccOp(0x00, 
-                 ulCoinOut, 
-                 0x00, 
-                 APP_DBJ_ACC);
+    // APP_prvAccOp(0x00, 
+    //              ulCoinOut, 
+    //              0x00, 
+    //              APP_DBJ_ACC);
+
+    offline_accounts_save(ulCoinOut, 0, MSG_TYPE_COIN_OUT, PAY_METHOD_OFFLINE);
 
     LYY_LOGD(">>> CoinOut sum : [%d][%d]",  g_DrillSta.pxAcc->ulCoinOutSum, 
                                             ulCoinOut);

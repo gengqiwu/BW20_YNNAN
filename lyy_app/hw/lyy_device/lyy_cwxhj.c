@@ -80,8 +80,16 @@ void lyy_device_cwxhj_init(void)
                 NULL);
 }
 
+/**
+ * @brief  停止功能
+ *
+ */
+int terminal_skyworthxhj_stop(void)
+{
+    uint8_t txbuff[6] = {0xAA, 0x00, 0x01, 0x08, 0x00, 0xA3};
 
-
+    return terminal_device_data((uint8_t *)txbuff, sizeof(txbuff));
+}
 /*******************************************************************************
 *函数名称：int terminalCWSendCHK()
 *函数说明：

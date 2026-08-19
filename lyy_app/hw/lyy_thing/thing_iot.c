@@ -626,6 +626,7 @@ static void APP_prvScreenUpdataRes(uint8_t ucRes, uint32_t ulLen)
 
             LYY_LOGD(" Screen write succes :[%s]", THING_IOT_SCREEN_PATH);
             //board_ota_status_send();
+            board_ota_param_t.status = SCREEN_OTA_STATUS_INIT;  
         }
         else
         {
@@ -741,7 +742,7 @@ int lyy_thing_down_ota(char *payload, uint32_t payload_len)
     }
     else if (strstr("screen", module->valuestring) != NULL)
     {
-        board_ota_param_init(version->valuestring, NULL, size->valueint);
+        screen_ota_param_init(version->valuestring, NULL, size->valueint);
 
         g_ulWriteOffset = 0x00;
         HAL_vFileClear(THING_IOT_SCREEN_PATH);

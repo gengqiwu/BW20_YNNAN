@@ -25,6 +25,7 @@ extern void lyy_device_cwxhj_init(void);
 extern int skyworth_xhj_pay_start(uint16_t mode);
 extern int skyworth_qhxhj_pay_apply(void);
 extern void skyworth_xhj_packet_parse(uint8_t *package, uint16_t len);
+extern int terminal_skyworthxhj_stop(void);
 
 #endif
 
