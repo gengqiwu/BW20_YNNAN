@@ -1133,7 +1133,7 @@ void ntp_get_timestamp(void)
         event_post_ntp_req(ntp_time_t.timestamp);
     }
 
-    if ((ntp_time_t.timestamp - timestamp_new) > (1 * 60 * 60 * 1000) && lyy_mqtt_get_status()) // 超过1小时重新获取时间
+    if ((ntp_time_t.timestamp - timestamp_new) > (10 * 60 * 1000) && lyy_mqtt_get_status()) // 超过1小时重新获取时间
     {
         timestamp_new = ntp_time_t.timestamp;
         event_post_ntp_req(ntp_time_t.timestamp);
@@ -1449,8 +1449,8 @@ void device_offline_account_upload(void)
         }
         else if (meta.read_idx < meta.write_idx-1)  
         {
-            meta.total_pending = meta.write_idx - meta.read_idx;
             meta.read_idx++;
+            meta.total_pending = meta.write_idx - meta.read_idx;
             LYY_LOGE("meta.write_idx = [%d] meta.read_idx = [%d]", meta.write_idx, meta.read_idx);
             bill_meta_save(&meta);
         }

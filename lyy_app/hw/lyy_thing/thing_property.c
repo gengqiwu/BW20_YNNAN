@@ -439,11 +439,11 @@ void pay_package_update(void *package, cJSON *body)
     }
 
     // 积分最大可抵扣金额
-    pkgs_data = cJSON_GetObjectItem(body, "orderMaxDeductAmout");
+    pkgs_data = cJSON_GetObjectItem(body, "orderMaxDeductAmount");
     if (pkgs_data != NULL && pkgs_data->type == cJSON_String)
     {
-        strcpy(pkgs->orderMaxDeductAmout, pkgs_data->valuestring);
-        LYY_LOGD("pkgs->orderMaxDeductAmout=%s", pkgs->orderMaxDeductAmout);
+        strcpy(pkgs->orderMaxDeductAmount, pkgs_data->valuestring);
+        LYY_LOGD("pkgs->orderMaxDeductAmount=%s", pkgs->orderMaxDeductAmount);
     }
 
     /* 未使用到的参数，节约资源 */

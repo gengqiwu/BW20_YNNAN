@@ -73,7 +73,7 @@ enum LBS_COMPANY_TYPE
 
 #define FILE_NAME_ERR_MSG          "lyy_err_msg"       //海外故障信息
 
-#define NDJ_LANE_MAX         6      //货道数
+#define NDJ_LANE_MAX         16      //货道数
 #define PAY_CHANNEL_MAX      4      //渠道数
 
 /**
@@ -96,7 +96,7 @@ typedef struct
     char            water_Temperature[32];         // 套餐水温度
     char            package_Color[32];             // 套餐颜色
 
-    char            orderMaxDeductAmout[32];   //积分最大可抵扣金额
+    char            orderMaxDeductAmount[32];   //积分最大可抵扣金额
 
 
 

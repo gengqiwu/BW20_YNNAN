@@ -1524,6 +1524,18 @@ int thing_service_qrcode_dynamic_std(cJSON* params, char *id)
         return -2;
     }
 
+    cJSON *currency = cJSON_GetObjectItem(params, "currency_desc");
+    if (currency != NULL && currency->type == cJSON_String) //
+    {
+        memset(tjc_infor_t.pay.currency_desc, 0, sizeof(tjc_infor_t.pay.currency_desc));
+        strcpy(tjc_infor_t.pay.currency_desc, currency->valuestring);
+        LYY_LOGD("currency_desc: %s", currency->valuestring);
+    }
+    else
+    {
+        LYY_LOGD("no currency_desc");
+    }
+
     //PAY_PARAM_DEF *param = get_pay_param();
     //lyy_tjc_pay_page_set(pay_url_wallet_number_get(),param->chnl_sum,url->valuestring,money->valuestring);//显示支付二维码
 
@@ -1601,6 +1613,18 @@ char thing_service_qrcode_dynamic_ndj(cJSON* params, char *id)
     else
     {
         LYY_LOGD("no unique_code");
+    }
+
+    cJSON *currency = cJSON_GetObjectItem(params, "currency_desc");
+    if (currency != NULL && currency->type == cJSON_String) //
+    {
+        memset(tjc_infor_t.pay.currency_desc, 0, sizeof(tjc_infor_t.pay.currency_desc));
+        strcpy(tjc_infor_t.pay.currency_desc, currency->valuestring);
+        LYY_LOGD("currency_desc: %s", currency->valuestring);
+    }
+    else
+    {
+        LYY_LOGD("no currency_desc");
     }
 
     // PAY_PARAM_DEF *param =get_pay_param();

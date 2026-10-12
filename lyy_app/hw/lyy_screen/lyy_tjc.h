@@ -108,7 +108,8 @@ typedef struct
     uint8_t     wallet_num;
     uint8_t     wallet_sum;
     uint16_t    time;
-}__attribute__((aligned(1), packed))TJC_PAY_PAGE_DEF,*PTJC_PAY_PAGE_DEF;
+    char        currency_desc[10];
+} __attribute__((aligned(1), packed)) TJC_PAY_PAGE_DEF, *PTJC_PAY_PAGE_DEF;
 /**
  * @brief 
  * 成功页面

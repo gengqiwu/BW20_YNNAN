@@ -1124,7 +1124,7 @@ int device_qhhgj_pay_start(uint16_t time)
     else
     {
         coinNun = qhhgj_devParm.coinPerPulse;
-        // coinNun += qhhgj_account.cur_coin;
+        //coinNun += qhhgj_account.cur_coin;
     }
     /*给主板下发投币指令*/
     lyy_semNewV2(&qhhgj_sendCoin_sem, 0);

@@ -201,18 +201,19 @@ void points_deduction_max_amount_show(void)
 
     char str[200] = {0};
     char str_2[200] = {0};
+    TJC_POINT_CONFIG_DEF *point_config_data = get_point_config();
 
-    if(1)
+    if (get_dev_type_code() == DEVICE_TYPE_UART_NDJ)
     {
         PAY_PACKAGES_NDJ_DEF *pkgs = get_pay_ndj_packages();
 
         // 拼接样例  RMB
-        sprintf(str, "%s", pkgs->currency_name);
+        sprintf(str, "%s", point_config_data->currency_code);
         lyy_tjc_objTxt("currency_code", str);
         vTaskDelay(2 / portTICK_PERIOD_MS);
 
         // 拼接样例  0.02
-        sprintf(str_2, "%s", pkgs->lane[tjc_infor_t.package_record].pkg.orderMaxDeductAmout);
+        sprintf(str_2, "%s", pkgs->lane[tjc_infor_t.package_record].pkg.orderMaxDeductAmount);
         lyy_tjc_objTxt("MaxDeductAmout", str_2);
         vTaskDelay(2 / portTICK_PERIOD_MS);
     }
@@ -221,12 +222,12 @@ void points_deduction_max_amount_show(void)
         PAY_PACKAGES_DEF *pkgs = get_pay_packages();
 
         // 拼接样例  RMB
-        sprintf(str, "%s", pkgs->currency_name);
+        sprintf(str, "%s", point_config_data->currency_code);
         lyy_tjc_objTxt("currency_code", str);
         vTaskDelay(2 / portTICK_PERIOD_MS);
 
         // 拼接样例  0.02
-        sprintf(str_2, "%s", pkgs->pkg[tjc_infor_t.package_record].orderMaxDeductAmout);
+        sprintf(str_2, "%s", pkgs->pkg[tjc_infor_t.package_record].orderMaxDeductAmount);
         lyy_tjc_objTxt("MaxDeductAmout", str_2);
         vTaskDelay(2 / portTICK_PERIOD_MS);
     }
@@ -326,7 +327,7 @@ void tourist_to_consume_add_points_show_loading(void)
 
     sprintf(str, "%s", "Loading");
     lyy_tjc_objTxt("pending_points", str);
-    vTaskDelay(5 / portTICK_PERIOD_MS);
+    vTaskDelay(10 / portTICK_PERIOD_MS);
 }
 
 /**
@@ -659,12 +660,31 @@ void lyy_tjc_pay_page(PTJC_PAY_PAGE_DEF pay)
 void lyy_tjc_pay_url_money(PTJC_PAY_PAGE_DEF pay)
 {
     char money_unit[128] = {0};
+    char currency[10] = {0};
+    if (tjc_infor_t.pay.currency_desc[0] == '\0')   //为了解决货币单位任意变化的问题，由后台下发
+    {
+        strcpy(currency, get_money_unit());
+    }
+    else
+    {
+        strcpy(currency, tjc_infor_t.pay.currency_desc);
+    }
     // char page_name[20] = {0};
-    sprintf(money_unit,"%s %s",pay->money,get_money_unit());
+    sprintf(money_unit, "%s %s", pay->money, currency);
     lyy_display_showpic("pay",tjc_infor_t.pay.wallet_num+1);
     vTaskDelay(5 / portTICK_PERIOD_MS);  
     lyy_tjc_objTxt("money", money_unit);
-    vTaskDelay(5 / portTICK_PERIOD_MS);  
+    vTaskDelay(5 / portTICK_PERIOD_MS);
+    if (tjc_infor_t.point_config.point_enabled == 1) // 积分固件兼容
+    {
+        lyy_tjc_objTxt("pay_prompt", "Earn points for successful payment");
+        vTaskDelay(5 / portTICK_PERIOD_MS);
+    }
+    else
+    {
+        lyy_tjc_objTxt("pay_prompt", "Scan the QR code to pay");
+        vTaskDelay(5 / portTICK_PERIOD_MS);
+    } 
     LYY_LOGD("lyy_tjc_pay_url_money money:%s",money_unit);    
     if(strlen(pay->url) != 0)
     {
@@ -895,7 +915,14 @@ void lyy_tjc_page_pkgs_xhj(void)
     char money[128] = {0};
     char mode_name[128] = {0};
     uint8_t i = 0;
-    lyy_tjc_switch_page("pkg_std2"); // 切换页面
+    if (tjc_infor_t.point_config.point_enabled == 1) // 积分固件兼容
+    {
+        lyy_tjc_switch_page("pkg_std2_p"); // 切换页面
+    }
+    else
+    {
+        lyy_tjc_switch_page("pkg_std2"); // 切换页面
+    }
     vTaskDelay(10 / portTICK_PERIOD_MS);
     lyy_tjc_device_infor();
     if (pkgs->sum < 6) // 隐藏不需要的套餐
@@ -929,7 +956,16 @@ void lyy_tjc_page_pkgs_std(void)
     char price[128]={0};
     char money[128]={0};
     uint8_t i = 0;
-    lyy_tjc_switch_page("pkg_std2");//切换页面
+
+    if (tjc_infor_t.point_config.point_enabled == 1)  //积分固件兼容
+    {
+        lyy_tjc_switch_page("pkg_std2_p"); // 切换页面
+    }
+    else
+    {
+        lyy_tjc_switch_page("pkg_std2"); // 切换页面
+    }
+
     vTaskDelay(10 / portTICK_PERIOD_MS);  
     lyy_tjc_device_infor();
     if(pkgs->sum<6)//隐藏不需要的套餐
@@ -961,7 +997,14 @@ void lyy_tjc_page_pkgs_pulse(void)
 {
     PAY_PACKAGES_DEF *pkgs = get_pay_packages();
     uint8_t i = 0;
-    lyy_tjc_switch_page("pkg_std2"); // 切换页面
+    if (tjc_infor_t.point_config.point_enabled == 1) // 积分固件兼容
+    {
+        lyy_tjc_switch_page("pkg_std2_p"); // 切换页面
+    }
+    else
+    {
+        lyy_tjc_switch_page("pkg_std2"); // 切换页面
+    }
     vTaskDelay(10 / portTICK_PERIOD_MS);
     lyy_tjc_device_infor();
     if (pkgs->sum < 6) // 隐藏不需要的套餐
@@ -1024,7 +1067,14 @@ void lyy_tjc_page_pkgs_ndj(void)
     char price[128]={0};
     char money[128]={0};
     uint8_t i = 0;
-    lyy_tjc_switch_page("pkg_ndj2");//切换页面
+    if (tjc_infor_t.point_config.point_enabled == 1) // 积分固件兼容
+    {
+        lyy_tjc_switch_page("pkg_ndj2_p"); // 切换页面
+    }
+    else
+    {
+        lyy_tjc_switch_page("pkg_ndj2"); // 切换页面
+    }
     vTaskDelay(10 / portTICK_PERIOD_MS); 
     lyy_tjc_device_infor();
     LYY_LOGD("lyy_tjc_page_pkgs_ndj");
@@ -1267,11 +1317,17 @@ void lyy_tjc_page_earn_points_url_show(void)
  */
 void lyy_tjc_page_obj_pay_result(void)
 {
-    lyy_tjc_switch_page("result");//切换页面
-    lyy_tjc_device_infor();
-    //tourist_to_consume_add_points_show();
-    tourist_to_consume_add_points_show_loading();
+    if (tjc_infor_t.point_config.point_enabled == 1) // 积分固件兼容
+    {
+        lyy_tjc_switch_page("result_p"); // 切换页面
+    }
+    else
+    {
+        lyy_tjc_switch_page("result"); // 切换页面
+    }
     lyy_tjc_page_earn_points_url_show();
+    lyy_tjc_device_infor();
+    tourist_to_consume_add_points_show();
 }
 
 void lyy_tjc_page_scan_points_ndj(void)
@@ -2120,7 +2176,7 @@ void lyy_tjc_touch_package(char *pack,uint16_t len)
     }
     else
     {
-        lyy_tjc_packages_choose(get_package_id(pack), 0); // 默认第一个钱包 0
+        lyy_tjc_packages_choose(get_package_id(pack), 0); // 默认第一个钱包 0  
     }
     
 }
