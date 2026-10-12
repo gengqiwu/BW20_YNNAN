@@ -1603,16 +1603,29 @@ char thing_service_qrcode_dynamic_ndj(cJSON* params, char *id)
         return -1;
     }
 
+    if(tjc_infor_t.point_config.point_enabled != 1 && ndj_infor_t.dzy_flag != 0x01)
+    {
+        PAY_PARAM_DEF *param = get_pay_param();
+        uint8_t package_id = pay_url_package_id_get();
+        // A response for a previous lane must not replace the selected package's QR.
+        if(package_id >= NDJ_LANE_MAX ||
+           param->ndj_pkgs.lane[package_id].x != lane_id)
+        {
+            return -1;
+        }
+    }
+
     cJSON *unique_code = cJSON_GetObjectItem(params, "unique_code");
     if(unique_code != NULL&&unique_code->type == cJSON_String) //指令唯一码
     {
         LYY_LOGD("unique_code: %s", unique_code->valuestring);
         //屏幕上做显示处理
-        if(cmp_pay_url_uinque_code(lane_id,unique_code->valuestring)==0x01) return -1; 
+        if(cmp_pay_url_uinque_code(lane_id,unique_code->valuestring)==0x01) return -1;
     }
     else
     {
         LYY_LOGD("no unique_code");
+        if(tjc_infor_t.point_config.point_enabled != 1 && ndj_infor_t.dzy_flag != 0x01) return -1;
     }
 
     cJSON *currency = cJSON_GetObjectItem(params, "currency_desc");

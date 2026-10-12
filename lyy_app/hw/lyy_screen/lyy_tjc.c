@@ -44,6 +44,9 @@
 
 #define NET_RETURN_RESULT(x)  ((x == 0x01) ? "online":"offline")
 
+// The EC600 chose_wallet page contains wallet0 through wallet7.
+#define TJC_WALLET_SLOT_MAX 8
+
 enum
 {
     SCREEN_START_STEP_HOMEPAGE = 0,
@@ -101,6 +104,7 @@ const TJC_PACKET_PARSE_DEF tjc_packet_parse_t[] =
         {"package4", lyy_tjc_touch_package},
         {"package5", lyy_tjc_touch_package},
         {"package6", lyy_tjc_touch_package},
+        {"time_return", lyy_tjc_touch_time_return},
         {"return", tjc_touch_return},
         {"wallet0", lyy_tjc_touch_wallet},
         {"wallet1", lyy_tjc_touch_wallet},
@@ -108,7 +112,6 @@ const TJC_PACKET_PARSE_DEF tjc_packet_parse_t[] =
         {"wallet3", lyy_tjc_touch_wallet},
         {"screen_ver:", lyy_tjc_time_version},
         {"screen_type:", lyy_tjc_vlaue_screen_type},
-        {"time_return", lyy_tjc_touch_time_return},
         {"regist_next", tjc_touch_regist_next},
         {"get_status", tjc_touch_device_status_display},
 // todo（先不使用log显示）
@@ -608,13 +611,28 @@ void lyy_tjc_device_infor(void)
  */
 void lyy_pic_get_cb(INFOR_PIC_VAIR *param)
 {
-    
     PAY_PARAM_DEF *pay= get_pay_param();
-    for(uint8_t i = 0;i<pay->chnl_sum * PIC_INFO_MAX;i++) //每个钱包都有pic
+    uint8_t wallet_sum = pay->chnl_sum;
+    uint8_t result = TJC_PIC_STATE_NONE;
+    if(wallet_sum > CHANNELINFO_MAX) wallet_sum = CHANNELINFO_MAX;
+
+    for(uint8_t i = 0;i<wallet_sum * PIC_INFO_MAX;i++)
     {
-        LYY_LOGD("param->picState[%d] = [%d]",i,param->picState[i]);
-        tjc_infor_t.img_result = param->picState[i];
+        uint8_t state = param->picState[i];
+        LYY_LOGD("param->picState[%d] = [%d]",i,state);
+        // A missing optional scan image is idle, not an update failure.
+        if(state == TJC_PIC_STATE_NONE) continue;
+        if(state != TJC_PIC_RESULT_TRAN_SUCCESS)
+        {
+            if(result == TJC_PIC_STATE_NONE || result == TJC_PIC_RESULT_TRAN_SUCCESS)
+                result = state;
+        }
+        else if(result == TJC_PIC_STATE_NONE)
+        {
+            result = TJC_PIC_RESULT_TRAN_SUCCESS;
+        }
     }
+    tjc_infor_t.img_result = result;
 }
 /**
  * @brief 
@@ -652,11 +670,85 @@ void lyy_tjc_pay_page(PTJC_PAY_PAGE_DEF pay)
     lyy_tjc_device_infor();
 }
 #endif
-/**
- * @brief 
- * 显示金额和支付二维码
- * @param pay 
- */
+// The display task uses a common countdown state for several different pages.
+static uint8_t lyy_tjc_scan_pay_active(void)
+{
+    return tjc_infor_t.status == TJC_SHOW_PAY_PAGE_NEW ||
+           tjc_infor_t.status == TJC_SHOW_PAY_URL ||
+           (tjc_infor_t.status == TJC_SHOW_COUNT_DOWN &&
+            (tjc_infor_t.count_down.current_status == TJC_SHOW_PAY_PAGE_NEW ||
+             tjc_infor_t.count_down.current_status == TJC_SHOW_PAY_URL));
+}
+
+static void lyy_tjc_change_pay_page_new(void)
+{
+    lyy_tjc_switch_page("Scan_to_Pay");
+    vTaskDelay(2 / portTICK_PERIOD_MS);
+    lyy_tjc_objTxt("topic", "Scan to Pay");
+    lyy_tjc_objTxt("title", "Payment Amount");
+    lyy_tjc_objTxt("money", " ");
+    lyy_tjc_objTxt("time", " ");
+    lyy_tjc_objTxt("pay_url", "");
+    lyy_tjc_device_infor();
+}
+
+static void lyy_tjc_change_paychannel_page(void)
+{
+    PAY_PARAM_DEF *param = get_pay_param();
+    PAY_PACKAGE_DEF *package;
+    char *currency;
+    char money[192];
+    char wallet[16];
+    uint8_t id = tjc_infor_t.package_record;
+    uint8_t wallet_sum = param->chnl_sum;
+    uint8_t i;
+
+    if(id >= NDJ_LANE_MAX || wallet_sum == 0)
+    {
+        lyy_tjc_page_waring("No payment channel or package available", 3, TJC_SHOW_PACKAGES);
+        return;
+    }
+    if(wallet_sum > PAY_CHANNEL_MAX) wallet_sum = PAY_CHANNEL_MAX;
+    if(wallet_sum > CHANNELINFO_MAX) wallet_sum = CHANNELINFO_MAX;
+    if(wallet_sum > TJC_WALLET_SLOT_MAX) wallet_sum = TJC_WALLET_SLOT_MAX;
+
+    if(get_dev_type_code() == DEVICE_TYPE_UART_NDJ)
+    {
+        package = &param->ndj_pkgs.lane[id].pkg;
+        currency = param->ndj_pkgs.currency_name;
+    }
+    else
+    {
+        package = &param->pkgs.pkg[id];
+        currency = param->pkgs.currency_name;
+    }
+
+    tjc_infor_t.pay.wallet_sum = wallet_sum;
+    tjc_infor_t.pay.time = PAY_COUNTDOWN_MAX;
+    lyy_tjc_switch_page("chose_wallet");
+    vTaskDelay(2 / portTICK_PERIOD_MS);
+    lyy_tjc_objTxt("topic", "Scan to Pay");
+    lyy_tjc_objTxt("title", "Choose a payment method");
+    lyy_tjc_objTxt("time", " ");
+    snprintf(money, sizeof(money), "%s %s - %s %s", package->display_price,
+             currency, package->display_value, package->unit);
+    lyy_tjc_objTxt("money", money);
+
+    // Hide unused slots on every entry, including after a channel-list update.
+    for(i = 0; i < TJC_WALLET_SLOT_MAX; i++)
+    {
+        snprintf(wallet, sizeof(wallet), "wallet%u", i);
+        lyy_tjc_objHide(wallet, 0);
+        if(i < wallet_sum)
+        {
+            lyy_display_show_wallet_icon(i, wallet);
+            lyy_tjc_objHide(wallet, 1);
+        }
+    }
+    lyy_tjc_device_infor();
+}
+
+// Display the selected channel, amount and QR code.
 void lyy_tjc_pay_url_money(PTJC_PAY_PAGE_DEF pay)
 {
     char money_unit[128] = {0};
@@ -671,7 +763,22 @@ void lyy_tjc_pay_url_money(PTJC_PAY_PAGE_DEF pay)
     }
     // char page_name[20] = {0};
     sprintf(money_unit, "%s %s", pay->money, currency);
-    lyy_display_showpic("pay",tjc_infor_t.pay.wallet_num+1);
+    if(tjc_infor_t.point_config.point_enabled == 1)
+    {
+        lyy_display_showpic("pay",tjc_infor_t.pay.wallet_num+1);
+    }
+    else
+    {
+        // A fast cloud response can arrive before the waiting page is rendered.
+        lyy_tjc_change_pay_page_new();
+        lyy_tjc_objHide("gm0", 0);
+        lyy_tjc_objHide("p0", 0);
+        lyy_tjc_objHide("p1", 0);
+        char indicator[16];
+        snprintf(indicator, sizeof(indicator), "p%u", pay->wallet_num);
+        lyy_tjc_objHide(indicator, 1);
+        lyy_display_show_wallet_icon(pay->wallet_num, "wallet");
+    }
     vTaskDelay(5 / portTICK_PERIOD_MS);  
     lyy_tjc_objTxt("money", money_unit);
     vTaskDelay(5 / portTICK_PERIOD_MS);
@@ -680,11 +787,6 @@ void lyy_tjc_pay_url_money(PTJC_PAY_PAGE_DEF pay)
         lyy_tjc_objTxt("pay_prompt", "Earn points for successful payment");
         vTaskDelay(5 / portTICK_PERIOD_MS);
     }
-    else
-    {
-        lyy_tjc_objTxt("pay_prompt", "Scan the QR code to pay");
-        vTaskDelay(5 / portTICK_PERIOD_MS);
-    } 
     LYY_LOGD("lyy_tjc_pay_url_money money:%s",money_unit);    
     if(strlen(pay->url) != 0)
     {
@@ -749,7 +851,11 @@ void lyy_tjc_pay_page_set(uint8_t wallet_num,uint8_t wallet_sum)
     tjc_infor_t.pay.wallet_num = wallet_num;
     tjc_infor_t.pay.wallet_sum = wallet_sum;
     tjc_infor_t.pay.time   = 40;  //倒计时固定40秒
-    lyy_tjc_set_status(TJC_SHOW_PAY_PAGE);
+    memset(tjc_infor_t.pay.url, 0, sizeof(tjc_infor_t.pay.url));
+    memset(tjc_infor_t.pay.money, 0, sizeof(tjc_infor_t.pay.money));
+    memset(tjc_infor_t.pay.currency_desc, 0, sizeof(tjc_infor_t.pay.currency_desc));
+    lyy_tjc_set_status(tjc_infor_t.point_config.point_enabled == 1 ?
+                       TJC_SHOW_PAY_PAGE : TJC_SHOW_PAY_PAGE_NEW);
     vTaskDelay(20 / portTICK_PERIOD_MS);  
 }
 /**
@@ -760,6 +866,11 @@ void lyy_tjc_pay_page_set(uint8_t wallet_num,uint8_t wallet_sum)
  */
 void lyy_tjc_pay_url_show(char *url,char *money)
 {
+    if(tjc_infor_t.point_config.point_enabled != 1 && !lyy_tjc_scan_pay_active())
+    {
+        // Ignore a late response after leaving the QR page.
+        return;
+    }
     memset(tjc_infor_t.pay.url,0,sizeof(tjc_infor_t.pay.url));
     memset(tjc_infor_t.pay.money,0,sizeof(tjc_infor_t.pay.money));
     strcpy(tjc_infor_t.pay.url,url);
@@ -1618,10 +1729,11 @@ void lyy_tjc_page_logining(void)
  */
 void lyy_tjc_count_down(uint16_t time,uint8_t next_status,uint8_t cur_status)
 {
+    if(cur_status != tjc_infor_t.status) return;
+
     tjc_infor_t.count_down.time = time;
     tjc_infor_t.count_down.next_status = next_status;
-
-    if(cur_status != tjc_infor_t.status) return;
+    tjc_infor_t.count_down.current_status = cur_status;
 
     if(tjc_infor_t.count_down.time >0) tjc_infor_t.status = TJC_SHOW_COUNT_DOWN;
     else 
@@ -1772,6 +1884,11 @@ void tjc_touch_return(char *pack,uint16_t len)
     (void)len;
 
     if(device_get_amy_err_Flag()) return;
+    if(tjc_infor_t.point_config.point_enabled != 1 && lyy_tjc_scan_pay_active())
+    {
+        lyy_tjc_set_status(TJC_SHOW_CHOSE_WALLET);
+        return;
+    }
     lyy_tjc_set_status(TJC_SHOW_PACKAGES);
 }
 
@@ -1783,11 +1900,7 @@ void tjc_touch_return(char *pack,uint16_t len)
  */
 void lyy_tjc_touch_time_return(char *pack,uint16_t len)
 {
-
-    (void)pack;
-    (void)len;
-
-    lyy_tjc_set_status(TJC_SHOW_PACKAGES);
+    tjc_touch_return(pack, len);
 }
 /**
  * @brief 
@@ -1923,6 +2036,11 @@ int lyy_tjc_pay_id_isok(uint8_t package_id ,uint8_t wallet_id)
         return -1;
     }
     
+    if(wallet_id >= para->chnl_sum || wallet_id >= PAY_CHANNEL_MAX)
+    {
+        lyy_tjc_page_waring_normal("pay channel: wallet number is error");
+        return -2;
+    }
     if(strlen(para->channel[wallet_id].code) == 0)
     {
         sprintf(temp,"pay channel: channel[%d] code is null",wallet_id);
@@ -2111,6 +2229,7 @@ void lyy_tjc_get_pay_url_std(uint8_t id,uint8_t wallet_id)
  */
 void lyy_tjc_get_pay_qrcode(uint8_t id,uint8_t wallet_id)
 {
+    if(lyy_tjc_pay_id_isok(id, wallet_id) < 0) return;
     pay_url_wallet_number_set(wallet_id);//默认使用第一个钱包
     pay_url_package_id_set(id);
     PAY_PARAM_DEF *param = get_pay_param();
@@ -2176,7 +2295,17 @@ void lyy_tjc_touch_package(char *pack,uint16_t len)
     }
     else
     {
-        lyy_tjc_packages_choose(get_package_id(pack), 0); // 默认第一个钱包 0  
+        PAY_PARAM_DEF *param = get_pay_param();
+        if(tjc_infor_t.package_record >= NDJ_LANE_MAX || param->chnl_sum == 0)
+        {
+            lyy_tjc_page_waring_normal("No payment channel or package available");
+            return;
+        }
+        // Save BW20's zero-based package index; request nothing until wallet touch.
+        pay_url_package_id_set(tjc_infor_t.package_record);
+        tjc_infor_t.points_pay_flag = 0;
+        tjc_infor_t.pay.time = PAY_COUNTDOWN_MAX;
+        lyy_tjc_set_status(TJC_SHOW_CHOSE_WALLET);
     }
     
 }
@@ -2192,7 +2321,7 @@ int get_wallet_id(char *wallet)
     else if(strstr(wallet,"wallet1")!=NULL) return 1;
     else if(strstr(wallet,"wallet2")!=NULL) return 2;
     else if(strstr(wallet,"wallet3")!=NULL) return 3;
-    else return 4;
+    else return -1;
 }
 /**
  * @brief 
@@ -2207,12 +2336,25 @@ void lyy_tjc_touch_wallet(char *pack,uint16_t len)
 
     int id = get_wallet_id(pack);
     PAY_PARAM_DEF *para = get_pay_param();
-    if(id>=para->chnl_sum) //钱包序号不对
+    if(id < 0 || id >= para->chnl_sum || id >= PAY_CHANNEL_MAX) //钱包序号不对
     {
         LYY_LOGD("wallet number is error");
         return ;
     }
-    lyy_tjc_get_pay_qrcode(pay_url_package_id_get(), id);
+    if(tjc_infor_t.point_config.point_enabled != 1)
+    {
+        if(tjc_infor_t.status != TJC_SHOW_CHOSE_WALLET &&
+           !(tjc_infor_t.status == TJC_SHOW_COUNT_DOWN &&
+             tjc_infor_t.count_down.current_status == TJC_SHOW_CHOSE_WALLET))
+        {
+            return;
+        }
+        lyy_tjc_get_pay_qrcode(tjc_infor_t.package_record, id);
+    }
+    else
+    {
+        lyy_tjc_get_pay_qrcode(pay_url_package_id_get(), id);
+    }
 
 }
 
@@ -2336,7 +2478,8 @@ void lyy_tjc_time_version(char *pack,uint16_t len)
     }
     else if(strstr(pack,LYY_SCREEN_DEVICE_TJC4880x243) != NULL) 
     {
-        set_tjcScreen(LYY_SCREEN_DEVICE_4880x243);
+        set_tjcScreen(strstr(pack, LYY_SCREEN_DEVICE_TJC4880x243V1) != NULL ?
+                      LYY_SCREEN_DEVICE_4880x243V1 : LYY_SCREEN_DEVICE_4880x243);
         // 获取屏幕方向
         if(strstr(pack,"_00_") != NULL) 
         {
@@ -2409,7 +2552,8 @@ void lyy_tjc_vlaue_screen_type(char *pack,uint16_t len)
     }
     else if(strstr(pack,LYY_SCREEN_DEVICE_TJC4880x243) != NULL) 
     {
-        set_tjcScreen(LYY_SCREEN_DEVICE_4880x243);
+        set_tjcScreen(strstr(pack, LYY_SCREEN_DEVICE_TJC4880x243V1) != NULL ?
+                      LYY_SCREEN_DEVICE_4880x243V1 : LYY_SCREEN_DEVICE_4880x243);
         // 获取屏幕方向
         if(strstr(pack,"_00_") != NULL) 
         {
@@ -3098,8 +3242,21 @@ void thread_page_display(void *arg)
             case TJC_SHOW_PAY_URL: //显示支付二维码
             {
                 lyy_tjc_pay_url_money(&tjc_infor_t.pay);
-                lyy_tjc_count_down(tjc_infor_t.pay.time,TJC_SHOW_PACKAGES, TJC_SHOW_PAY_URL);
+                lyy_tjc_count_down(tjc_infor_t.pay.time,
+                                  tjc_infor_t.point_config.point_enabled == 1 ?
+                                  TJC_SHOW_PACKAGES : TJC_SHOW_CHOSE_WALLET,
+                                  TJC_SHOW_PAY_URL);
             }break; 
+            case TJC_SHOW_CHOSE_WALLET:
+            {
+                lyy_tjc_change_paychannel_page();
+                lyy_tjc_count_down(tjc_infor_t.pay.time, TJC_SHOW_PACKAGES, TJC_SHOW_CHOSE_WALLET);
+            }break;
+            case TJC_SHOW_PAY_PAGE_NEW:
+            {
+                lyy_tjc_change_pay_page_new();
+                lyy_tjc_count_down(tjc_infor_t.pay.time, TJC_SHOW_CHOSE_WALLET, TJC_SHOW_PAY_PAGE_NEW);
+            }break;
             case TJC_SHOW_PAY_PAGE: //支付界面
             {
                 lyy_tjc_change_pay_page(tjc_infor_t.pay.wallet_sum,tjc_infor_t.pay.wallet_num);

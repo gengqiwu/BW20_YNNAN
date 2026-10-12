@@ -345,9 +345,9 @@ void getTjcPicUrl(void)
     for(; picVair.startGetPic < g_pxTjcPicFlashInfo.ucWalletNumSum; picVair.startGetPic++) {
 
         LYY_LOGD("picVair.startGetPic===================[%d]",picVair.startGetPic);
-        getTjcPicUrl_page("pay",picVair.startGetPic);
-        
+        xSemaphoreTake(hw_httpGetPicUrlSem, 0);
         g_SemSta = 1;
+        getTjcPicUrl_page("pay",picVair.startGetPic);
         result = xSemaphoreTake(hw_httpGetPicUrlSem, 5 * 1000); //等待10s平台回复
         g_SemSta = 0;
 
@@ -371,8 +371,13 @@ void getTjcPicUrl(void)
  */
 int tjc_recv_pic_url(cJSON* params)
 {
-
-
+    if(params == NULL || params->type != cJSON_String || params->valuestring == NULL ||
+       picVair.process != TJC_PIC_GET_URL || !g_SemSta ||
+       g_pxTjcPicFlashInfo.pucData == NULL ||
+       picVair.startGetPic >= g_pxTjcPicFlashInfo.ucWalletNumSum)
+    {
+        return -1;
+    }
     LYY_LOGD("payload->valuestring: %s\n", params->valuestring);
     cJSON *payload_json = cJSON_Parse(params->valuestring);
     
@@ -427,7 +432,9 @@ int tjc_recv_pic_url(cJSON* params)
     // 判断读url是否跟新
     cJSON *wallet_url = cJSON_GetObjectItem(components, "wallet_url");
 
-    if(wallet_url == NULL)     {
+    if(wallet_url == NULL || wallet_url->type != cJSON_String ||
+       wallet_url->valuestring == NULL || wallet_url->valuestring[0] == '\0' ||
+       strlen(wallet_url->valuestring) >= sizeof(pxTjcInfo->url)) {
 
         LYY_LOGE("wallet null");
         cJSON_Delete(payload_json);
@@ -476,12 +483,23 @@ int tjc_recv_pic_url(cJSON* params)
 
     cJSON *scan_url = cJSON_GetObjectItem(components, "scan_url");
 
-    if(scan_url == NULL)     {
+    if(scan_url == NULL)
+    {
+        // V1 layouts only need wallet_url; EC600 also treats scan_url as optional.
+        // Drop the old scan image metadata when switching from the legacy layout.
+        memset(pxTjcInfo, 0, sizeof(*pxTjcInfo));
+        picVair.picState[ulUrlAdd] = TJC_PIC_STATE_NONE;
+        LYY_LOGD("wallet[%d]: no optional scan_url, skip scan image", picVair.startGetPic);
+    }
+    else if(scan_url->type != cJSON_String || scan_url->valuestring == NULL ||
+            scan_url->valuestring[0] == '\0' ||
+            strlen(scan_url->valuestring) >= sizeof(pxTjcInfo->url))
+    {
+        LYY_LOGE("wallet[%d]: invalid scan_url", picVair.startGetPic);
         cJSON_Delete(payload_json);
         return -11;
     }
-
-    if(((scan_url->valuestring != NULL) 
+    else if(((scan_url->valuestring != NULL)
                 && strcmp((const char *)&pxTjcInfo->url[0],scan_url->valuestring))  
                 || pxTjcInfo->filesize == 0x00)
     {
@@ -605,11 +623,12 @@ http_retry :
 
     g_ulWriteOffset = 0x00;
 
+    xSemaphoreTake(hw_httpGetPicUrlSem, 0);
+    g_SemSta = 1;
     HAL_vHttpGet(   (const char *)pxTjcInfo->url, 
                     APP_prvHttpDataRvCd, 
                     APP_prvHttpRes);                         
 
-    g_SemSta = 1;
     int result = xSemaphoreTake(hw_httpGetPicUrlSem, 15 * 1000); 
     g_SemSta = 0;
 
@@ -755,10 +774,9 @@ void getTjcPicTran(void)
             sprintf(file_name,"filename_%d",(picVair.startGetPic * PIC_INFO_MAX + picVair.startGetPicType));
             
             LYY_LOGD("========================  url_temp.filesize : [%d]  ulUrlAdd :[%d]" , pxTjcInfo->filesize, ulUrlAdd);
-            lyy_display_sendPic("ram",file_name, pxTjcInfo->filesize);
-
-            
+            xSemaphoreTake(hw_httpTranPicUrlSem, 0);
             g_SemSta = 1;
+            lyy_display_sendPic("ram",file_name, pxTjcInfo->filesize);
             result = xSemaphoreTake(hw_httpTranPicUrlSem,10000);           // 传输完成
             g_SemSta = 0;
 
@@ -867,9 +885,8 @@ int lyy_display_sendPic(char *  addr, char * fileName, unsigned int  fileSize)
     LYY_LOGD("====================================================");
     LYY_LOGD("====================================================");
 
-    lyy_display_send((unsigned char *)CmdBuff,strlen((const char *)CmdBuff));
-
     lyy_display_setSendPicStatus(LYY_SENDPIC_TRANS);
+    lyy_display_send((unsigned char *)CmdBuff,strlen((const char *)CmdBuff));
 
     return res;
 }
@@ -1047,18 +1064,25 @@ int lyy_display_setPicPath(char * name,char *  path)
 
     return 1;
 }
+// Bind a zero-based channel's wallet icon to the requested screen component.
+int lyy_display_show_wallet_icon(uint8_t wallet_id, char *object)
+{
+    char file_name[20];
+
+    if(object == NULL || wallet_id >= CHANNELINFO_MAX ||
+       wallet_id >= g_pxTjcPicFlashInfo.ucWalletNumSum)
+    {
+        return -2;
+    }
+
+    // Reuse BW20's downloaded wallet image, without changing the scan-tip image.
+    snprintf(file_name, sizeof(file_name), "filename_%u", wallet_id * PIC_INFO_MAX);
+    return lyy_display_setPicPath(object, file_name);
+}
+
 /**
- * @description: 显示图片
- * 
- * @param [in]    page 哪一页
- * @param [in]    walletNum 哪一个钱包
- * 
- * @return {unsigned char } 
- * 1成功/
- *  0 参数有误/
- * -1 无该页面图片显示/
- * -2 钱包个数大于最大钱包数/
- * -3 没有对应图片
+ * @brief Display the wallet and scan-tip images on the original payment page.
+ * @param walletNum One-based wallet number.
  */
 int lyy_display_showpic(char *page,unsigned char walletNum)
 {

@@ -51,6 +51,8 @@ typedef enum
     TJC_SHOW_EARN_POINTS_SUCCESS, //  获取积分成功
     TJC_SHOW_PAY_RESULT_POINTS,   // 积分抵扣付款成功
     TJC_SHOW_SCREEN_OTA,   // 
+    TJC_SHOW_CHOSE_WALLET,        // 非积分支付渠道选择
+    TJC_SHOW_PAY_PAGE_NEW,        // 非积分扫码支付
 } TJC_SHOW_STATE;
 
 /**
@@ -85,6 +87,7 @@ typedef struct
     uint32_t  time;             //倒计时时间
     uint8_t   next_status;      //倒计时到了之后的状态 
     uint8_t   enable;
+    uint8_t   current_status;    // 倒计时所属页面
 }__attribute__((aligned(1), packed))TJC_COUNT_DOWN_DEF,*PTJC_COUNT_DOWN_DEF;
 /**
  * @brief 

@@ -58,9 +58,11 @@
 #define LYY_SCREEN_DEVICE_TJC8048x270     "TJC8048x270"      
 #define LYY_SCREEN_DEVICE_TJC8048x243     "TJC8048x243"       
 #define LYY_SCREEN_DEVICE_TJC4880x243     "TJC4880x243"        
+#define LYY_SCREEN_DEVICE_TJC4880x243V1   "TJC4880x243V1"
 
 #define LYY_SCREEN_DEVICE                 "small"                    
 #define LYY_SCREEN_DEVICE_4880x243        "small_tjc4880X243"        
+#define LYY_SCREEN_DEVICE_4880x243V1      "small_tjc4880X243V1"
 
 #define LYY_SCREEN_TYPC_00              "00"     
 #define LYY_SCREEN_TYPC_90              "90"     
@@ -168,6 +170,7 @@ extern void lyy_display_send(unsigned char *data, unsigned int len);
 
 
 extern int lyy_display_showpic(char *page,unsigned char walletNum);
+extern int lyy_display_show_wallet_icon(uint8_t wallet_id, char *object);
 extern void set_tjcScreenType(char * type);
 extern int lyy_display_recvPic(unsigned char * pack,unsigned int  len);
 extern int lyy_hw_tjc_pic_info_start(void (*pic_result_cb)(INFOR_PIC_VAIR *));
