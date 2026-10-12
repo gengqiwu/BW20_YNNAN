@@ -67,7 +67,7 @@
 
 
 /* 版本信息 */
-#define CFG_APP_VERSION                         "BW20_POINTS_V2.0.0"        //从2.0.0开始，兼容积分和非积分。后台切换，相对应切换。
+#define CFG_APP_VERSION                         "BW20_WALLET_V2.0.0"        //从2.0.0开始，兼容积分和非积分。后台切换，相对应切换。
 #define CFG_SDK_VERSION                         "AMEBA_RTOS_SDK_V1.0.1"    
 #define CFG_HARD_VERSION                        "BW20_LYY_V1.00"  
 

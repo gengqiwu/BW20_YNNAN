@@ -17,7 +17,7 @@
 
 #include "HAL_Log.h"
 #include "HAL_Ota.h"
-#include "HAL_WIFI.h"
+#include "HAL_Wifi.h"
 #include "HAL_Uart.h"
 #include "HAL_System.h"
 #include "HAL_Flash.h"
