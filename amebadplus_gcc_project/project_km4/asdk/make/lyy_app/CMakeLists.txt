@@ -75,6 +75,7 @@ set(
     ${HW}/lyy_device/lyy_mshgj.c
     ${HW}/lyy_device/lyy_tclxyj.c
     ${HW}/lyy_device/lyy_dfssj.c
+    ${HW}/lyy_device/lyy_koreapos.c
     ${HW}/lyy_device/lyy_xcj.c
     ${HW}/lyy_user/lyy_start.c
     ${HW}/lyy_user/lyy_para.c

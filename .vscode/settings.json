@@ -56,5 +56,6 @@
         "lyy_pic.h": "c",
         "app_apconfig.h": "c",
         "utils.h": "c"
-    }
+    },
+    "cmake.sourceDirectory": "D:/BW20/ameba-rtos20250911/ameba-rtos/amebadplus_gcc_project"
 }

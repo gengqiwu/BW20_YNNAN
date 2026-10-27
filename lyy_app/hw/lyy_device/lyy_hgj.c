@@ -53,8 +53,11 @@
 static uint8_t flagLoopCheckSta = 1;    // 循环获取状态启动标志
 static uint8_t flagFristGetSta = 0;     // 首次获取到主板状态标志
 static uint8_t flagReportDevStatus = 0; // 满足上报主板状态标志
-static int flagfactoryParmGet = 0;          // 记录主板参数获取标记
-static int mqtt_status_old = 0;             // 记录mqtt连接状态
+static int flagfactoryParmGet = 0;      // 记录主板参数获取标记
+static int mqtt_status_old = 0;         // 记录mqtt连接状态
+
+static volatile uint8_t qhhgj_pay_start_waiting = 0;
+static volatile uint8_t qhhgj_background_querying = 0;
 
 static SEM_TYPE qhhgj_checkStaus_sem;
 static SEM_TYPE qhhgj_selectProgram_sem;
@@ -68,11 +71,11 @@ TYPE_QHHGJ_DEV_FACTORY_PARM qhhgj_devParm = {0}; // 厂家参数
 TYPE_QHHGJ_DEV_STA qhhgj_devSta = {0};           // 状态信息
 TYPE_REPORT_QHHGJ_STA_INFO qhghj_rundata = {0};
 TYPE_REPORT_QHHGJ_ACCOUNT_INFO qhhgj_account = {0}; // 投币账目统计
-uint8_t qhhgjRunSta_old = 0;                    // 对应qhhgj_devSta.isRun
-uint16_t qhhgjCoinCnt_old = 0;                  // 对应qhhgj_account.coin_all;
+uint8_t qhhgjRunSta_old = 0;                        // 对应qhhgj_devSta.isRun
+uint16_t qhhgjCoinCnt_old = 0;                      // 对应qhhgj_account.coin_all;
 uint8_t qhhgjfactoryParamId = 0;                    // 控制读取参数序号
-#define TIME_INTERRUPT_MS (50U)              // 定时器周期
-#define PERIOD_FOR_CHECKSTA (3000U)          // 获取设备状态的周期
+#define TIME_INTERRUPT_MS (50U)                     // 定时器周期
+#define PERIOD_FOR_CHECKSTA (3000U)                 // 获取设备状态的周期
 static int timeout_to_checkSta = PERIOD_FOR_CHECKSTA / TIME_INTERRUPT_MS;
 /*******************************************************************************
  *函数名称：uint16_t ModBusCRC16_long(uint8_t *cmd, unsigned long len)
@@ -408,7 +411,7 @@ int device_qhhgj_factory_param_get(void)
  * @param len
  */
 static int transmit_cmd_factoryParmSet(uint8_t *data, uint16_t len) // done
-{                                                                           // 01 03 03 E8 00 50 C5 86
+{                                                                   // 01 03 03 E8 00 50 C5 86
     const uint8_t head1[] = {0x01, 0x10, 0x03, 0xE8, 0x00, 0x50, 0xA0};
     const uint8_t head2[] = {0x01, 0x10, 0x04, 0x38, 0x00, 0x50, 0xA0};
     uint8_t package1[256];
@@ -448,7 +451,7 @@ static int transmit_cmd_factoryParmSet(uint8_t *data, uint16_t len) // done
  * @param len
  */
 static int transmit_cmd_factoryParmSet_forqhhgj(uint8_t *data, uint16_t len) // done
-{                                                                   // 01 03 03 E8 00 50 C5 86
+{                                                                            // 01 03 03 E8 00 50 C5 86
     const uint8_t head[] = {0x01, 0x10, 0x03, 0xE8, 0x00, 0x50, 0xA0};
     uint8_t package[256];
     uint16_t crc, i;
@@ -537,6 +540,17 @@ static int transmit_cmd_start_hgj(void) // done
     return terminal_device_data((uint8_t *)CMD, sizeof(CMD));
 }
 
+static int transmit_cmd_stop_hgj(void)
+{
+    const uint8_t CMD[] = {0x01, 0x10, 0x01, 0x2F, 0x00, 0x01, 0x02, 0x00, 0x01, 0x70, 0xCF};
+    timeout_to_checkSta = PERIOD_FOR_CHECKSTA / TIME_INTERRUPT_MS;
+    return terminal_device_data((uint8_t *)CMD, sizeof(CMD));
+}
+
+int device_qhhgj_stop(void)
+{
+    return transmit_cmd_stop_hgj();
+}
 #if 0
 /**
  * @brief
@@ -707,6 +721,13 @@ void thread_qhhgj_inquire_status(void *arg) //-- done
     while (1)
     {
         vTaskDelay(500 / portTICK_PERIOD_MS);
+        qhhgj_background_querying = 1;
+        if (qhhgj_pay_start_waiting)
+        {
+            qhhgj_background_querying = 0;
+            continue;
+        }
+
         if (mqtt_status_old != lyy_mqtt_get_status())
         { /*网络状态变更*/
             mqtt_status_old = lyy_mqtt_get_status();
@@ -736,21 +757,46 @@ void thread_qhhgj_inquire_status(void *arg) //-- done
                 vTaskDelay(1000 / portTICK_PERIOD_MS);
             }
         }
+        qhhgj_background_querying = 0;
     }
 }
 
 /*获取设备状态倒计时清零，立即触发*/
 static void trigger_checkSta_timeout(void) //-- done
 {
+    if (qhhgj_pay_start_waiting)
+    {
+        transmit_cmd_bitStatusGet();
+        return;
+    }
+
     if (flagLoopCheckSta)
         timeout_to_checkSta = 0;
     else
         transmit_cmd_bitStatusGet();
 }
 
+static void qhhgj_wait_background_idle(uint32_t timeout_ms)
+{
+    uint32_t wait_ms = 0;
+
+    while (qhhgj_background_querying && wait_ms < timeout_ms)
+    {
+        vTaskDelay(100 / portTICK_PERIOD_MS);
+        wait_ms += 100;
+    }
+}
+
 void device_qhhgj_update_status(void *arg) //-- done
 {
     (void)arg;
+    qhhgj_background_querying = 1;
+    if (qhhgj_pay_start_waiting)
+    {
+        qhhgj_background_querying = 0;
+        return;
+    }
+
     if (flagLoopCheckSta)
     {
         if (timeout_to_checkSta)
@@ -761,11 +807,17 @@ void device_qhhgj_update_status(void *arg) //-- done
         {
             transmit_cmd_bitStatusGet();
             vTaskDelay(1000 / portTICK_PERIOD_MS);
+            if (qhhgj_pay_start_waiting)
+            {
+                qhhgj_background_querying = 0;
+                return;
+            }
             transmit_cmd_runDataGet();
             // LYY_LOGD("timeout_to_checkSta>>>>>>>>>>>>>>>>");
             timeout_to_checkSta = PERIOD_FOR_CHECKSTA / TIME_INTERRUPT_MS;
         }
     }
+    qhhgj_background_querying = 0;
 }
 HAL_RTOS_TIMER_T g_hgjTimerHandle;
 /**
@@ -1022,12 +1074,15 @@ int device_qhhgj_pay_start(uint16_t time)
     uint8_t programNum = time;
     uint16_t coinNun = 0;
     uint8_t ret = 0;
-
+    qhhgj_pay_start_waiting = 1;
+    qhhgj_wait_background_idle(6000);
+    vTaskDelay(200 / portTICK_PERIOD_MS);
     if (qhhgj_devSta.isRun != 1) // 设备启动中，启动加时，投币数为当前已投币数+支付币数
     {
         if (programNum == 4)
         {
             event_post_log("zhijiejiashi_timeout");
+            qhhgj_pay_start_waiting = 0;
             return 0;
         }
         if (get_dev_type_code() == DEVICE_TYPE_UART_QHHGJ)
@@ -1061,6 +1116,7 @@ int device_qhhgj_pay_start(uint16_t time)
         if (ret == 0)
         { // 超时未收到主板应答
             event_post_log("transmit_cmd_select_program");
+            qhhgj_pay_start_waiting = 0;
             return 0;
         }
         vTaskDelay(300 / portTICK_PERIOD_MS); // 延时一会
@@ -1077,6 +1133,12 @@ int device_qhhgj_pay_start(uint16_t time)
     LYY_LOGD("qhhgj_devParm.hightCoinCnt[%d]", qhhgj_devParm.hightCoinCnt);
     LYY_LOGD("transmit_cmd_coin_num >>>>>>>>%d", coinNun);
     if (coinNun > 20)
+    {
+        qhhgj_pay_start_waiting = 0;
+        lyy_semFreeV2(qhhgj_sendCoin_sem);
+        qhhgj_sendCoin_sem = NULL;
+    }
+    if (coinNun > 20)
         return 0; // 币数异常直接不启动 避免引起异常
     transmit_cmd_coin_num(coinNun);
     /*等待启动应答指令*/
@@ -1086,6 +1148,7 @@ int device_qhhgj_pay_start(uint16_t time)
     if (ret == 0)
     { // 超时未收到主板应答
         event_post_log("transmit_cmd_coin_num");
+        qhhgj_pay_start_waiting = 0;
         return 0;
     }
     vTaskDelay(500 / portTICK_PERIOD_MS);               // 延时一会
@@ -1093,6 +1156,7 @@ int device_qhhgj_pay_start(uint16_t time)
     {
         event_post_log("jiashichenggong");
         apply_start_t.start_result = 0x01;
+        qhhgj_pay_start_waiting = 0;
         return 1;
     }
     while (1)
@@ -1109,7 +1173,7 @@ int device_qhhgj_pay_start(uint16_t time)
             if (ret == 0)
             { // 超时未收到主板应答
                 event_post_log("LJ_transmit_cmd_start_hgj");
-                //return 0;
+                // return 0;
             }
         }
 
@@ -1163,6 +1227,8 @@ int device_qhhgj_pay_start(uint16_t time)
             break;
         }
     }
+
+    qhhgj_pay_start_waiting = 0;
 
     return ret;
 }

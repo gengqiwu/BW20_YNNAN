@@ -146,7 +146,12 @@ void device_dbj_accounts_pos(uint8_t *data, uint16_t len)
     PDBJ_ACCOUNTS_DEF pAcc = (PDBJ_ACCOUNTS_DEF)data;
     char order[30] = {0};
     utils_lhexToString(order, pAcc->unique, 6);
-    event_post_account_dbj_uart("pos_pay", pAcc->money_sum, pAcc->money_inc, pAcc->coins_sum, pAcc->coins_inc, order);
+    //event_post_account_dbj_uart("pos_pay", pAcc->money_sum, pAcc->money_inc, pAcc->coins_sum, pAcc->coins_inc, order);
+
+    offline_accounts_save(pAcc->money_inc, pAcc->money_sum, MSG_TYPE_AMOUNT, PAY_METHOD_POS_ALL);
+    vTaskDelay(100 / portTICK_PERIOD_MS);
+    offline_accounts_save(pAcc->coins_inc, pAcc->coins_sum, MSG_TYPE_COIN_OUT, PAY_METHOD_POS_ALL);
+
     device_dbj_reply_accounts_pos(data, len);
 }
 
@@ -174,7 +179,10 @@ void device_dbj_accounts_change(uint8_t *data, uint16_t len)
     PDBJ_CHANGE_DEF pAcc = (PDBJ_CHANGE_DEF)data;
     char order[30] = {0};
     utils_lhexToString(order, pAcc->unique, 6);
-    event_post_account_dbj_uart_change("give_change", pAcc->all_money_sum, pAcc->out_money_inc, order);
+    //event_post_account_dbj_uart_change("give_change", pAcc->all_money_sum, pAcc->out_money_inc, order);
+
+    offline_accounts_save(pAcc->out_money_inc, pAcc->all_money_sum, MSG_TYPE_AMOUNT, PAY_METHOD_CHANGE);
+
     device_dbj_reply_accounts_change(data, len);
 }
 
@@ -235,7 +243,12 @@ void device_dbj_accounts_offline(uint8_t *data, uint16_t len)
     char order[30] ={0};
 
     utils_lhexToString(order,pAcc->unique,6);
-    event_post_account_dbj_uart("offline_pay",pAcc->money_sum,pAcc->money_inc,pAcc->coins_sum,pAcc->coins_inc,order);
+    //event_post_account_dbj_uart("offline_pay",pAcc->money_sum,pAcc->money_inc,pAcc->coins_sum,pAcc->coins_inc,order);
+
+    offline_accounts_save(pAcc->money_inc, pAcc->money_sum, MSG_TYPE_AMOUNT, PAY_METHOD_OFFLINE);
+    vTaskDelay(100 / portTICK_PERIOD_MS);
+    offline_accounts_save(pAcc->coins_inc, pAcc->coins_sum, MSG_TYPE_COIN_OUT, PAY_METHOD_OFFLINE);
+
     device_dbj_reply_accounts(data,len);
 
 }

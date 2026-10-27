@@ -16,76 +16,92 @@
 
 #include "thing_mqtt.h"
 #include "thing_event.h"
+#include "lyy_device.h"
 
 #include "lyy_start.h"
+#include "lyy_para.h"
 
-
-
-enum {
-
-    APP_IDLE_ACC,
-    APP_PULSE_ACC,
-    APP_WWJ_ACC,
-    APP_DBJ_ACC,
-};
-
+#define ACC_TIME_INTERRUPT_MS (50U)     // 定时器周期
+#define ACC_PERIOD_FOR_CHECKSTA (5000U) // 获取设备状态的周期
+static int acc_timeout_to_checkSta = ACC_PERIOD_FOR_CHECKSTA / ACC_TIME_INTERRUPT_MS;
 
 typedef struct {
 
-    uint8_t    ucAccUpdate;
-    uint8_t    ucAccType;
-    APP_ACC_T *pxAcc;
-    APP_ACC_T  xAcc;
+    uint32_t    ucAccCoinIn;
+    uint32_t    ucAccGiftOut;
+}APP_ACC_UPDATE_T;
 
-}APP_DRILL_STA_T;
+static APP_ACC_UPDATE_T app_acc_update_t;
 
+// enum {
 
-static APP_DRILL_STA_T g_DrillSta;
-
-
-static void APP_prvAccOp(uint32_t ulCoinIn, uint32_t ulCoinOut, uint32_t ulGiftOut, uint8_t ucAccType)
-{
-
-    g_DrillSta.ucAccUpdate          =  0x01;
-    g_DrillSta.ucAccType            =  ucAccType;
-
-    if(ulCoinIn) {
-
-        g_DrillSta.xAcc.ulCoinInSum     += ulCoinIn;
-        g_DrillSta.pxAcc->ulCoinInSum   += ulCoinIn;
-    }
+//     APP_IDLE_ACC,
+//     APP_PULSE_ACC,
+//     APP_WWJ_ACC,
+//     APP_DBJ_ACC,
+// };
 
 
-    if(ulCoinOut) {
+// typedef struct {
+
+//     uint8_t    ucAccUpdate;
+//     uint8_t    ucAccType;
+//     APP_ACC_T *pxAcc;
+//     APP_ACC_T  xAcc;
+
+// }APP_DRILL_STA_T;
+
+
+// static APP_DRILL_STA_T g_DrillSta;
+
+
+
+// static void APP_prvAccOp(uint32_t ulCoinIn, uint32_t ulCoinOut, uint32_t ulGiftOut, uint8_t ucAccType)
+// {
+
+//     g_DrillSta.ucAccUpdate          =  0x01;
+//     g_DrillSta.ucAccType            =  ucAccType;
+
+//     if(ulCoinIn) {
+
+//         g_DrillSta.xAcc.ulCoinInSum     += ulCoinIn;
+//         g_DrillSta.pxAcc->ulCoinInSum   += ulCoinIn;
+//     }
+
+
+//     if(ulCoinOut) {
         
-        g_DrillSta.xAcc.ulCoinOutSum     += ulCoinOut;
-        g_DrillSta.pxAcc->ulCoinOutSum   += ulCoinOut;
-    }
+//         g_DrillSta.xAcc.ulCoinOutSum     += ulCoinOut;
+//         g_DrillSta.pxAcc->ulCoinOutSum   += ulCoinOut;
+//     }
 
-    if(ulGiftOut) {
+//     if(ulGiftOut) {
         
-        g_DrillSta.xAcc.ulGiftOutSum     += ulGiftOut;
-        g_DrillSta.pxAcc->ulGiftOutSum   += ulGiftOut;
-    }
+//         g_DrillSta.xAcc.ulGiftOutSum     += ulGiftOut;
+//         g_DrillSta.pxAcc->ulGiftOutSum   += ulGiftOut;
+//     }
 
-}
+// }
 
 
 void APP_vCoinIn(void *pvArg)
 {
     
-    APP_prvAccOp(*((uint32_t *)pvArg), 
-                 0x00, 
-                 0x00, 
-                 APP_PULSE_ACC);
+    // APP_prvAccOp(*((uint32_t *)pvArg), 
+    //              0x00, 
+    //              0x00, 
+    //              APP_PULSE_ACC);
 
-    START_TYPE_LEVEL == APP_pxlGetParamePulse()->ulPulsetype ? 
-                APP_vPulseStart(APP_COIN_LEVEL, *((uint32_t *)pvArg)) : 
-                        APP_vPulseStart(APP_COIN_PLUSE, *((uint32_t *)pvArg));
-                            
+    acc_timeout_to_checkSta = ACC_PERIOD_FOR_CHECKSTA / ACC_TIME_INTERRUPT_MS;
+    app_acc_update_t.ucAccCoinIn += *((uint32_t *)pvArg);
+    
 
-    LYY_LOGD(">>> CoinIn sum : [%d][%d]",  g_DrillSta.pxAcc->ulCoinInSum, 
-                                            *((uint32_t *)pvArg));
+    START_TYPE_LEVEL == APP_pxlGetParamePulse()->ulPulsetype
+        ? APP_vPulseStart(APP_COIN_LEVEL, *((uint32_t *)pvArg))
+        : APP_vPulseStart(APP_COIN_PLUSE, *((uint32_t *)pvArg));
+
+    //LYY_LOGD(">>> CoinIn sum : [%d][%d]",  g_DrillSta.pxAcc->ulCoinInSum, 
+                                            //*((uint32_t *)pvArg));
     
 }
 
@@ -94,13 +110,17 @@ void APP_vCoinIn(void *pvArg)
 void APP_vGiftOut(void *pvArg)
 {
 
-    APP_prvAccOp(0x00, 
-                 0x00, 
-                 *((uint32_t *)pvArg), 
-                 APP_PULSE_ACC);
+    // APP_prvAccOp(0x00, 
+    //              0x00, 
+    //              *((uint32_t *)pvArg), 
+    //              APP_PULSE_ACC);
 
-    LYY_LOGD(">>> GiftOut sum : [%d][%d]",  g_DrillSta.pxAcc->ulGiftOutSum, 
-                                            *((uint32_t *)pvArg));
+    acc_timeout_to_checkSta = ACC_PERIOD_FOR_CHECKSTA / ACC_TIME_INTERRUPT_MS;
+    app_acc_update_t.ucAccGiftOut += *((uint32_t *)pvArg);
+
+
+    //LYY_LOGD(">>> GiftOut sum : [%d][%d]",  g_DrillSta.pxAcc->ulGiftOutSum, 
+                                            //*((uint32_t *)pvArg));
 
 }
 
@@ -108,13 +128,15 @@ void APP_vGiftOut(void *pvArg)
 void APP_vWwjCoinIn(uint32_t ulCoinIn)
 {
 
-    APP_prvAccOp(ulCoinIn, 
-                 0x00, 
-                 0x00, 
-                 APP_WWJ_ACC);
+    // APP_prvAccOp(ulCoinIn, 
+    //              0x00, 
+    //              0x00, 
+    //              APP_WWJ_ACC);
 
-    LYY_LOGD(">>> CoinIn sum : [%d][%d]",   g_DrillSta.pxAcc->ulCoinInSum, 
-                                            ulCoinIn);
+    offline_accounts_save(ulCoinIn, 0, MSG_TYPE_COIN_IN, PAY_METHOD_OFFLINE);
+
+    //LYY_LOGD(">>> CoinIn sum : [%d][%d]",   g_DrillSta.pxAcc->ulCoinInSum, 
+                                            //ulCoinIn);
     
 }
 
@@ -122,13 +144,14 @@ void APP_vWwjCoinIn(uint32_t ulCoinIn)
 void APP_vWwjGiftOut(uint32_t ulGiftOut)
 {
 
-    APP_prvAccOp(0x00, 
-                 0x00, 
-                 ulGiftOut,
-                 APP_WWJ_ACC);
+    // APP_prvAccOp(0x00, 
+    //              0x00, 
+    //              ulGiftOut,
+    //              APP_WWJ_ACC);  
+    offline_accounts_save(ulGiftOut, 0, MSG_TYPE_GIFT_OUT, PAY_METHOD_OFFLINE);
 
-    LYY_LOGD(">>> GiftOut sum : [%d][%d]",  g_DrillSta.pxAcc->ulGiftOutSum, 
-                                            ulGiftOut);
+    //LYY_LOGD(">>> GiftOut sum : [%d][%d]",  g_DrillSta.pxAcc->ulGiftOutSum, 
+                                            //ulGiftOut);
 
 }
 
@@ -136,13 +159,15 @@ void APP_vWwjGiftOut(uint32_t ulGiftOut)
 void APP_vDbjCoinIn(uint32_t ulCoinIn)
 {
 
-    APP_prvAccOp(ulCoinIn, 
-                 0x00, 
-                 0x00, 
-                 APP_DBJ_ACC);
+    // APP_prvAccOp(ulCoinIn, 
+    //              0x00, 
+    //              0x00, 
+    //              APP_DBJ_ACC);
 
-    LYY_LOGD(">>> CoinIn sum : [%d][%d]",   g_DrillSta.pxAcc->ulCoinInSum, 
-                                            ulCoinIn);
+    offline_accounts_save(ulCoinIn, 0, MSG_TYPE_AMOUNT, PAY_METHOD_OFFLINE);
+
+    //LYY_LOGD(">>> CoinIn sum : [%d][%d]",   g_DrillSta.pxAcc->ulCoinInSum, 
+                                            // ulCoinIn);
     
 }
 
@@ -150,150 +175,181 @@ void APP_vDbjCoinIn(uint32_t ulCoinIn)
 void APP_vDbjCoinOut(uint32_t ulCoinOut)
 {
 
-    APP_prvAccOp(0x00, 
-                 ulCoinOut, 
-                 0x00, 
-                 APP_DBJ_ACC);
+    // APP_prvAccOp(0x00, 
+    //              ulCoinOut, 
+    //              0x00, 
+    //              APP_DBJ_ACC);
 
-    LYY_LOGD(">>> CoinOut sum : [%d][%d]",  g_DrillSta.pxAcc->ulCoinOutSum, 
-                                            ulCoinOut);
+    offline_accounts_save(ulCoinOut, 0, MSG_TYPE_COIN_OUT, PAY_METHOD_OFFLINE);
+
+    //LYY_LOGD(">>> CoinOut sum : [%d][%d]",  g_DrillSta.pxAcc->ulCoinOutSum, 
+                                            //ulCoinOut);
     
 }
 
 
-void APP_vAccUpdate(void)
-{
+// void APP_vAccUpdate(void)
+// {
 
-    if(0x01 == g_DrillSta.ucAccUpdate) {
+//     if(0x01 == g_DrillSta.ucAccUpdate) {
 
-        APP_lSetParamUpdate();
-        g_DrillSta.ucAccUpdate = 0x00;
-
-        LYY_LOGD(">>> update acc .....");
-    }
-
-}
+//         //APP_lSetParamUpdate();  //不在保存
 
 
+//         g_DrillSta.ucAccUpdate = 0x00;
 
-void APP_vReportedAcc(void)
-{
+//         LYY_LOGD(">>> update acc .....");
+//     }
 
-
-    switch(g_DrillSta.ucAccType)
-    {
-
-        case APP_PULSE_ACC :{
+// }
 
 
-            if(g_DrillSta.xAcc.ulCoinInSum > 0) {
 
-                event_post_account_pulse(   g_DrillSta.xAcc.ulCoinInSum,
-                                            g_DrillSta.pxAcc->ulCoinInSum,
-                                            "offline_pay",
-                                            NULL,
-                                            "accounts_pulse_coin");
-
-                g_DrillSta.xAcc.ulCoinInSum  = 0x00;
-            }
+// void APP_vReportedAcc(void)
+// {
 
 
-            if(g_DrillSta.xAcc.ulGiftOutSum > 0) {
+//     switch(g_DrillSta.ucAccType)
+//     {
 
-                event_post_account_pulse(   g_DrillSta.xAcc.ulGiftOutSum,
-                                            g_DrillSta.pxAcc->ulGiftOutSum,
-                                            "offline_pay",
-                                            NULL,
-                                            "accounts_pulse_gift");
-
-                g_DrillSta.xAcc.ulGiftOutSum  = 0x00;
-            }
+//         case APP_PULSE_ACC :{
 
 
-        }break;
+//             if(g_DrillSta.xAcc.ulCoinInSum > 0) {
 
-        case APP_WWJ_ACC   :{
+//                 event_post_account_pulse(   g_DrillSta.xAcc.ulCoinInSum,
+//                                             g_DrillSta.pxAcc->ulCoinInSum,
+//                                             "offline_pay",
+//                                             NULL,
+//                                             "accounts_pulse_coin");
 
-
-            if(g_DrillSta.xAcc.ulCoinInSum > 0 || g_DrillSta.xAcc.ulGiftOutSum > 0) {
-
-                    event_post_account_wwj_uart(   "offline_pay",
-                                                    g_DrillSta.pxAcc->ulCoinInSum, 
-                                                    g_DrillSta.xAcc.ulCoinInSum,
-                                                    g_DrillSta.pxAcc->ulGiftOutSum, 
-                                                    g_DrillSta.xAcc.ulGiftOutSum ,
-                                                    NULL);
-
-                g_DrillSta.xAcc.ulCoinInSum     = 0x00;
-                g_DrillSta.xAcc.ulGiftOutSum    = 0x00;
-
-            }
+//                 g_DrillSta.xAcc.ulCoinInSum  = 0x00;
+//             }
 
 
-        }break;
+//             if(g_DrillSta.xAcc.ulGiftOutSum > 0) {
 
-        case APP_DBJ_ACC   :{
+//                 event_post_account_pulse(   g_DrillSta.xAcc.ulGiftOutSum,
+//                                             g_DrillSta.pxAcc->ulGiftOutSum,
+//                                             "offline_pay",
+//                                             NULL,
+//                                             "accounts_pulse_gift");
 
-            if(g_DrillSta.xAcc.ulCoinInSum > 0 || g_DrillSta.xAcc.ulCoinOutSum > 0) {
+//                 g_DrillSta.xAcc.ulGiftOutSum  = 0x00;
+//             }
 
-                event_post_account_dbj_uart("offline_pay",
-                                            g_DrillSta.pxAcc->ulCoinInSum, 
-                                            g_DrillSta.xAcc.ulCoinInSum,
-                                            g_DrillSta.pxAcc->ulCoinOutSum, 
-                                            g_DrillSta.xAcc.ulCoinOutSum ,
-                                            NULL);
 
-                g_DrillSta.xAcc.ulCoinInSum     = 0x00;
-                g_DrillSta.xAcc.ulCoinOutSum    = 0x00;
-            }
+//         }break;
+
+//         case APP_WWJ_ACC   :{
+
+
+//             if(g_DrillSta.xAcc.ulCoinInSum > 0 || g_DrillSta.xAcc.ulGiftOutSum > 0) {
+
+//                     event_post_account_wwj_uart(   "offline_pay",
+//                                                     g_DrillSta.pxAcc->ulCoinInSum, 
+//                                                     g_DrillSta.xAcc.ulCoinInSum,
+//                                                     g_DrillSta.pxAcc->ulGiftOutSum, 
+//                                                     g_DrillSta.xAcc.ulGiftOutSum ,
+//                                                     NULL);
+
+//                 g_DrillSta.xAcc.ulCoinInSum     = 0x00;
+//                 g_DrillSta.xAcc.ulGiftOutSum    = 0x00;
+
+//             }
+
+
+//         }break;
+
+//         case APP_DBJ_ACC   :{
+
+//             if(g_DrillSta.xAcc.ulCoinInSum > 0 || g_DrillSta.xAcc.ulCoinOutSum > 0) {
+
+//                 event_post_account_dbj_uart("offline_pay",
+//                                             g_DrillSta.pxAcc->ulCoinInSum, 
+//                                             g_DrillSta.xAcc.ulCoinInSum,
+//                                             g_DrillSta.pxAcc->ulCoinOutSum, 
+//                                             g_DrillSta.xAcc.ulCoinOutSum ,
+//                                             NULL);
+
+//                 g_DrillSta.xAcc.ulCoinInSum     = 0x00;
+//                 g_DrillSta.xAcc.ulCoinOutSum    = 0x00;
+//             }
     
 
-        }break;
+//         }break;
 
-        default : ;
+//         default : ;
 
-    }
+//     }
 
-    g_DrillSta.ucAccType = APP_IDLE_ACC;
+//     g_DrillSta.ucAccType = APP_IDLE_ACC;
 
-}
+// }
 
 
 
-void APP_vAccTask(void *pvArg)
+void APP_vAccTask(void *pvArg)   //新线下账目优化后
 {
 
     (void)pvArg;
 
-    APP_vAccUpdate();
-
-    if(lyy_mqtt_connect_result()) {
-
-        APP_vReportedAcc();
+    if (acc_timeout_to_checkSta)
+    {
+        acc_timeout_to_checkSta--;
     }
-    
+    if (acc_timeout_to_checkSta <= 0)
+    {
+        //event_post_log("acc_time_test");
+
+        if (app_acc_update_t.ucAccCoinIn != 0)
+        {
+
+            if (get_dev_type_code() == DEVICE_TYPE_PULSE)
+            {
+                offline_accounts_save(app_acc_update_t.ucAccCoinIn, 0, MSG_TYPE_PULSE_COIN, PAY_METHOD_OFFLINE);
+            }
+            else
+            {
+                offline_accounts_save(app_acc_update_t.ucAccCoinIn, 0, MSG_TYPE_COIN_IN, PAY_METHOD_OFFLINE); // 大概率用不上
+            }
+
+            app_acc_update_t.ucAccCoinIn = 0; //账目清零
+        }
+
+        if (app_acc_update_t.ucAccGiftOut != 0)
+        {
+            if (get_dev_type_code() == DEVICE_TYPE_PULSE)
+            {
+                offline_accounts_save(app_acc_update_t.ucAccGiftOut, 0, MSG_TYPE_PULSE_GIFT, PAY_METHOD_OFFLINE);
+            }
+            else
+            {
+                offline_accounts_save(app_acc_update_t.ucAccGiftOut, 0, MSG_TYPE_GIFT_OUT, PAY_METHOD_OFFLINE); // 大概率用不上
+            }
+            app_acc_update_t.ucAccGiftOut = 0; // 账目清零
+        }
+
+        acc_timeout_to_checkSta = ACC_PERIOD_FOR_CHECKSTA / ACC_TIME_INTERRUPT_MS;
+    }
 }
 
 
 void APP_vDrillingModeInit(void)
 {
 
-    memset((void *)&g_DrillSta,
-            0x00,
-            sizeof(APP_DRILL_STA_T));
+    // memset((void *)&g_DrillSta,
+    //         0x00,
+    //         sizeof(APP_DRILL_STA_T));
 
-    g_DrillSta.pxAcc   = APP_pxlGetParameAcc();
-
-#define APP_ACC_TASK_TIME      (4 * 1000)
+    //g_DrillSta.pxAcc   = APP_pxlGetParameAcc();
 
     static struct HalSoftTimer AppAccTask;
 
-    HAL_vSoftTimeInit(&AppAccTask, 
-                      APP_vAccTask, 
-                      APP_ACC_TASK_TIME,
+    HAL_vSoftTimeInit(&AppAccTask,
+                      APP_vAccTask,
+                      ACC_TIME_INTERRUPT_MS,
                       NULL);
-
-                      
 }
 
 

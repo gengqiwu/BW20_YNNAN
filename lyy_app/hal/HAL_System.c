@@ -47,6 +47,8 @@ void HAL_vSoftTimeInit(struct HalSoftTimer *pxHandle,
                        void *pxArg)
 {
 
+    // unsigned long ullRepeat    单位是10ms
+
     pxHandle->vTimeoutCb = vTimeoutCb;
     pxHandle->ullSysTick = rtos_time_get_current_system_time_ms();
     pxHandle->ullRepeat  = ullRepeat;

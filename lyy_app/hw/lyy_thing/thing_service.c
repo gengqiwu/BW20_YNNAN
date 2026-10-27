@@ -20,6 +20,7 @@
 #include "APP_Param.h"
 #include "APP_Pluse.h"
 #include "APP_Detect.h"
+#include "lyy_device.h"
 
 #include "thing_iot.h"
 #include "thing_init.h"
@@ -33,6 +34,12 @@
 #include "lyy_para.h"
 #include "lyy_start.h"
 #include "lyy_dfssj.h"
+#include "lyy_xyj.h"
+#include "lyy_hgj.h"
+#include "lyy_cwxyj.h"
+#include "lyy_cwxhj.h"
+#include "lyy_cwhgj.h"
+#include "lyy_koreapos.h"
 
 int thing_service_pay_apply_ndj(cJSON* params, char *id);
 int thing_service_pay_start_ndj(cJSON* params, char *id);
@@ -47,20 +54,24 @@ int thing_service_equipment_binding(cJSON *params, char *id);
 int thing_service_equipment_unbinding(cJSON *params, char *id);
 int thing_service_marketing_point_authorize(cJSON *params, char *id);
 int thing_service_marketing_point_claim(cJSON *params, char *id);
+int thing_service_ntp_req(cJSON *params, char *id);
+int thing_service_accounts_clear(cJSON *params, char *id);
 
 int thing_service_pay_apply(cJSON *params, char *id);
-int thing_service_pay_start(cJSON* params, char *id);
-int thing_service_pay_apply_dbj(cJSON* params, char *id);
-int thing_service_pay_start_dbj(cJSON* params, char *id);
-int thing_service_pay_apply_wwj(cJSON* params, char *id);
-int thing_service_pay_start_wwj(cJSON* params, char *id);
-int thing_service_pay_start_amy(cJSON* params, char *id);
+int thing_service_pay_start(cJSON *params, char *id);
+int thing_service_pay_apply_dbj(cJSON *params, char *id);
+int thing_service_pay_start_dbj(cJSON *params, char *id);
+int thing_service_pay_apply_wwj(cJSON *params, char *id);
+int thing_service_pay_start_wwj(cJSON *params, char *id);
+int thing_service_pay_start_amy(cJSON *params, char *id);
 int thing_service_pay_apply_dfssj(cJSON *params, char *id);
 int thing_service_pay_start_dfssj(cJSON *params, char *id);
-/**
- * @brief
- * 服务
- */
+int thing_service_stop(cJSON *params, char *id);
+int thing_service_pos_order_create_func(cJSON *params, char *id);
+int thing_service_pos_order_view_func(cJSON *params, char *id);
+int thing_service_pos_order_clear_func(cJSON *params, char *id);
+int thing_service_pos_pay_cancel_func(cJSON *params, char *id);
+
 const SERVICE_METHOD_DEF moethod_service[] =
     {
         {"pay_apply", thing_service_pay_apply},
@@ -79,6 +90,13 @@ const SERVICE_METHOD_DEF moethod_service[] =
         {"equipment_unbinding", thing_service_equipment_unbinding},             // 设备解绑通知
         {"marketing_point_authorize", thing_service_marketing_point_authorize}, // 积分营销-订单授权
         {"marketing_point_claim", thing_service_marketing_point_claim},         // 积分营销-积分领取
+        {"ntp_reply", thing_service_ntp_req},                                   // 同步时钟
+        {"accounts_clear", thing_service_accounts_clear},                       // 账目清除
+        {"stop", thing_service_stop},                                           // 停止服务
+        {"pos_order_create_func", thing_service_pos_order_create_func},         // POS机订单创建
+        {"pos_order_view_func", thing_service_pos_order_view_func},             // POS机订单明细回查
+        {"pos_order_clear_func", thing_service_pos_order_clear_func},           // POS机订单缓存清除
+        {"pos_pay_cancel_func", thing_service_pos_pay_cancel_func},             // POS取消支付
 };
 
 char pay_start_type[64] = {0};
@@ -255,15 +273,192 @@ int thing_service_pay_start(cJSON* params, char *id)
     return 1;
 }
 
+int thing_service_stop(cJSON *params, char *id)
+{
+    int ret = -1;
+    cJSON *data = NULL;
+
+    (void)params;
+
+    switch (get_dev_type_code())
+    {
+    case DEVICE_TYPE_UART_QHXYJ:
+    case DEVICE_TYPE_UART_LJXYJ:
+        ret = device_qhxyj_stop();
+        break;
+    case DEVICE_TYPE_UART_QHHGJ:
+    case DEVICE_TYPE_UART_LJHGJ:
+        ret = device_qhhgj_stop();
+        vTaskDelay(400 / portTICK_PERIOD_MS);
+        ret |= device_qhhgj_stop();
+        break;
+    case DEVICE_TYPE_UART_SKYWORTH_GTXYJ:
+        ret = terminal_skyworthXYJ_stop();  //创维洗衣机停止
+        break;
+    case DEVICE_TYPE_UART_SKYWORTH_GTHGJ:
+        ret = terminal_skyworthXYJ_stop(); // 创维烘干机停止   判断烘干机和洗衣机是一个指令，待测试
+        break;
+    case DEVICE_TYPE_UART_SKYWORTH_GTXHJ:
+        ret = terminal_skyworthxhj_stop(); // 创维洗烘机停止
+        break;
+    case DEVICE_TYPE_UART_MSHGJ:
+        break;
+    default:
+        LYY_LOGD("stop service unsupported dev_type:%d", get_dev_type_code());
+        break;
+    }
+
+    data = cJSON_CreateObject();
+    if (data != NULL)
+    {
+        cJSON_AddStringToObject(data, "result", (ret == 0) ? "success" : "fail");
+    }
+
+    thing_service_invoke_reply(data, (ret == 0) ? "success" : "fail", id, "stop");
+
+    return (ret == 0) ? 1 : -1;
+}
+
+int thing_service_pos_order_create_func(cJSON *params, char *id)
+{
+    (void)id;
+
+    koreapos_param_t.payment_amount = 0;  //清空启动金额
+
+    cJSON *data = NULL;
+    cJSON *cJsonData = NULL;
+
+    cJSON *pack = cJSON_GetObjectItem(params, "payload");
+    if (pack == NULL)
+    {
+        LYY_LOGD("pos_order_create_func is error");
+        return -1;
+    }
+    cJsonData = cJSON_Parse(pack->valuestring);
+    if (cJsonData == NULL)
+    {
+        LYY_LOGD("cJSON_Parse fail");
+        return -2;
+    }
+
+    // 系统交易流水号
+    data = cJSON_GetObjectItem(cJsonData, "transaction_number");
+    if (data != NULL && data->type == cJSON_String)
+    {
+        memset(koreapos_param_t.transaction_number_new, 0x00, sizeof(koreapos_param_t.transaction_number_new));
+        strcpy(koreapos_param_t.transaction_number_new, data->valuestring);
+        LYY_LOGD("koreapos_param_t.transaction_number_new: %s", koreapos_param_t.transaction_number_new);
+    }
+
+    // 支付金额
+    data = cJSON_GetObjectItem(cJsonData, "payment_amount");
+    if (data != NULL && data->type == cJSON_Number)
+    {
+        koreapos_param_t.payment_amount = (uint32_t)data->valueint;
+        LYY_LOGD("koreapos_param_t.payment_amount%d", koreapos_param_t.payment_amount);
+    }
+
+    if (koreapos_param_t.pay_flag==1)
+    {
+        event_post_pos_order_create_result(koreapos_param_t.transaction_number_new, 2); // 发起支付失败
+    }
+    else
+    {
+        koreapos_param_t.cancel_flag = 0; // 添加取消标记，直到下次调起支付才清零。
+        koreapos_param_t.pay_flag = 0; // 发起支付申请，清空支付状态
+        lyy_koreapos_payment(koreapos_param_t.payment_amount, 60);
+    }
+
+    return 1;
+}
+
+int thing_service_pos_order_view_func(cJSON *params, char *id)
+{
+    (void)id;
+
+    cJSON *data = NULL;
+    uint8_t result;
+
+    // 系统交易流水号
+    data = cJSON_GetObjectItem(params, "transaction_number");
+    if (data != NULL && data->type == cJSON_String)
+    {
+        memset(koreapos_param_t.transaction_number_new, 0x00, sizeof(koreapos_param_t.transaction_number_new));
+        strcpy(koreapos_param_t.transaction_number_new, data->valuestring);
+        LYY_LOGD("koreapos_param_t.transaction_number_new: %s", koreapos_param_t.transaction_number_new);
+    }
+
+    if (strcmp(koreapos_param_t.transaction_number, koreapos_param_t.transaction_number_new) == 0)
+    {
+        // 需要修改，先这样写
+        if (koreapos_param_t.pay_flag == 0)
+            result = 1;
+        else
+            result = 0;
+
+        event_post_pos_order_detail(koreapos_param_t.transaction_number_new, result);
+    }
+    else
+    {
+
+        event_post_pos_order_detail(koreapos_param_t.transaction_number_new, 2);
+    }
+
+
+    return 1;
+}
+
+int thing_service_pos_order_clear_func(cJSON *params, char *id)
+{
+    (void)id;
+
+    cJSON *data = NULL;
+
+    // 系统交易流水号
+    data = cJSON_GetObjectItem(params, "transaction_number");
+    if (data != NULL && data->type == cJSON_String)
+    {
+        memset(koreapos_param_t.transaction_number_new, 0x00, sizeof(koreapos_param_t.transaction_number_new));
+        strcpy(koreapos_param_t.transaction_number_new, data->valuestring);
+        LYY_LOGD("koreapos_param_t.transaction_number_new: %s", koreapos_param_t.transaction_number_new);
+    }
+
+    event_post_pos_order_cleaing(koreapos_param_t.transaction_number_new);
+
+    return 1;
+}
+
+int thing_service_pos_pay_cancel_func(cJSON *params, char *id)
+{
+    (void)id;
+
+    cJSON *data = NULL;
+
+    // 系统交易流水号
+    data = cJSON_GetObjectItem(params, "transaction_number");
+    if (data != NULL && data->type == cJSON_String)
+    {
+        LYY_LOGD("koreapos_param_t.transaction_number_new: %s", koreapos_param_t.transaction_number_new);
+    }
+
+    if (get_dev_type_code() == DEVICE_TYPE_UART_KOREAPOS)
+    {
+        koreapos_param_t.pay_flag = 0; // 回归默认状态
+        koreapos_param_t.cancel_flag = 1; // 添加取消标记，直到下次调起支付才清零。
+        lyy_koreapos_cancel_payment();
+    }
+
+    return 1;
+}
 /***********************************ndj*************************************/
 /**
- * @brief 
+ * @brief
  * 支付申请
- * @param params 
- * @param id 
- * @return char 
+ * @param params
+ * @param id
+ * @return char
  */
-int thing_service_pay_apply_ndj(cJSON* params, char *id)
+int thing_service_pay_apply_ndj(cJSON *params, char *id)
 {
     //ndj_add
     int x=0,y=0;
@@ -1355,6 +1550,18 @@ int thing_service_qrcode_dynamic_std(cJSON* params, char *id)
         return -2;
     }
 
+    cJSON *currency = cJSON_GetObjectItem(params, "currency_desc");
+    if (currency != NULL && currency->type == cJSON_String) //
+    {
+        memset(tjc_infor_t.pay.currency_desc, 0, sizeof(tjc_infor_t.pay.currency_desc));
+        strcpy(tjc_infor_t.pay.currency_desc, currency->valuestring);
+        LYY_LOGD("currency_desc: %s", currency->valuestring);
+    }
+    else
+    {
+        LYY_LOGD("no currency_desc");
+    }
+
     //PAY_PARAM_DEF *param = get_pay_param();
     //lyy_tjc_pay_page_set(pay_url_wallet_number_get(),param->chnl_sum,url->valuestring,money->valuestring);//显示支付二维码
 
@@ -1432,6 +1639,18 @@ char thing_service_qrcode_dynamic_ndj(cJSON* params, char *id)
     else
     {
         LYY_LOGD("no unique_code");
+    }
+
+    cJSON *currency = cJSON_GetObjectItem(params, "currency_desc");
+    if (currency != NULL && currency->type == cJSON_String) //
+    {
+        memset(tjc_infor_t.pay.currency_desc, 0, sizeof(tjc_infor_t.pay.currency_desc));
+        strcpy(tjc_infor_t.pay.currency_desc, currency->valuestring);
+        LYY_LOGD("currency_desc: %s", currency->valuestring);
+    }
+    else
+    {
+        LYY_LOGD("no currency_desc");
     }
 
     // PAY_PARAM_DEF *param =get_pay_param();
@@ -1776,7 +1995,11 @@ int thing_service_marketing_point_authorize(cJSON *params, char *id)
     }
 
     //执行屏幕页面跳转
-    lyy_tjc_set_status(TJC_SHOW_SCAN_POINTS_SUCCESS);
+    //lyy_tjc_set_status(TJC_SHOW_SCAN_POINTS_SUCCESS);
+
+    // 直接跳转到会员抵扣消费
+    tjc_infor_t.points_pay_flag = 1;                        // 标记积分抵扣消费
+    lyy_tjc_packages_choose(tjc_infor_t.package_record, 0); // 默认第一个钱包 0
 
     thing_service_invoke_reply(NULL, "success", id, "marketing_point_authorize"); // 应答
 
@@ -1860,10 +2083,96 @@ int thing_service_marketing_point_claim(cJSON *params, char *id)
     }
 
 
-    //执行屏幕页面跳转
+    // //执行屏幕页面跳转
     lyy_tjc_set_status(TJC_SHOW_EARN_POINTS_SUCCESS);
 
     thing_service_invoke_reply(NULL, "success", id, "marketing_point_claim"); // 应答
 
+    return 1;
+}
+
+/**
+ * @description: 同步时钟
+ * @param {*}
+ * @return {*}
+ */
+int thing_service_ntp_req(cJSON *params, char *id)
+{
+    (void)id;
+
+    cJSON *data = NULL;
+    char device_send_time_t[21] = {0};
+    char server_receive_time_t[21] = {0};
+    char server_send_time_t[21] = {0} ;
+
+    // 设备发送时间
+    data = cJSON_GetObjectItem(params, "device_send_time");
+    if (data != NULL && data->type == cJSON_String)
+    {
+        memset(device_send_time_t, 0x00, sizeof(device_send_time_t));
+        strcpy(device_send_time_t, data->valuestring);
+        LYY_LOGD("device_send_time_t: %s", device_send_time_t);
+    }else
+    {
+        LYY_LOGD("device_send_time_t is NULL");
+        return 0;
+    }
+
+    // 服务器接收时间
+    data = cJSON_GetObjectItem(params, "server_receive_time");
+    if (data != NULL && data->type == cJSON_String)
+    {
+        memset(server_receive_time_t, 0x00, sizeof(server_receive_time_t));
+        strcpy(server_receive_time_t, data->valuestring);
+        LYY_LOGD("server_receive_time_t: %s", server_receive_time_t);
+    }
+    else
+    {
+        LYY_LOGD("server_receive_time_t is NULL");
+        return 0;
+    }
+
+    // 服务器发送时间
+    data = cJSON_GetObjectItem(params, "server_send_time");
+    if (data != NULL && data->type == cJSON_String)
+    {
+        memset(server_send_time_t, 0x00, sizeof(server_send_time_t));
+        strcpy(server_send_time_t, data->valuestring);
+        LYY_LOGD("server_send_time_t: %s", server_send_time_t);
+    }
+    else
+    {
+        LYY_LOGD("server_send_time_t is NULL");
+        return 0;
+    }
+
+    ntp_time_t.device_send_time = strtoull(device_send_time_t, NULL,10);
+    ntp_time_t.server_receive_time = strtoull(server_receive_time_t, NULL,10);
+    ntp_time_t.server_send_time = strtoull(server_send_time_t, NULL,10);
+
+    ntp_time_t.timestamp = (ntp_time_t.server_receive_time + ntp_time_t.server_send_time + get_timestamp()-ntp_time_t.device_send_time)/ 2;
+
+    return 1;
+}
+
+/**
+ * @description: 账目清除
+ * @param {*}
+ * @return {*}
+ */
+int thing_service_accounts_clear(cJSON *params, char *id)
+{
+    (void)id;
+
+    cJSON *data = NULL;
+
+    // 清除账目的唯一码
+    data = cJSON_GetObjectItem(params, "unique_code");
+    if (data != NULL && data->type == cJSON_String)
+    {
+        memset(account_data_t.unique_code, 0x00, sizeof(account_data_t.unique_code));
+        strncpy(account_data_t.unique_code, data->valuestring, sizeof(account_data_t.unique_code) - 1);
+        LYY_LOGD("account_data_t.unique_code: %s", account_data_t.unique_code);
+    }
     return 1;
 }

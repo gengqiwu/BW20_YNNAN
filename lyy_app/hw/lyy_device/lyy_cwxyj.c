@@ -97,7 +97,16 @@ void lyy_device_cwxyj_init(void)
                     NULL); 
 }
 
+/**
+ * @brief  停止功能
+ *
+ */
+int terminal_skyworthXYJ_stop(void)
+{
+    uint8_t txbuff[7] = {0xAA, 0x00, 0x01, 0x08, 0x00, 0xA3, 0xDD};
 
+    return terminal_device_data((uint8_t *)txbuff, sizeof(txbuff));
+}
 
 /*******************************************************************************
 *函数名称：int terminalCWSendCHK()

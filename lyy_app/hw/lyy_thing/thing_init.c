@@ -19,6 +19,7 @@
 
 
 #include "lyy_pic.h"
+#include "lyy_tjc.h"
 #include "lyy_para.h"
 #include "lyy_device.h"
 
@@ -212,8 +213,12 @@ void box_post_cloud_device_infor(void)
     property_post_wifi_info(); // 上报WIFI账号密码
     vTaskDelay(1000 / portTICK_PERIOD_MS);
 
+    thing_ota_inform_version(tjc_infor_t.tjc_ver, THING_OTA_SCREEN); // 上报屏幕版本信息
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
+
     thing_ota_inform_version(CFG_APP_VERSION , THING_OTA_DEFAULT);  //上报版本信息
     vTaskDelay(2000  / portTICK_PERIOD_MS);//延时等待获取设备品类  
+
 
 }
 

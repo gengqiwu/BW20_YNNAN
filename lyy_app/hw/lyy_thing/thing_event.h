@@ -10,6 +10,7 @@
 
 #include <string.h>
 #include "cJSON.h"
+#include "lyy_device.h"
 
 //账目类型
 enum acc_type
@@ -51,4 +52,11 @@ extern void event_post_start_result_dfssj(uint16_t volume, uint8_t x, uint8_t y,
 extern void event_post_query_marketing_point_config(void);
 extern void event_post_query_dynamic_url_std_points(char *package_id, char *channel, char *channel_number, cJSON_bool use_point_flag, char *auth_token, char *expected_deduct_points, char *expected_deduct_amount, char *expected_pay_amount);
 extern void event_post_query_dynamic_url_ndj_points(char *package_id, char *channel, char *channel_number, uint32_t x, uint32_t y, cJSON_bool use_point_flag, char *auth_token, char *expected_deduct_points, char *expected_deduct_amount, char *expected_pay_amount);
+
+extern void event_post_ntp_req(uint64_t timestamp);
+extern void event_post_new_offline_accounts(BillCacheItem_t *item);
+
+extern void event_post_pos_order_create_result(char *transaction_number, uint8_t result);
+extern void event_post_pos_order_detail(char *transaction_number, uint8_t transaction_result);
+extern void event_post_pos_order_cleaing(char *transaction_number);
 #endif // !

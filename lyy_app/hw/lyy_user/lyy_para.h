@@ -32,6 +32,7 @@ typedef enum
     DEVICE_TYPE_UART_TCLXYJ,         /*TCL洗衣机*/
     DEVICE_TYPE_UART_DFSSJ,          /*德锋售水机*/
     DEVICE_TYPE_UART_THXCJ,          /*探虎洗车机*/
+    DEVICE_TYPE_UART_KOREAPOS,        /*韩国POS*/
 } DEVICE_TYPE;
 
 typedef enum
@@ -72,7 +73,7 @@ enum LBS_COMPANY_TYPE
 
 #define FILE_NAME_ERR_MSG          "lyy_err_msg"       //海外故障信息
 
-#define NDJ_LANE_MAX         6      //货道数
+#define NDJ_LANE_MAX         16      //货道数
 #define PAY_CHANNEL_MAX      4      //渠道数
 
 /**
@@ -94,6 +95,10 @@ typedef struct
     char            price_Desc[32];     // 价格描述
     char            water_Temperature[32];         // 套餐水温度
     char            package_Color[32];             // 套餐颜色
+
+    char            orderMaxDeductAmount[32];   //积分最大可抵扣金额
+
+
 
 #if 0
     char            name[128];          //名称

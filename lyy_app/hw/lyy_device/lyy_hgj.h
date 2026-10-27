@@ -56,14 +56,14 @@ typedef enum
 
 typedef struct
 {
-    uint16_t coinPerPulse;    // 单脉冲币数
-    uint16_t baseCoinCnt;     // 基础投币数
-    uint16_t minAddCoinCnt;   // 中温烘增加币数
-    uint16_t hightAddCoinCnt; // 高温烘增加币数
-    uint16_t lowCoinCnt;      // 低温投币数
-    uint16_t minCoinCnt;      // 中温烘投币数
-    uint16_t hightCoinCnt;    // 高温烘投币数
-} TYPE_QHHGJ_DEV_FACTORY_PARM;    //
+    uint16_t coinPerPulse;     // 单脉冲币数
+    uint16_t baseCoinCnt;      // 基础投币数
+    uint16_t minAddCoinCnt;    // 中温烘增加币数
+    uint16_t hightAddCoinCnt;  // 高温烘增加币数
+    uint16_t lowCoinCnt;       // 低温投币数
+    uint16_t minCoinCnt;       // 中温烘投币数
+    uint16_t hightCoinCnt;     // 高温烘投币数
+} TYPE_QHHGJ_DEV_FACTORY_PARM; //
 
 typedef struct
 {
@@ -91,7 +91,6 @@ typedef struct
     uint16_t coin_all; // 投币总统计 ADDR36
 } TYPE_REPORT_QHHGJ_ACCOUNT_INFO;
 
-
 extern void lyy_device_qhhgj_init(void);
 extern void device_qhhgj_packet_parse(uint8_t *package, uint16_t len);
 
@@ -104,5 +103,5 @@ extern uint8_t qhhgj_report_change_status(uint8_t force);
 extern void qhhgj_ctlb_post_up_raw(uint8_t *data, int datalen);
 extern void qhhgj_ctlb_post_up_raw_err(uint8_t errCode);
 extern void qhhgj_event_post_account(void);
-
+extern int device_qhhgj_stop(void);
 #endif

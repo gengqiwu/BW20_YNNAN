@@ -36,9 +36,9 @@ typedef enum
     TJC_SHOW_AMY_TIME_WORK,   // 倒计时
     TJC_SHOW_AMY_TIME_START,
     TJC_SHOW_AMY_PACKAGES,
-    TJC_SHOW_LOG_DEBUG, // 日志打印
-    TJC_SHOW_PAY_URL,   // 支付界面
-    TJC_SHOW_PAY_RESULT,  //正常支付成功
+    TJC_SHOW_LOG_DEBUG,  // 日志打印
+    TJC_SHOW_PAY_URL,    // 支付界面
+    TJC_SHOW_PAY_RESULT, // 正常支付成功
     TJC_SHOW_DEVICE_REGIST,
     TJC_SHOW_PAY_PAGE,            // 支付界面
     TJC_SHOW_STANDBY,             // 巡检状态
@@ -50,6 +50,7 @@ typedef enum
     TJC_SHOW_EARN_POINTS,         //  获取积分页面
     TJC_SHOW_EARN_POINTS_SUCCESS, //  获取积分成功
     TJC_SHOW_PAY_RESULT_POINTS,   // 积分抵扣付款成功
+    TJC_SHOW_SCREEN_OTA,   // 
 } TJC_SHOW_STATE;
 
 /**
@@ -107,7 +108,8 @@ typedef struct
     uint8_t     wallet_num;
     uint8_t     wallet_sum;
     uint16_t    time;
-}__attribute__((aligned(1), packed))TJC_PAY_PAGE_DEF,*PTJC_PAY_PAGE_DEF;
+    char        currency_desc[10];
+} __attribute__((aligned(1), packed)) TJC_PAY_PAGE_DEF, *PTJC_PAY_PAGE_DEF;
 /**
  * @brief 
  * 成功页面
@@ -290,9 +292,15 @@ extern void lyy_tjc_page_obj_amy_waring(char *context);
 extern void lyy_tjc_page_amy_working_V2(uint8_t statues,uint32_t time);
 extern void amy_time_to_string(uint32_t time,char *pstring);
 extern void lyy_tjc_obj_update_amy_count_down(char *body);
+extern void lyy_tjc_packages_choose(uint8_t id, uint8_t wallet_number);
+
 
 extern void thread_dowload_semGive(void);
 extern TJC_POINT_CONFIG_DEF *get_point_config(void);
 extern TJC_POINT_AUTHORIZE_DEF *get_point_authorize(void);
 extern TJC_POINT_CLAIM_DEF *get_point_claim(void);
+extern void points_deduction_max_amount_show(void);
+extern void tourist_to_consume_add_points_show_loading(void);
+extern void tourist_to_consume_add_points_show(void);
+
 #endif

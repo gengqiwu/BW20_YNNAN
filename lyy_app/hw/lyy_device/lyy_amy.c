@@ -270,7 +270,10 @@ void device_amy_update_acc(uint8_t *data, uint16_t len)
     if(acc_amy->add != add) //需要上报
     {
         add = acc_amy->add;
-        event_post_account_amy_uart("offline_pay",0,0,acc_amy->total,acc_amy->inc, NULL);
+        //event_post_account_amy_uart("offline_pay",0,0,acc_amy->total,acc_amy->inc, NULL);
+
+        offline_accounts_save(acc_amy->inc, acc_amy->total, MSG_TYPE_AMOUNT, PAY_METHOD_OFFLINE);
+
         LYY_LOGD("acc[amy] total: %d ,inc: %d",acc_amy->total,acc_amy->inc);
     }
 
@@ -296,7 +299,12 @@ void device_amy_update_acc_V2(uint8_t *data, uint16_t len)
     if(acc_amy->add != add) //需要上报
     {
         add = acc_amy->add;
-        event_post_account_amy_uart("offline_pay",acc_amy->coin_total,acc_amy->coin_inc,acc_amy->cash_total,acc_amy->cash_inc, NULL);
+        //event_post_account_amy_uart("offline_pay",acc_amy->coin_total,acc_amy->coin_inc,acc_amy->cash_total,acc_amy->cash_inc, NULL);
+
+        offline_accounts_save(acc_amy->cash_inc, acc_amy->cash_total, MSG_TYPE_AMOUNT, PAY_METHOD_OFFLINE);
+        vTaskDelay(100 / portTICK_PERIOD_MS);
+        offline_accounts_save(acc_amy->coin_inc, acc_amy->coin_total, MSG_TYPE_COIN_IN, PAY_METHOD_OFFLINE);
+
         LYY_LOGD("acc[amy] coin total: %d ,inc: %d",acc_amy->coin_total,acc_amy->coin_inc);
         LYY_LOGD("acc[amy] cash total: %d ,inc: %d",acc_amy->cash_total,acc_amy->cash_inc);
     }
