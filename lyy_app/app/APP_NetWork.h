@@ -12,13 +12,16 @@ typedef enum {
     
     CLIENT_DIS_CON,
     CLIENT_CONNING,
-    CLIENT_CONED
+    CLIENT_CONED,
+    CLIENT_ISPAUSED
 }APP_CLIENT_STA_T;
 
 
 extern void             APP_vNetWorkInit(void);
 extern APP_CLIENT_STA_T APP_pxGetClientSta(void);
 extern int              APP_lClientWrite(char *pcBuf, int lLen);
+extern void             APP_pxSetClientSta(APP_CLIENT_STA_T xSta);
+extern void             APP_prvClientCloseSocket(void);
 
 
 

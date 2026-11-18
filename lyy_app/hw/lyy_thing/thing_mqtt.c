@@ -325,6 +325,8 @@ void lyy_mqtt_status_task(void *arg)
             //todo..
         }break;
 
+        case MQTT_STATE_ISPAUSED:
+            break;
         default : break;
 
     }
@@ -373,6 +375,11 @@ int lyy_mqtt_get_step(void)
 void lyy_mqtt_set_status(uint8_t status)
 {
     mqttClient.clientSta = status;
+}
+
+void lyy_mqtt_set_step(int para)
+{
+    mqttClient.clientSta = para;
 }
 
 /**

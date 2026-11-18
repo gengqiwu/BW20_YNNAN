@@ -24,6 +24,9 @@
 #include "HAL_Uart.h"
 #include "HAL_Flash.h"
 #include "HAL_System.h"
+#include "FreeRTOS.h"
+#include "task.h"
+#include "semphr.h"
 
 #include "thing_iot.h"
 #include "thing_mqtt.h"
@@ -72,7 +75,7 @@ void (*tjc_pic_result_cb)(INFOR_PIC_VAIR *) = NULL;
  */
 void lyy_display_send(unsigned char *data, unsigned int len)
 {
-    HAL_vUartSend(HAL_UART_SCREEN, (uint8_t *)data, len, 600);
+    lyy_tjc_cmd_send((char *)data, len);
 }
 
 
@@ -103,6 +106,7 @@ int lyy_hw_tjc_pic_info_start(void (*pic_result_cb)(INFOR_PIC_VAIR *))
 
     tjc_pic_result_cb = pic_result_cb;
 
+    if (pay->chnl_sum > CHANNELINFO_MAX) pay->chnl_sum = CHANNELINFO_MAX;
     HAL_vFileRead(  FILE_NAME_HW_PARA_TJC_PIC_INFO, 
                     &g_pxTjcPicFlashInfo.ucWalletNumSum, 
                     sizeof(g_pxTjcPicFlashInfo.ucWalletNumSum));
@@ -137,7 +141,7 @@ int lyy_hw_tjc_pic_info_start(void (*pic_result_cb)(INFOR_PIC_VAIR *))
 
     if(!g_pxTjcPicFlashInfo.pucData) { 
 
-        g_pxTjcPicFlashInfo.pucData =  malloc(g_pxTjcPicFlashInfo.ucWalletNumSum * 2 * sizeof(INFOR_PIC_INFO));
+        g_pxTjcPicFlashInfo.pucData = malloc(CHANNELINFO_MAX * PIC_INFO_MAX * sizeof(INFOR_PIC_INFO));
     }
 
     if(!g_pxTjcPicFlashInfo.pucData) {
@@ -201,9 +205,9 @@ void lyy_pic_infoAllClean(void)
  * 设置淘晶驰屏幕类型
  * @param [char *] type 
  */
-void set_tjcScreen(char * type)
+void set_tjc_Screen(char *type)
 {
-    if(type == NULL || strlen(type) > 64) return ; 
+    if (type == NULL || strlen(type) >= sizeof(lyy_screen)) return;
     memset(lyy_screen,0x00,64);
     memcpy(lyy_screen,type,strlen(type));
     LYY_LOGD("set_tjcScreen:%s",lyy_screen);
@@ -214,13 +218,15 @@ void set_tjcScreen(char * type)
  * 设置淘晶驰屏幕类型
  * @param arg 
  */
-void set_tjcScreenType(char * type)
+void set_tjc_screen_type(char *type)
 {
-    if(type == NULL || strlen(type) > 64) return ; 
+    if (type == NULL || strlen(type) >= sizeof(lyy_screenType)) return;
     memset(lyy_screenType,0x00,64);
     memcpy(lyy_screenType,type,strlen(type));
     LYY_LOGD("set_tjcScreenType:%s",lyy_screenType);
 }
+void set_tjcScreen(char *type) { set_tjc_Screen(type); }
+void set_tjcScreenType(char *type) { set_tjc_screen_type(type); }
 /**
  * @brief 
  * picState
@@ -348,7 +354,7 @@ void getTjcPicUrl(void)
         getTjcPicUrl_page("pay",picVair.startGetPic);
         
         g_SemSta = 1;
-        result = xSemaphoreTake(hw_httpGetPicUrlSem, 5 * 1000); //等待10s平台回复
+        result = xSemaphoreTake(hw_httpGetPicUrlSem, pdMS_TO_TICKS(10000));
         g_SemSta = 0;
 
         if(result == 0)  {
@@ -373,6 +379,8 @@ int tjc_recv_pic_url(cJSON* params)
 {
 
 
+    if (params == NULL || params->valuestring == NULL || g_pxTjcPicFlashInfo.pucData == NULL ||
+        picVair.startGetPic >= g_pxTjcPicFlashInfo.ucWalletNumSum) return -1;
     LYY_LOGD("payload->valuestring: %s\n", params->valuestring);
     cJSON *payload_json = cJSON_Parse(params->valuestring);
     
@@ -434,6 +442,9 @@ int tjc_recv_pic_url(cJSON* params)
         return -10;
     }
 
+    if (wallet_url->valuestring == NULL || strlen(wallet_url->valuestring) >= sizeof(pxTjcInfo->url)) {
+        cJSON_Delete(payload_json); return -10;
+    }
     if(((wallet_url->valuestring != NULL) && 
            strcmp((const char *)&pxTjcInfo->url[0],wallet_url->valuestring)) || 
            pxTjcInfo->filesize == 0x00)
@@ -481,6 +492,9 @@ int tjc_recv_pic_url(cJSON* params)
         return -11;
     }
 
+    if (scan_url->valuestring == NULL || strlen(scan_url->valuestring) >= sizeof(pxTjcInfo->url)) {
+        cJSON_Delete(payload_json); return -11;
+    }
     if(((scan_url->valuestring != NULL) 
                 && strcmp((const char *)&pxTjcInfo->url[0],scan_url->valuestring))  
                 || pxTjcInfo->filesize == 0x00)
@@ -605,12 +619,13 @@ http_retry :
 
     g_ulWriteOffset = 0x00;
 
+    xSemaphoreTake(hw_httpGetPicUrlSem, 0);
+    g_SemSta = 1;
     HAL_vHttpGet(   (const char *)pxTjcInfo->url, 
                     APP_prvHttpDataRvCd, 
                     APP_prvHttpRes);                         
 
-    g_SemSta = 1;
-    int result = xSemaphoreTake(hw_httpGetPicUrlSem, 15 * 1000); 
+    int result = xSemaphoreTake(hw_httpGetPicUrlSem, pdMS_TO_TICKS(15000));
     g_SemSta = 0;
 
     if(result) {
@@ -755,11 +770,12 @@ void getTjcPicTran(void)
             sprintf(file_name,"filename_%d",(picVair.startGetPic * PIC_INFO_MAX + picVair.startGetPicType));
             
             LYY_LOGD("========================  url_temp.filesize : [%d]  ulUrlAdd :[%d]" , pxTjcInfo->filesize, ulUrlAdd);
+            xSemaphoreTake(hw_httpTranPicUrlSem, 0);
+            g_SemSta = 1;
             lyy_display_sendPic("ram",file_name, pxTjcInfo->filesize);
 
             
-            g_SemSta = 1;
-            result = xSemaphoreTake(hw_httpTranPicUrlSem,10000);           // 传输完成
+            result = xSemaphoreTake(hw_httpTranPicUrlSem, pdMS_TO_TICKS(20000));
             g_SemSta = 0;
 
             if(result == 0)
@@ -893,12 +909,12 @@ int lyy_display_recvPic(unsigned char * pack,unsigned int  len)
     #define PIC_CMD_FILE_FAIL "\x06\xff\xff\xff"
     #define PIC_CMD_FILE_END "\xfd\xff\xff\xff"
 
-    if(memcmp(pack, PIC_CMD_FILE_SUCESS, 4) == 0) //启动成功
+    if (len >= 4 && memcmp(pack, PIC_CMD_FILE_SUCESS, 4) == 0)
     {
         LYY_LOGD(" PIC_CMD_FILE_SUCESS");
         lyy_display_pick(sendPic.sendPack);
 
-    }else  if(memcmp(pack, PIC_CMD_FILE_FAIL, 4) == 0) //启动失败
+    }else if (len >= 4 && memcmp(pack, PIC_CMD_FILE_FAIL, 4) == 0)
     {
         LYY_LOGD(" PIC_CMD_FILE_FAIL");
         lyy_display_setSendPicStatus(LYY_SENDPIC_NORMAL);
@@ -918,7 +934,7 @@ int lyy_display_recvPic(unsigned char * pack,unsigned int  len)
         // 重新发送该包数据
         lyy_display_pick(sendPic.sendPack);
         
-    }else if(memcmp(pack, PIC_CMD_FILE_END, 4) == 0)  // 传输结束
+    }else if (len >= 4 && memcmp(pack, PIC_CMD_FILE_END, 4) == 0)
     {
         LYY_LOGD(" PIC_CMD_FILE_END");
         // 切换回普通模式
@@ -974,15 +990,10 @@ int lyy_display_pick(unsigned int  packet)
         sendNumCount = 0;
     }
 
-    // 获取要读取的包数大小
-    if(packet < (sendPic.totalPack - 1))
-    {
-        readSize = LYY_SEND_PIC_PACKET_SIZE;
-    }
-    else
-    {
-        readSize = sendPic.fileSize % LYY_SEND_PIC_PACKET_SIZE;
-    } 
+    if (packet >= sendPic.totalPack) return 1;
+    offset = packet * LYY_SEND_PIC_PACKET_SIZE;
+    readSize = sendPic.fileSize - offset;
+    if (readSize > LYY_SEND_PIC_PACKET_SIZE) readSize = LYY_SEND_PIC_PACKET_SIZE;
 
     offset = packet*LYY_SEND_PIC_PACKET_SIZE;
 
@@ -1083,35 +1094,16 @@ int lyy_display_showpic(char *page,unsigned char walletNum)
 
         char file_name[20];
 
-
-#if 0
-        uint32_t ulAddr = FILE_NAME_HW_PARA_TJC_PIC_LOAD +  ((walletNum-1)*PIC_INFO_MAX) 
-                                                                         * (FTLE_NAME_HW_PARA_TJC_PIC_DATA_LEN);
-
-        HAL_lFlashAddrRead(ulAddr, (uint8_t *)&url_temp, sizeof(INFOR_PIC_INFO));
-#else
- 
-
-#endif
-
-        // 该是否有图片
-        memset(file_name,0x00,20);
-        sprintf(file_name,"filename_%d",((walletNum-1)*PIC_INFO_MAX));
-        lyy_display_setPicPath("wallet",file_name);
+        if (g_pxTjcPicFlashInfo.pucData == NULL) return -3;
+        INFOR_PIC_INFO *info = (INFOR_PIC_INFO *)g_pxTjcPicFlashInfo.pucData;
+        unsigned int index = (walletNum - 1) * PIC_INFO_MAX;
+        if (info[index].filesize == 0 || info[index + 1].filesize == 0) return -3;
+        memset(file_name, 0, sizeof(file_name));
+        sprintf(file_name, "filename_%d", index);
+        lyy_display_setPicPath("wallet", file_name);
         vTaskDelay(100 / portTICK_PERIOD_MS);
-                
-#if 0
-        ulAddr = FILE_NAME_HW_PARA_TJC_PIC_LOAD +  ((walletNum-1)*PIC_INFO_MAX + 1) 
-                                                                         * (FTLE_NAME_HW_PARA_TJC_PIC_DATA_LEN); 
-        HAL_lFlashAddrRead(ulAddr, (uint8_t *)&url_temp, sizeof(INFOR_PIC_INFO));
-#else
-
-
-#endif
-        // 该是否有图片
-        memset(file_name,0x00,20);
-        sprintf(file_name,"filename_%d",((walletNum-1)*PIC_INFO_MAX + 1));
-        lyy_display_setPicPath("wallet_type",file_name);
+        sprintf(file_name, "filename_%d", index + 1);
+        lyy_display_setPicPath("wallet_type", file_name);
         vTaskDelay(100 / portTICK_PERIOD_MS);
 
 
@@ -1167,23 +1159,11 @@ void thread_tjcPicDealThread(void *arg)
                 break;
             default:
                 LYY_LOGD("===================Ending===================");
-                if(!g_pxTjcPicFlashInfo.pucData) {
-                    
-                    free(g_pxTjcPicFlashInfo.pucData);
-                }
                 vTaskDelay(1000 / portTICK_PERIOD_MS);
-                goto dowload_exit;
-                break;
+                return;
         }
-        
         vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
-
-dowload_exit:
-
-    thread_dowload_semGive();
-
-    vTaskDelete(NULL);
 
 }
 

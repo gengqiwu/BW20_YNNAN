@@ -2,6 +2,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "FreeRTOS.h"
+#include "task.h"
+
 #include "USER_Config.h"
 
 #include "HAL_Log.h"
@@ -20,7 +23,7 @@
 
 typedef struct {
 
-    uint8_t             ucCloseTls;
+    uint32_t            ulPauseTick;
     APP_CLIENT_STA_T    xClientSta;
     WIFI_WORK_STA_T     xWifiSta;
     hal_tls_t           *pxTls;
@@ -37,7 +40,15 @@ APP_CLIENT_STA_T APP_pxGetClientSta(void)
 }
 
 
-static void APP_prvClientCloseSocket(void)
+void APP_pxSetClientSta(APP_CLIENT_STA_T xSta)
+{
+    if (xSta == CLIENT_ISPAUSED) {
+        g_xAppNetInfo.ulPauseTick = HAL_ulGetSysTick();
+    }
+    g_xAppNetInfo.xClientSta = xSta;
+}
+
+void APP_prvClientCloseSocket(void)
 {
 
     if(g_xAppNetInfo.pxTls)  {
@@ -45,7 +56,7 @@ static void APP_prvClientCloseSocket(void)
         HAL_vTlsClose(g_xAppNetInfo.pxTls);
         g_xAppNetInfo.pxTls = NULL;
 
-        vTaskDelay(200  / portTICK_PERIOD_MS);
+        vTaskDelay(300 / portTICK_PERIOD_MS);
     }
 
 }
@@ -81,12 +92,10 @@ void APP_prvWifiWorkSta(WIFI_WORK_STA_T xSta)
 
         case WIFI_WORK_IDLE     :{
 
-#if(CFG_USER_SOC == CFG_SOC_RTL8711)
-
             APP_vLedSstSta(LED_GREEN,   LED_STA_OFF);
             APP_vLedSstSta(LED_RED,     LED_STA_SLOW_FLASH);
 
-#endif
+            set_led_status(LED_STATUS_NET_REGISTER);
 
             LYY_LOGI(">>> WIFI_WORK_IDLE ");
 
@@ -96,6 +105,7 @@ void APP_prvWifiWorkSta(WIFI_WORK_STA_T xSta)
 
             APP_vLedSstSta(LED_GREEN,   LED_STA_OFF);
             APP_vLedSstSta(LED_RED,     LED_STA_SLOW_FLASH);
+            set_led_status(LED_STATUS_NET_REGISTER);
             
             LYY_LOGI(">>> WIFI_WORK_CONNING");
 
@@ -105,6 +115,7 @@ void APP_prvWifiWorkSta(WIFI_WORK_STA_T xSta)
 
             APP_vLedSstSta(LED_GREEN,   LED_STA_ON);
             APP_vLedSstSta(LED_RED,     LED_STA_SLOW_FLASH);
+            set_led_status(LED_STATUS_LOGIN_SUCCESS);
 
             LYY_LOGI(">>> WIFI_WORK_CONNED");
 
@@ -162,6 +173,15 @@ static void APP_prvClientTlsTask(void *pvArg)
 
         vTaskDelay(CLIENT_TASK_TIME  / portTICK_PERIOD_MS);
 
+        /* HTTP/OTA temporarily owns the connection; recover after ten minutes. */
+        if (g_xAppNetInfo.xClientSta == CLIENT_ISPAUSED) {
+            if (HAL_ucTickTimeout(g_xAppNetInfo.ulPauseTick, 10 * 60 * 1000)) {
+                g_xAppNetInfo.xClientSta = CLIENT_DIS_CON;
+            }
+            vTaskDelay(1000 / portTICK_PERIOD_MS);
+            continue;
+        }
+
         if(g_xAppNetInfo.xWifiSta != WIFI_STA_CONNED) {
 
             g_xAppNetInfo.xClientSta =  CLIENT_DIS_CON;
@@ -192,6 +212,8 @@ static void APP_prvClientTlsTask(void *pvArg)
             continue;
         }
 
+        wifi_connect_count = 0;
+
 #if(CFG_USER_SOC == CFG_SOC_RTL8711)
 
         if(lWifiSta != g_xAppNetInfo.xWifiSta) {
@@ -214,6 +236,7 @@ static void APP_prvClientTlsTask(void *pvArg)
 
         switch(g_xAppNetInfo.xClientSta)
         {
+            case CLIENT_ISPAUSED: break;
 
             case CLIENT_DIS_CON :{
 
@@ -306,6 +329,10 @@ static void APP_prvMqttTask(void *arg)
 
 void APP_vNetWorkInit(void)
 {
+
+    APP_vLedSstSta(LED_GREEN, LED_STA_OFF);
+    APP_vLedSstSta(LED_RED, LED_STA_SLOW_FLASH);
+    set_led_status(LED_STATUS_NET_REGISTER);
 
 #define CLIENT_THREAD_NAME          "CLIENT_THREAD"
 #define CLIENT_THREAD_STACK         (1024 * 18 / sizeof(portSTACK_TYPE))

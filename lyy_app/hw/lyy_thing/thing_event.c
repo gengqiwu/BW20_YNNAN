@@ -22,6 +22,7 @@
 
 
 #include "lyy_start.h"
+#include "lyy_zcj.h"
 
 #include "utils.h"
 #include "cJSON.h"
@@ -63,6 +64,40 @@ void event_post_out_coin_result(char *result, uint32_t out_coins, char *unique_c
     }
 }
 
+void event_post_account_note(uint32_t inc, uint32_t sum, char *pay_mode, char *order, char *event_id, int32_t channel)
+{
+    char sum_acc[128] = {0};
+    ZCJ_NOTE_ACCS_TOTAL *acct = zcj_accounts_get();
+    cJSON *value;
+    uint8_t ch = channel;
+    if (acct->ch_sum == 0) return;
+    if (channel == 101) { ch = 9; acct->ch_acc[0] = sum; }
+    else if (channel == 100) { ch = 9; acct->ch_acc[1] = sum; }
+    else if (channel >= 0 && channel <= 10) acct->ch_acc[1 + channel] = sum;
+    snprintf(sum_acc, sizeof(sum_acc), "%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu",
+             (unsigned long)acct->ch_acc[2], (unsigned long)acct->ch_acc[3],
+             (unsigned long)acct->ch_acc[4], (unsigned long)acct->ch_acc[5],
+             (unsigned long)acct->ch_acc[6], (unsigned long)acct->ch_acc[7],
+             (unsigned long)acct->ch_acc[8], (unsigned long)acct->ch_acc[9],
+             (unsigned long)acct->ch_acc[0]);
+    value = cJSON_CreateObject();
+    if (value == NULL) return;
+    cJSON_AddNumberToObject(value, "channel", ch);
+    cJSON_AddNumberToObject(value, "channel_increment", inc);
+    cJSON_AddStringToObject(value, "channel_count", sum_acc);
+    cJSON_AddStringToObject(value, "pay_method", pay_mode);
+    cJSON_AddStringToObject(value, "order", order == NULL ? get_random_string() : order);
+    thing_event_post(value, event_id);
+}
+void event_post_start_result_note(uint32_t result, uint32_t channel, char *order)
+{
+    cJSON *value = cJSON_CreateObject();
+    if (value == NULL) return;
+    cJSON_AddNumberToObject(value, "channel", channel);
+    cJSON_AddStringToObject(value, "result", get_apply_start_result_type(result));
+    cJSON_AddStringToObject(value, "order", order);
+    thing_event_post(value, "start_result");
+}
 /**
  * @brief 
  * 脉冲版本账目
@@ -301,72 +336,6 @@ void event_post_query_dynamic_url_std(char *package_id,char *channel,char *chann
 
 /**
  * @brief
- * 获取动态支付二维码 -- 通用--积分体系
- * @param package_id
- * @param channel
- * @param channel_number
- * @param x
- * @param y
- */
-void event_post_query_dynamic_url_std_points(char *package_id, char *channel, char *channel_number, cJSON_bool use_point_flag, char *auth_token, char *expected_deduct_points, char *expected_deduct_amount, char *expected_pay_amount)
-{
-
-    cJSON *value = cJSON_CreateObject();
-    if (value != NULL)
-    {
-        cJSON_AddStringToObject(value, "commodity_id", package_id);               // 套餐id
-        cJSON_AddStringToObject(value, "pay_channel_code", channel);              // 支付渠道
-        cJSON_AddStringToObject(value, "pay_channel_number", channel_number);     // 渠道编号
-        cJSON_AddStringToObject(value, "unique_code", get_py_url_uinque_code(0)); // 支付唯一码
-
-        cJSON_AddBoolToObject(value, "use_point", use_point_flag);                        // 是否使用积分消费
-        cJSON_AddStringToObject(value, "auth_token", auth_token);                         // 授权临时token
-        cJSON_AddStringToObject(value, "expected_deduct_points", expected_deduct_points); // 预期抵扣积分
-        cJSON_AddStringToObject(value, "expected_deduct_amount", expected_deduct_amount); // 预期抵扣金额
-        cJSON_AddStringToObject(value, "expected_pay_amount", expected_pay_amount);       // 预期实付金额
-
-        thing_event_post(value, "get_qrcode");
-    }
-}
-
-
-
-
-/**
- * @brief 
- * 获取动态支付二维码 --扭蛋机--积分
- * @param package_id 
- * @param channel 
- * @param channel_number 
- * @param x 
- * @param y 
- */
-void event_post_query_dynamic_url_ndj_points(char *package_id, char *channel, char *channel_number, uint32_t x, uint32_t y, cJSON_bool use_point_flag, char *auth_token, char *expected_deduct_points, char *expected_deduct_amount, char *expected_pay_amount)
-{
-
-    cJSON* value = cJSON_CreateObject();
-    if(value != NULL)
-    {
-        cJSON_AddStringToObject(value, "commodity_id",package_id);//套餐id
-        cJSON_AddStringToObject(value, "pay_channel_code",channel);//支付渠道
-        cJSON_AddStringToObject(value, "pay_channel_number",channel_number);//渠道编号
-        cJSON_AddStringToObject(value, "unique_code",get_py_url_uinque_code(x));//支付唯一码
-        cJSON_AddNumberToObject(value, "position_x",x);//
-        cJSON_AddNumberToObject(value, "position_y",y);//
-
-        cJSON_AddBoolToObject(value, "use_point", use_point_flag);                        // 是否使用积分消费
-        cJSON_AddStringToObject(value, "auth_token", auth_token);                         // 授权临时token
-        cJSON_AddStringToObject(value, "expected_deduct_points", expected_deduct_points); // 预期抵扣积分
-        cJSON_AddStringToObject(value, "expected_deduct_amount", expected_deduct_amount); // 预期抵扣金额
-        cJSON_AddStringToObject(value, "expected_pay_amount", expected_pay_amount);       // 预期实付金额
-
-        thing_event_post(value, "get_qrcode");
-    }
-
-}
-
-/**
- * @brief
  * 获取动态支付二维码 --扭蛋机
  * @param package_id
  * @param channel
@@ -597,28 +566,6 @@ void event_post_start_result_ndj(uint16_t result,uint8_t x,uint8_t y,char *order
 }
 
 /**
- * @brief
- * 启动结果上报
- * @param result
- * @param x
- * @param y
- * @param order
- */
-void event_post_start_result_dfssj(uint16_t volume, uint8_t x, uint8_t y, char *order)
-{
-    cJSON *value = NULL;
-    value = cJSON_CreateObject();
-    if (value != NULL)
-    {
-        cJSON_AddNumberToObject(value, "volume", volume);
-        cJSON_AddNumberToObject(value, "position_x", x);
-        cJSON_AddNumberToObject(value, "position_y", y);
-        cJSON_AddStringToObject(value, "order", order);
-        thing_event_post(value, "start_result");
-    }
-}
-
-/**
  * @brief 
  * 
  * @param error 主板故障上报
@@ -631,187 +578,5 @@ void event_post_device_fault(uint8_t error)
     {
         cJSON_AddNumberToObject(value, "error", error);
         thing_event_post(value, "board_error"); 
-    }
-}
-
-/**
- * @brief 查询积分营销配置
- *
- * @param
- */
-void event_post_query_marketing_point_config(void)
-{
-    cJSON *value = NULL;
-    value = cJSON_CreateObject();
-    if (value != NULL)
-    {
-        cJSON_AddStringToObject(value, "param", "param");
-        thing_event_post(value, "query_marketing_point_config");
-    }
-}
-
-/**
- * @brief POS机订单创建结果通知事件
- *
- * @param  result 1成功 2失败
- */
-void event_post_pos_order_create_result(char *transaction_number, uint8_t result)
-{
-    cJSON *value = NULL;
-    value = cJSON_CreateObject();
-    if (value != NULL)
-    {
-        cJSON_AddStringToObject(value, "transaction_number", transaction_number);
-        cJSON_AddNumberToObject(value, "create_result", result);
-
-        // char *json_str = cJSON_Print(value);
-        char *json_str = cJSON_PrintUnformatted(value);
-        cJSON_Delete(value);
-
-        cJSON *value_2 = NULL;
-        value_2 = cJSON_CreateObject();
-        if (value_2 != NULL)
-        {
-            cJSON_AddStringToObject(value_2, "payload", json_str); // 渠道交易流水号
-
-            free(json_str);
-        }
-
-        thing_event_post(value_2, "pos_order_create_result_event");
-    }
-}
-
-/**
- * @brief POS机订单明细通知事件
- *
- * @param  transaction_result 0交易中  1交易成功  2交易失败
- */
-void event_post_pos_order_detail(char *transaction_number, uint8_t transaction_result)  
-{
-    cJSON *value = NULL;
-    value = cJSON_CreateObject();
-    if (value != NULL)
-    {
-        cJSON_AddStringToObject(value, "transaction_number", transaction_number);
-        cJSON_AddNumberToObject(value, "transaction_result", transaction_result);
-        cJSON_AddStringToObject(value, "channel_transaction_number", transaction_number);
-
-        // char *json_str = cJSON_Print(value);
-        char *json_str = cJSON_PrintUnformatted(value);
-        cJSON_Delete(value);
-
-        cJSON *value_2 = NULL;
-        value_2 = cJSON_CreateObject();
-        if (value_2 != NULL)
-        {
-            cJSON_AddStringToObject(value_2, "payload", json_str); // 渠道交易流水号
-
-            free(json_str);
-        }
-
-        thing_event_post(value_2, "pos_order_detail_event");
-    }
-}
-
-/**
- * @brief POS机订单缓存清除
- *
- * @param  transaction_result 0交易中  1交易成功  2交易失败
- */
-void event_post_pos_order_cleaing(char *transaction_number)
-{
-    cJSON *value = NULL;
-    value = cJSON_CreateObject();
-    if (value != NULL)
-    {
-        cJSON_AddStringToObject(value, "transaction_number", transaction_number);
-        cJSON_AddBoolToObject(value, "result", 1);
-        thing_event_post(value, "pos_order_cleaing_event");
-    }
-}
-
-/**
- * @brief
- * LOG 日志上报
- * @param coin
- * @param coins
- * @param gift
- * @param gifts
- * @param lane_id
- * @param order
- */
-void event_post_log(char *log)
-{
-    cJSON *value = cJSON_CreateObject();
-    if (value != NULL)
-    {
-        cJSON_AddStringToObject(value, "log", log);
-        thing_event_post(value, "log");
-    }
-}
-
-
-/**
- * @brief
- *  往服务端发送 hex数据转化成的字符串
- * @param error
- */
-void event_post_log_hextostring(uint8_t *data, uint16_t len)
-{
-#define MAX_DATA_LEN  (256)
-#define MAX_STR_LEN   (MAX_DATA_LEN * 2 + 1)
-
-    char out_str[MAX_STR_LEN] = {0};
-
-    if (data == NULL || len == 0 || len > MAX_DATA_LEN)
-    {
-        event_post_log("param fail");
-        return;
-    }
-
-    uint16_t count = 0;
-    for (uint16_t i = 0; i < len; i++)
-    {
-        count += snprintf(&out_str[count], MAX_STR_LEN - count, "%02x", data[i]);
-
-        if (count >= MAX_STR_LEN - 1)
-        {
-            break;
-        }
-    }
-
-    event_post_log(out_str);
-}
-
-void event_post_ntp_req(uint64_t timestamp)
-{
-    cJSON *value = NULL;
-    char timestamp_str[21] = {0};
-    snprintf(timestamp_str, sizeof(timestamp_str), "%llu", timestamp);
-    value = cJSON_CreateObject();
-    if (value != NULL)
-    {
-        cJSON_AddStringToObject(value, "device_send_time", timestamp_str);
-        thing_event_post(value, "ntp_req");
-    }
-}
-
-void event_post_new_offline_accounts(BillCacheItem_t *item)
-{
-    cJSON *value = NULL;
-    char timestamp_str[21] = {0};
-    snprintf(timestamp_str, sizeof(timestamp_str), "%llu", item->time);
-    value = cJSON_CreateObject();
-    if (value != NULL)
-    {
-        cJSON_AddNumberToObject(value, "increment", item->increment); // 增量
-        cJSON_AddNumberToObject(value, "total", item->total);         // 总量
-        cJSON_AddNumberToObject(value, "position_x", item->position_x); // id
-        cJSON_AddNumberToObject(value, "position_y", item->position_y); // 
-        cJSON_AddStringToObject(value, "type", get_offline_accounts_data_type(item->type));                     // 类型
-        cJSON_AddStringToObject(value, "pay_method", get_offline_accounts_pay_method_type(item->pay_method)); // 支付方式
-        cJSON_AddStringToObject(value, "unique_code", item->unique_code); // 唯一码
-        cJSON_AddStringToObject(value, "time", timestamp_str); // 时间
-        thing_event_post(value, "offline_accounts");
     }
 }

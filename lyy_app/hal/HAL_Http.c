@@ -85,6 +85,8 @@ static uint8_t HAL_prucHttpcOp(uint8_t ucHttpType, void *pvArg)
     char      *pcBuff       = NULL;
     char      *pcHttpHeard  = NULL;
     uint8_t    ucRes        = HTTP_GET_ERR;
+    http_parser xHttpParser;
+    http_parser_init(&xHttpParser, HTTP_RESPONSE);
 
 #define  HAL_HEARD_LEN_MAX      (1024U)
 #define  HAL_BUFF_LEN_MAX       (10 * 1024U)
@@ -132,7 +134,6 @@ static uint8_t HAL_prucHttpcOp(uint8_t ucHttpType, void *pvArg)
         goto httpc_exit;
     }
 
-    http_parser           xHttpParser;
 
     http_parser_settings  xHttpParserSet = {
         
@@ -140,7 +141,6 @@ static uint8_t HAL_prucHttpcOp(uint8_t ucHttpType, void *pvArg)
         .on_message_complete = lOnResponseComplete,
     };
 
-    http_parser_init(&xHttpParser, HTTP_RESPONSE);
     
     g_HalHttpC.ucHttpSta = eHttpRecving;  
 
@@ -172,23 +172,14 @@ static uint8_t HAL_prucHttpcOp(uint8_t ucHttpType, void *pvArg)
 
         if(lRet > 0)  {
 
-            http_parser_execute(&xHttpParser, 
-                                &xHttpParserSet, 
-                                pcBuff, 
-                                lRet); 
-
-            if( xHttpParser.status_code != 200 &&
-                xHttpParser.status_code != 206) {
-                
-                LYY_LOGE("### xHttpParser.status_code : [%d]", xHttpParser.status_code);
-                break;
-            }
+            size_t parsed = http_parser_execute(&xHttpParser, &xHttpParserSet, pcBuff, lRet);
+            if (parsed != (size_t)lRet || HTTP_PARSER_ERRNO(&xHttpParser) != HPE_OK) break;
 
             ulSysTick = HAL_ulGetSysTick();
 
         }
 
-        if(eHttpComplete == g_HalHttpC.ucHttpSta) {
+        if(eHttpComplete == g_HalHttpC.ucHttpSta && xHttpParser.status_code == 200) {
 
             ucRes = HTTP_GET_SUCCESS;
             break;
@@ -209,8 +200,7 @@ static uint8_t HAL_prucHttpcOp(uint8_t ucHttpType, void *pvArg)
 
 httpc_exit:
 
-    g_HalHttpC.ulHttpRvDataLen = xHttpParser.content_length ? 
-                        xHttpParser.content_length : g_HalHttpC.ulHttpBodyRvDataLen;
+    g_HalHttpC.ulHttpRvDataLen = g_HalHttpC.ulHttpBodyRvDataLen;
 
     if(pcBuff) {
 
@@ -327,6 +317,7 @@ void HAL_vHttpGet(const char *pcUrl, vHttpDataCd xHttpDataCd, vHttpRes xHttpRes)
     if(g_HalHttpC.ucHttpSta != eHttpIDle || !pcUrl) {
 
         LYY_LOGE(">>> http running .....");
+        if (xHttpRes) xHttpRes(HTTP_GET_ERR, 0);
         return ;
     }
 
@@ -335,77 +326,19 @@ void HAL_vHttpGet(const char *pcUrl, vHttpDataCd xHttpDataCd, vHttpRes xHttpRes)
     g_HalHttpC.xttpDataCd           = xHttpDataCd;
     g_HalHttpC.xHttpRes             = xHttpRes;
 
-    char *pcPath;
-    char *pcHostname;
-    
-
-    if (strncmp(pcUrl, "http://", 7) == 0) {
-
-        g_HalHttpC.lPort = 80;
-        pcHostname = (char *)pcUrl + 7;
-
-    } else if (strncmp(pcUrl, "https://", 8) == 0) {
-
-        g_HalHttpC.lPort = 443;
-        pcHostname = (char *)pcUrl + 8;
-
-    } else {
-
-        if(g_HalHttpC.xHttpRes) {
-
-            g_HalHttpC.xHttpRes(HTTP_GET_ERR, g_HalHttpC.ulHttpRvDataLen);  
-        }
-        LYY_LOGE("Invalid URL format\n");
-        return ;
+    const char *host = NULL;
+    if (!strncmp(pcUrl, "http://", 7)) { g_HalHttpC.lPort = 80; host = pcUrl + 7; }
+    else if (!strncmp(pcUrl, "https://", 8)) { g_HalHttpC.lPort = 443; host = pcUrl + 8; }
+    const char *path = host ? strchr(host, '/') : NULL;
+    size_t host_len = path ? (size_t)(path - host) : 0;
+    if (!path || !host_len || host_len >= sizeof(g_HalHttpC.pcHostName) ||
+        strlen(path) >= sizeof(g_HalHttpC.pcPath)) {
+        if (xHttpRes) xHttpRes(HTTP_GET_ERR, 0);
+        return;
     }
-
-    pcPath = strchr(pcHostname, '/');
-
-    if (pcPath == NULL) {
-
-        if(g_HalHttpC.xHttpRes) {
-
-            g_HalHttpC.xHttpRes(HTTP_GET_ERR, g_HalHttpC.ulHttpRvDataLen);
-        }
-        LYY_LOGE("Invalid URL format\n");
-        return ;
-    }
-
-    *pcPath = '\0';
-
-    memset( g_HalHttpC.pcHostName, 
-            0x00, 
-            sizeof(g_HalHttpC.pcHostName));
-
-    if(strlen(pcHostname) > sizeof(g_HalHttpC.pcHostName)) {
-
-        if(g_HalHttpC.xHttpRes) {
-
-            g_HalHttpC.xHttpRes(HTTP_GET_ERR, g_HalHttpC.ulHttpRvDataLen);
-        }
-        LYY_LOGE("### pcHostname len err ");
-        return ;
-    }
-
-    strcpy(g_HalHttpC.pcHostName, pcHostname);
-
-    *pcPath = '/';
-
-    if(strlen(pcPath) > sizeof(g_HalHttpC.pcPath)) {
-
-        if(g_HalHttpC.xHttpRes) {
-
-            g_HalHttpC.xHttpRes(HTTP_GET_ERR, g_HalHttpC.ulHttpRvDataLen);
-        }
-        LYY_LOGE("### pcPath len err ");
-        return ;
-    }
-
-    memset( g_HalHttpC.pcPath, 
-            0x00, 
-            sizeof(g_HalHttpC.pcPath));
-
-    strcpy(g_HalHttpC.pcPath, pcPath);
+    memcpy(g_HalHttpC.pcHostName, host, host_len);
+    g_HalHttpC.pcHostName[host_len] = 0;
+    strcpy(g_HalHttpC.pcPath, path);
 
     LYY_LOGD("Hostname: %s\n",  g_HalHttpC.pcHostName);
     LYY_LOGD("Port: %d\n",      g_HalHttpC.lPort);
@@ -415,14 +348,11 @@ void HAL_vHttpGet(const char *pcUrl, vHttpDataCd xHttpDataCd, vHttpRes xHttpRes)
 #define HTTP_THREAD_NAME          "HTTP_THREAD"
 #define HTTP_THREAD_STACK         (1024 * 16 / sizeof(portSTACK_TYPE))
 
-    xTaskCreate(    HAL_prvHttpcThread, 
-                    HTTP_THREAD_NAME, 
-                    HTTP_THREAD_STACK, 
-                    NULL, 
-                    8,
-                    NULL);
-
     g_HalHttpC.ucHttpSta = eHttpCreate;
+    if (xTaskCreate(HAL_prvHttpcThread, HTTP_THREAD_NAME, HTTP_THREAD_STACK, NULL, 8, NULL) != pdPASS) {
+        g_HalHttpC.ucHttpSta = eHttpIDle;
+        if (xHttpRes) xHttpRes(HTTP_GET_ERR, 0);
+    }
 
 }
 

@@ -8,6 +8,7 @@
 #ifndef __LYY_START_H__
 #define __LYY_START_H__
 
+#include <stdint.h>
 
 enum
 {
@@ -65,10 +66,9 @@ typedef struct
 typedef struct {
 
     uint32_t    number;
+    uint32_t channel;
     char        uniqueid[64]; 
     char        pay_apply_id[64];
-    uint16_t    x;
-    uint16_t    y;
 }__attribute__((aligned(1), packed))HW_PAY_APPLY,*PHW_PAY_APPLY;
 
 

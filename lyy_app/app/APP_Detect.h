@@ -24,6 +24,7 @@ enum
 
 extern void     APP_vDetectInit(void);
 extern void     APP_vDetecTimerMs(void);
+extern void APP_prvDetectNetWorkKey(void);
 extern void     APP_vDeteclRegisterFunc(uint16_t usDetectType, void (*vFunc)(void *pvArg));
 
 extern void     APP_prvDetectMachtineLvl(void);

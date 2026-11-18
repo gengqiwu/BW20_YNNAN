@@ -13,6 +13,7 @@
 #include "HAL_Log.h"
 #include "HAL_Flash.h"
 
+#include "HAL_Ota.h"
 #include "vfs.h"
 #include "ameba.h"
 
@@ -37,8 +38,7 @@ static void HAL_prvFileGetVfsPath(const char *pcStore, char *pcPath, uint16_t ul
 
 int HAL_vFileWrite(const char *pcStore, uint8_t *pucDuf, size_t xSize)
 {
-
-    int  lRet                               = 0x00;
+    int  lRet = -1;
     char pcPath[HAL_FLASH_VFS_PATH_MAX_LEN] = {0x00, }; 
 
     HAL_prvFileGetVfsPath(  pcStore, 
@@ -136,16 +136,10 @@ int HAL_vFileWriteOffset(const char *pcStore, uint8_t *pucDuf, size_t xSize, siz
         pxFd = (vfs_file *)fopen(pcPath, "wb+"); // 文件不存在时创建
     }
 
-    // if (pxFd == NULL)
-    // {
-
-    //     LYY_LOGE("Failed to open file for writing");
-
-    //     return lRet;
-    // }
+    if (pxFd == NULL) return lRet;
 
     // 文件头开始进行偏移
-    fseek((FILE *)pxFd, xOffset, SEEK_SET);
+    if (fseek((FILE *)pxFd, xOffset, SEEK_SET)) { fclose((FILE *)pxFd); return -1; }
 
     //lRet = fwrite(pucDuf, xSize, 1, (FILE *)pxFd);
     lRet = fwrite(pucDuf, 1, xSize, (FILE *)pxFd);
@@ -181,7 +175,7 @@ int HAL_vFileReadOffset(const char *pcStore, uint8_t *pucDuf, size_t xSize, size
     }
 
     // 文件头开始进行偏移
-    fseek((FILE *)pxFd, xOffset, SEEK_SET);
+    if (fseek((FILE *)pxFd, xOffset, SEEK_SET)) { fclose((FILE *)pxFd); return -1; }
 
     //lRet = fread(pucDuf, xSize, 1, (FILE *)pxFd);
     lRet = fread(pucDuf, 1, xSize, (FILE *)pxFd);
@@ -198,37 +192,25 @@ int HAL_vFileReadOffset(const char *pcStore, uint8_t *pucDuf, size_t xSize, size
 
 int HAL_lFlashAddrErase(uint32_t ulAddr, size_t xSize)
 {
-
-    (void)ulAddr;
-    (void)xSize;
-
-    return 0x00;
-
+    if (ulAddr != FILE_NAME_HW_DEVICE_OTA_LOAD || xSize > FILE_NAME_HW_DEVICE_OTA_SIZE) return -1;
+    return HAL_vFileWrite(HAL_BOARD_OTA_FILE, (uint8_t *)"", 0) == 0 ? 0 : -1;
 }
 
 
 int HAL_lFlashAddrWrite(uint32_t ulAddr, uint8_t *pucDuf, size_t xSize)
 {
-
-    (void)ulAddr;
-    (void)pucDuf;
-    (void)xSize;
-
-    return 0x00;
-
+    if (ulAddr < FILE_NAME_HW_DEVICE_OTA_LOAD || xSize > FILE_NAME_HW_DEVICE_OTA_SIZE ||
+        ulAddr - FILE_NAME_HW_DEVICE_OTA_LOAD > FILE_NAME_HW_DEVICE_OTA_SIZE - xSize) return -1;
+    return HAL_vFileWriteOffset(HAL_BOARD_OTA_FILE, pucDuf, xSize, ulAddr - FILE_NAME_HW_DEVICE_OTA_LOAD) == (int)xSize ? 0 : -1;
 }
 
 
 
 int HAL_lFlashAddrRead(uint32_t ulAddr, uint8_t *pucDuf, size_t xSize)
 {
-
-    (void)ulAddr;
-    (void)pucDuf;
-    (void)xSize;
-
-    return 0x00;
-
+    if (ulAddr < FILE_NAME_HW_DEVICE_OTA_LOAD || xSize > FILE_NAME_HW_DEVICE_OTA_SIZE ||
+        ulAddr - FILE_NAME_HW_DEVICE_OTA_LOAD > FILE_NAME_HW_DEVICE_OTA_SIZE - xSize) return -1;
+    return HAL_vFileReadOffset(HAL_BOARD_OTA_FILE, pucDuf, xSize, ulAddr - FILE_NAME_HW_DEVICE_OTA_LOAD) == (int)xSize ? 0 : -1;
 }
 
 

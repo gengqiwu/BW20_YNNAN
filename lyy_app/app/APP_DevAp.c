@@ -2,6 +2,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "FreeRTOS.h"
+#include "task.h"
+
 #include "cJSON.h"
 
 #include "HAL_Log.h"
@@ -75,7 +78,7 @@ static void APP_prvUdpSendHandShake(void *pvArg)
 
     (void)pvArg;
 
-    if(xApConfig.ulWiftSta  != 0x01) {
+    if(xApConfig.ulWiftSta != 0x01 || !xApConfig.xBroadcast.pucAddr[0]) {
         return ;
     }
 
@@ -120,12 +123,16 @@ static void APP_prvUdpRecvDataProc(uint8_t *pucData, uint32_t ulDataLen)
         return ;
     }
 
-    WIFI_INFO_T pcWifiInfo;
+    WIFI_INFO_T pcWifiInfo = {0};
 
     cJSON *pxWifiSsid = cJSON_GetObjectItem(pxJsonData, "ssid"    );
     cJSON *pxWifiPwd  = cJSON_GetObjectItem(pxJsonData, "password");
 
-    if(NULL == pxWifiSsid || NULL == pxWifiPwd)
+    if(NULL == pxWifiSsid || NULL == pxWifiPwd ||
+       pxWifiSsid->type != cJSON_String || pxWifiPwd->type != cJSON_String ||
+       !pxWifiSsid->valuestring || !pxWifiPwd->valuestring ||
+       !pxWifiSsid->valuestring[0] || strlen(pxWifiSsid->valuestring) > 32 ||
+       strlen(pxWifiPwd->valuestring) >= sizeof(pcWifiInfo.pcPwd))
     {
         goto cjson_exit;
     }
@@ -136,7 +143,7 @@ static void APP_prvUdpRecvDataProc(uint8_t *pucData, uint32_t ulDataLen)
     strcpy(pcWifiInfo.pcSsid,   pxWifiSsid->valuestring);
     strcpy(pcWifiInfo.pcPwd,    pxWifiPwd->valuestring);
 
-    LYY_LOGI(">>> ssid : [%s]  pwd : [%s]", pcWifiInfo.pcSsid, pcWifiInfo.pcPwd);
+    LYY_LOGI(">>> ssid : [%s]", pcWifiInfo.pcSsid);
 
     APP_lParamSetWifiInfo(&pcWifiInfo);
 
@@ -174,7 +181,8 @@ static void APP_prvDevApTask(void *pvArg)
     if(HAL_UDP_SOCK_ERR == xApConfig.lSockFd) {
         
         LYY_LOGE("### udp sock err");
-        return ;
+        vTaskDelete(NULL);
+        return;
     }
 
 
@@ -218,10 +226,11 @@ static void APP_prvDevApTask(void *pvArg)
         lRet = HAL_lUdpRecvFrom(xApConfig.lSockFd, 
                                 &xApConfig.xRemote, 
                                 pucData, 
-                                sizeof(pucData),
+                                sizeof(pucData) - 1,
                                 1000);
 
         if(lRet > 0x00) {
+            pucData[lRet] = '\0';
 
             LYY_LOGD(">>> udp recv pucData : [%s]", pucData);
             APP_prvUdpRecvDataProc(pucData, lRet);

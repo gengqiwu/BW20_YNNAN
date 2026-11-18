@@ -6,6 +6,13 @@
 #ifndef __HAL_PARA_H__
 #define __HAL_PARA_H__
 
+#include <stdint.h>
+#include "HAL_System.h"
+#define FILE_NAME_PARA_DEVICE "para_box"
+#define FILE_NAME_PARA_DEV_INFOR "para_dev_infor"
+#define DEVICE_TYPE_UART_ZCJ 1
+#define NET_TYPE_DEFAULT NET_TYPE_NETTY
+typedef enum { NET_TYPE_LMQ, NET_TYPE_NETTY, NET_TYPE_MAX } ENUM_NET_TYPE;
 //#define LYY_PATA_NDJ
 
 //设备类型
@@ -21,18 +28,6 @@ typedef enum
     DEVICE_TYPE_UART_AMY,
     DEVICE_TYPE_UART_XYJ,
     DEVICE_TYPE_UART_NOTE,
-    DEVICE_TYPE_UART_QHXYJ,          /*乔禾洗衣机 add by dxw,20241010*/
-    DEVICE_TYPE_UART_QHHGJ,          /*乔禾烘干机 add by dxw,20241010*/
-    DEVICE_TYPE_UART_LJXYJ,          /*乔禾洗衣机 add by dxw,20241210*/
-    DEVICE_TYPE_UART_LJHGJ,          /*乔禾烘干机 add by dxw,20241210*/
-    DEVICE_TYPE_UART_SKYWORTH_GTXYJ, /*创维滚筒洗衣机 add by zyl,20250605*/
-    DEVICE_TYPE_UART_MSHGJ,
-    DEVICE_TYPE_UART_SKYWORTH_GTHGJ, /*创维烘干机*/
-    DEVICE_TYPE_UART_SKYWORTH_GTXHJ, /*创维洗烘机*/
-    DEVICE_TYPE_UART_TCLXYJ,         /*TCL洗衣机*/
-    DEVICE_TYPE_UART_DFSSJ,          /*德锋售水机*/
-    DEVICE_TYPE_UART_THXCJ,          /*探虎洗车机*/
-    DEVICE_TYPE_UART_KOREAPOS,        /*韩国POS*/
 } DEVICE_TYPE;
 
 typedef enum
@@ -73,7 +68,7 @@ enum LBS_COMPANY_TYPE
 
 #define FILE_NAME_ERR_MSG          "lyy_err_msg"       //海外故障信息
 
-#define NDJ_LANE_MAX         16      //货道数
+#define NDJ_LANE_MAX 6
 #define PAY_CHANNEL_MAX      4      //渠道数
 
 /**
@@ -83,23 +78,12 @@ enum LBS_COMPANY_TYPE
 typedef struct 
 {
     char            id[32];             //套餐id
-    char            name[64];           // 名称
     uint32_t        seq;                //排序
     float           price;              //套餐金额
     char            display_price[32];  //展示金额
     float           priceValue;         //套餐币数  
     char            display_value[32];  //展示价值
     char            unit[32];           //套餐币单位
-
-    char            commodity_Desc[32]; // 商品描述
-    char            price_Desc[32];     // 价格描述
-    char            water_Temperature[32];         // 套餐水温度
-    char            package_Color[32];             // 套餐颜色
-
-    char            orderMaxDeductAmount[32];   //积分最大可抵扣金额
-
-
-
 #if 0
     char            name[128];          //名称
     char            sku[64];            //sku编码   （？）
@@ -168,9 +152,11 @@ typedef struct
 {
 
 
+#if 0
     char dev_id[64];        //业务id
     char region[64];        //修改成用来保存区域，根域区域来判断支付页面，小屏暂不支持文字语言切换
     char language[64];      //语音，暂无用
+#endif
     uint8_t bind_state;     //绑定状态
 }__attribute__ ((aligned (1), packed)) INFOR_BUSINESS;
 
@@ -179,7 +165,9 @@ typedef struct
 {
     char                    init_mark;                      //初始化标志位
     INFOR_BUSINESS          business;                       //业务设备信息
+#ifdef LYY_PATA_NDJ
     PAY_PACKAGES_NDJ_DEF    ndj_pkgs;                       //ndj 套餐信息
+#endif
     PAY_PACKAGES_DEF        pkgs;                           //其他品类 套餐个数
     uint8_t                 chnl_sum;                       //渠道数
     PAY_CHANNEL_DEF         channel[PAY_CHANNEL_MAX];       //支付渠道信息
@@ -216,6 +204,35 @@ typedef struct
     char       name[32];   //设备类型 
 }__attribute__ ((aligned (1), packed)) DEV_TYPE_DEF,*PDEV_TYPE_DEF;
 
+typedef struct {
+    uint8_t key[16], password[8], flag_aesUpdate;
+} __attribute__((aligned(1), packed)) PARAAES_DEF, *PPARAAES_DEF;
+typedef struct {
+    uint16_t width, gap, mode;
+    uint8_t note_type, type;
+    uint32_t brt;
+} __attribute__((aligned(1), packed)) PARAINTER_DEF, *PPARAINTER_DEF;
+typedef struct {
+    uint8_t type;
+    uint16_t port;
+    char url[100];
+} __attribute__((aligned(1), packed)) PARAGATE_DEF, *PPARAGATE_DEF;
+typedef struct {
+    uint8_t init_mark, sw, mode;
+    uint16_t cycle, number;
+} __attribute__((aligned(1), packed)) PARA_FLOW_DEF, *PPARA_FLOW_DEF;
+typedef struct {
+    uint8_t init_mark;
+    char id[33];
+    uint32_t type;
+    PARAAES_DEF aes;
+    PARAINTER_DEF inter;
+    PARAGATE_DEF gate;
+    PARA_FLOW_DEF flow;
+    uint16_t login_flag;
+    uint8_t flag_sdk_upgrade, output_type, output_port, res[17];
+    char dev_type[64];
+} __attribute__((aligned(1), packed)) PARA_DEV_DEF, *PPARA_DEV_DEF;
 
 /**
  * @brief 
@@ -230,6 +247,12 @@ typedef struct
 }__attribute__((aligned(1), packed))CHANNEL_PAYMENT_DEF,*PCHANNEL_PAYMENT_DEF;
 
 
+extern PARAINTER_DEF *para_getInterInfor(void);
+extern PARA_DEV_DEF *para_getDevInfor(void);
+extern void para_deviceInit(void);
+extern int32_t lyy_dev_read(PPARA_DEV_DEF arg);
+extern int32_t lyy_dev_write(PPARA_DEV_DEF arg);
+extern void set_serAddr(PPARAGATE_DEF gate, uint8_t type);
 extern int                      get_dev_type_code(void);
 extern PAY_PACKAGES_DEF         *get_pay_packages(void);
 extern PAY_PACKAGES_NDJ_DEF     *get_pay_ndj_packages(void);
@@ -239,10 +262,6 @@ extern uint8_t                  ndj_get_lane_enable(uint8_t x);
 extern PLANE_INFOR_TABLE_DEF    ndj_net_lane_infor(void);
 
 extern char                     *get_money_unit(void);
-extern int                      lyy_hw_err_msg_write(uint8_t * arg);
-extern int                      lyy_hw_err_msg_read(uint8_t * arg);
-
-extern INFOR_BUSINESS           *get_business_infor(void);
 
 #if 0
 

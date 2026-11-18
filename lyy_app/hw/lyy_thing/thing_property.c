@@ -27,12 +27,11 @@
 #include "thing_service.h"
 #include "thing_property.h"
 
-#include "lyy_ndj.h"
+#include "lyy_zcj.h"
 #include "lyy_tjc.h"
 #include "lyy_pic.h"
 #include "lyy_para.h"
 #include "lyy_start.h"
-#include "lyy_dfssj.h"
 
 
 /*属性设置*/
@@ -45,9 +44,7 @@ int property_write_pulse_param(cJSON* params);
 int property_write_ndj_lane(cJSON* params);
 int property_write_fault_list(cJSON* params);
 int property_write_picture_screen(cJSON* params);
-int property_write_wifi_info(cJSON *params);
-int property_write_marketing_point_config(cJSON *params);
-int property_write_customer_service_info(cJSON *params);
+int property_write_zcj_param(cJSON *params);
 
 /*属性读取*/
 int property_read_brt_param(cJSON *reply);
@@ -55,7 +52,7 @@ int property_read_pulse_para(cJSON* reply);
 int property_read_infor_net(cJSON* reply);
 int property_read_login_flag(cJSON* reply);
 int property_read_dev_infor(cJSON* reply);
-int property_read_wifi_info(cJSON *reply);
+int property_read_zcj_param(cJSON *reply);
 /**
  * @brief 
  * 属性操作
@@ -75,9 +72,8 @@ const PROPER_METHOD_DEF method_property[] =
         {"dev_infor", NULL, property_read_dev_infor},
         {"network_level", NULL, NULL},
         {"attr_container_layout", property_write_picture_screen, NULL},
-        {"wifi_info", property_write_wifi_info, property_read_wifi_info},
-        {"customer_service_info", property_write_customer_service_info, NULL},
-        {"marketing_point_config", property_write_marketing_point_config, NULL}, // 积分营销配置
+        {"bill_machine_params", property_write_zcj_param, property_read_zcj_param},
+        {"mcu_version", NULL, property_read_dev_mcu_version},
 };
 
 void login_flag_packet(cJSON *login,uint16_t login_flag,uint8_t result,char *message);
@@ -116,7 +112,7 @@ void thing_property_set(cJSON* params)
             {
                 LYY_LOGD("pro_write[%s] is null",method->method);
             }
-            // break;    //处理一个属性里面多个配置 如equipment_info  和  customer_service_info  一起下发
+            break;
         }
     }
     //id-相当于指令唯一码
@@ -202,138 +198,6 @@ int property_write_uart_infor(cJSON* params)
     return 1;
 }
 
-int property_write_wifi_info(cJSON *params)
-{
-    cJSON *pxWifiSsid = NULL;
-    cJSON *pxWifiPwd = NULL;
-    WIFI_INFO_T pcWifiInfo;
-
-    pxWifiSsid = cJSON_GetObjectItem(params, "wifi_name");
-    pxWifiPwd = cJSON_GetObjectItem(params, "wifi_password");
-
-    if (NULL == pxWifiSsid || NULL == pxWifiPwd)
-    {
-        goto cjson_exit;
-    }
-    LYY_LOGD("wifi_name: %s", pxWifiSsid->valuestring);
-    LYY_LOGD("wifi_password: %s", pxWifiPwd->valuestring);
-
-    pcWifiInfo.xMode = WIFI_STA;
-
-    strcpy(pcWifiInfo.pcSsid, pxWifiSsid->valuestring);
-    strcpy(pcWifiInfo.pcPwd, pxWifiPwd->valuestring);
-
-    APP_lParamSetWifiInfo(&pcWifiInfo);
-
-    HAL_vReset("write_wifi success", 1000);
-
-cjson_exit:
-    return 1;
-}
-
-int property_write_customer_service_info(cJSON *params)
-{
-    cJSON *data = NULL;
-
-    // 客服电话
-    data = cJSON_GetObjectItem(params, "telephone");
-    if (data != NULL && data->type == cJSON_String)
-    {
-        memset(tjc_infor_t.telephone, 0x00, sizeof(tjc_infor_t.telephone));
-        strcpy(tjc_infor_t.telephone, data->valuestring);
-        LYY_LOGD("tjc_infor_t.telephone: %s", tjc_infor_t.telephone);
-    }
-
-
-    //更新电话时，先显示一次
-    lyy_tjc_device_infor();
-
-    return 1;
-}
-
-int property_write_marketing_point_config(cJSON *params)
-{
-
-    cJSON *data = NULL;
-
-    TJC_POINT_CONFIG_DEF *point_config_data = get_point_config();
-
-    // 是否开启积分营销
-    data = cJSON_GetObjectItem(params, "point_enabled");
-    if (data != NULL)
-    {
-        if (data->type == cJSON_True)
-        {
-            point_config_data->point_enabled = 1;
-            LYY_LOGD("point_config_data->point_enabled=%d", point_config_data->point_enabled);
-        }
-        else if (data->type == cJSON_False)
-        {
-            point_config_data->point_enabled = 0;
-            LYY_LOGD("point_config_data->point_enabled=%d", point_config_data->point_enabled);
-        }
-    }
-
-    // 抵扣积分
-    data = cJSON_GetObjectItem(params, "deduct_rule_points");
-    if (data != NULL && data->type == cJSON_String)
-    {
-        memset(point_config_data->deduct_rule_points, 0x00, sizeof(point_config_data->deduct_rule_points));
-        strcpy(point_config_data->deduct_rule_points, data->valuestring);
-        LYY_LOGD("point_config_data->deduct_rule_points: %s", point_config_data->deduct_rule_points);
-    }
-
-    // 抵扣金额
-    data = cJSON_GetObjectItem(params, "deduct_rule_amount");
-    if (data != NULL && data->type == cJSON_String)
-    {
-        memset(point_config_data->deduct_rule_amount, 0x00, sizeof(point_config_data->deduct_rule_amount));
-        strcpy(point_config_data->deduct_rule_amount, data->valuestring);
-        LYY_LOGD("point_config_data->deduct_rule_amount: %s", point_config_data->deduct_rule_amount);
-    }
-
-    // 当前设备可用积分
-    data = cJSON_GetObjectItem(params, "equipment_available_point");
-    if (data != NULL && data->type == cJSON_String)
-    {
-        memset(point_config_data->equipment_available_point, 0x00, sizeof(point_config_data->equipment_available_point));
-        strcpy(point_config_data->equipment_available_point, data->valuestring);
-        LYY_LOGD("point_config_data->equipment_available_point: %s", point_config_data->equipment_available_point);
-    }
-
-    // 当前设备积分可抵扣金额
-    data = cJSON_GetObjectItem(params, "equipment_available_deduct_amount");
-    if (data != NULL && data->type == cJSON_String)
-    {
-        memset(point_config_data->equipment_available_deduct_amount, 0x00, sizeof(point_config_data->equipment_available_deduct_amount));
-        strcpy(point_config_data->equipment_available_deduct_amount, data->valuestring);
-        LYY_LOGD("point_config_data->equipment_available_deduct_amount: %s", point_config_data->equipment_available_deduct_amount);
-    }
-
-    // 时间戳（毫秒）
-    data = cJSON_GetObjectItem(params, "timestamp");
-    if (data != NULL && data->type == cJSON_String)
-    {
-        memset(point_config_data->timestamp, 0x00, sizeof(point_config_data->timestamp));
-        strcpy(point_config_data->timestamp, data->valuestring);
-        LYY_LOGD("point_config_data->timestamp: %s", point_config_data->timestamp);
-    }
-
-    // 货币代码
-    data = cJSON_GetObjectItem(params, "currency_code");
-    if (data != NULL && data->type == cJSON_String)
-    {
-        memset(point_config_data->currency_code, 0x00, sizeof(point_config_data->currency_code));
-        strcpy(point_config_data->currency_code, data->valuestring);
-        LYY_LOGD("point_config_data->currency_code: %s", point_config_data->currency_code);
-    }
-
-    device_get_points_show();   //积分更新
-
-    tourist_to_consume_add_points_show();  //游客支付成功，数据更新
-
-    return 1;
-}
 
 /**
  * @brief
@@ -356,14 +220,6 @@ void pay_package_update(void *package, cJSON *body)
         LYY_LOGD("pkgs->id=%s",pkgs->id);
     }
 
-    // 商品名称
-    pkgs_data = cJSON_GetObjectItem(body, "name");
-    if (pkgs_data != NULL && pkgs_data->type == cJSON_String)
-    {
-        strcpy(pkgs->name, pkgs_data->valuestring);
-        LYY_LOGD("pkgs->name=%s", pkgs->name);
-    }
-    
     //排序
     pkgs_data = cJSON_GetObjectItem(body, "seq");
     if(pkgs_data != NULL && pkgs_data->type == cJSON_Number)
@@ -406,45 +262,6 @@ void pay_package_update(void *package, cJSON *body)
         LYY_LOGD("pkgs->UnitDesc=%s", pkgs->unit);
     }
 
-    // 商品描述
-    pkgs_data = cJSON_GetObjectItem(body, "commodityDesc");
-    if (pkgs_data != NULL && pkgs_data->type == cJSON_String)
-    {
-        strcpy(pkgs->commodity_Desc, pkgs_data->valuestring);
-        LYY_LOGD("pkgs->commodity_Desc=%s", pkgs->commodity_Desc);
-    }
-
-    // 价格描述
-    pkgs_data = cJSON_GetObjectItem(body, "priceDesc");
-    if (pkgs_data != NULL && pkgs_data->type == cJSON_String)
-    {
-        strcpy(pkgs->price_Desc, pkgs_data->valuestring);
-        LYY_LOGD("pkgs->price_Desc=%s", pkgs->price_Desc);
-    }
-
-    // 水温度
-    pkgs_data = cJSON_GetObjectItem(body, "waterTemperature");
-    if (pkgs_data != NULL && pkgs_data->type == cJSON_String)
-    {
-        strcpy(pkgs->water_Temperature, pkgs_data->valuestring);
-        LYY_LOGD("pkgs->water_Temperature=%s", pkgs->water_Temperature);
-    }
-
-    // 套餐颜色
-    pkgs_data = cJSON_GetObjectItem(body, "packageColor");
-    if (pkgs_data != NULL && pkgs_data->type == cJSON_String)
-    {
-        strcpy(pkgs->package_Color, pkgs_data->valuestring);
-        LYY_LOGD("pkgs->package_Color=%s", pkgs->package_Color);
-    }
-
-    // 积分最大可抵扣金额
-    pkgs_data = cJSON_GetObjectItem(body, "orderMaxDeductAmount");
-    if (pkgs_data != NULL && pkgs_data->type == cJSON_String)
-    {
-        strcpy(pkgs->orderMaxDeductAmount, pkgs_data->valuestring);
-        LYY_LOGD("pkgs->orderMaxDeductAmount=%s", pkgs->orderMaxDeductAmount);
-    }
 
     /* 未使用到的参数，节约资源 */
 #if 0
@@ -484,108 +301,7 @@ void pay_package_update(void *package, cJSON *body)
  */
 int property_write_pay_pkgs_ndj(cJSON* params)
 {   
-    //ndj_add
-    uint8_t i   = 0;
-    uint8_t lane_id = 0;
-
-    PAY_PACKAGES_NDJ_DEF *ndj_pkgs = get_pay_ndj_packages();
-    cJSON *lane_data = NULL;
-    cJSON *package = NULL;
-    cJSON *cJsonData = NULL;
-    cJSON *data = NULL;
-    if(params == NULL)
-    {
-        LYY_LOGD("property_write_pay_pkgs_ndj is null");
-        return -3;    
-    }
-    if(params->type == cJSON_String)
-    {
-        // LYY_LOGD("ndj_pay_package %s", params->valuestring);
-        LYY_LOGD("property_write_pay_pkgs_ndj type is string");
-    }
-    LYY_LOGD("property_write_pay_pkgs_ndj");
-    cJsonData = cJSON_Parse(params->valuestring);
-    if(cJsonData == NULL)   
-    {
-        LYY_LOGD("cJSON_Parse fail");
-        return -2;
-    }
-    //货币 名称
-    data = cJSON_GetObjectItem(cJsonData, "currencyCode");
-    if(data != NULL && data->type == cJSON_String)
-    {
-        memset(ndj_pkgs->currency_name, 0x00, sizeof(ndj_pkgs->currency_name));
-        strcpy(ndj_pkgs->currency_name, data->valuestring);
-        LYY_LOGD("ndj_pkgs->currency_name: %s", ndj_pkgs->currency_name);
-    }
-
-    // 货币 符号
-    data = cJSON_GetObjectItem(cJsonData, "currencySymbol");
-    if(data != NULL && data->type == cJSON_String)
-    {
-        memset(ndj_pkgs->currency_symbol, 0x00, sizeof(ndj_pkgs->currency_symbol));
-        strcpy(ndj_pkgs->currency_symbol, data->valuestring);
-        LYY_LOGD("ndj_pkgs->currency_symbol: %s", ndj_pkgs->currency_symbol);
-    }
-    data = cJSON_GetObjectItem(cJsonData, "positionList");
-    if(data == NULL)
-    {
-        cJSON_Delete(cJsonData);//清除结构体
-        return -3;
-    }
-    ndj_pkgs->lane_sum = cJSON_GetArraySize(data);	//获取数组成员个数 
-    LYY_LOGD("ndj_pkgs->lane_sum: %d", ndj_pkgs->lane_sum);
-    if(ndj_pkgs->lane_sum == 0)//无套餐
-    {
-        LYY_LOGD("no lane no package");
-        //显示无套餐
-        cJSON_Delete(cJsonData);//清除结构体
-        return -4; 
-    } 
- 
-    for(i=0; i< ndj_pkgs->lane_sum; i++)
-    {
-        lane_data = cJSON_GetObjectItem(cJSON_GetArrayItem(data, i), "positionX");
-        if(lane_data != NULL && lane_data->type == cJSON_Number && (lane_data->valueint >= 1))
-        {
-            lane_id = lane_data->valueint -1;
-            if(lane_id >= NDJ_LANE_MAX) continue ; // 仓位ID过大
-            ndj_pkgs->lane[lane_id].x = lane_data->valueint;
-            LYY_LOGD("lane[%d].x=%d", lane_id, lane_data->valueint);
-        }
-        else continue;  //没有仓位ID跳过后面部分
-
-        lane_data = cJSON_GetObjectItem(cJSON_GetArrayItem(data, i), "positionY");
-        if(lane_data != NULL && lane_data->type == cJSON_Number)
-        {
-            LYY_LOGD("lane[%d].y=%d", lane_id, lane_data->valueint);
-            ndj_pkgs->lane[lane_id].y = lane_data->valueint;
-        }
-
-        package = cJSON_GetObjectItem(cJSON_GetArrayItem(data, i), "consumptionPackage");
-        ndj_pkgs->lane[lane_id].number = cJSON_GetArraySize(package);	//获取数组成员个数 
-        if(ndj_pkgs->lane[lane_id].number == 0) //无套餐
-        {
-            LYY_LOGD("lane[%d] :no package",lane_id); 
-            continue ;  //没有仓位ID跳过后面部分  
-        }
-        LYY_LOGD("para->lane[%d].number = %d",lane_id,ndj_pkgs->lane[lane_id].number);
-        #if 0 // 暂时不支付多个number todo
-        for(j=0;j<ndj_pkgs->lane[lane_id].number;j++)
-        {
-            LYY_LOGD("ndj_pkgs->lane[%d].pkg[%d]",lane_id,j);
-            pay_package_update(&ndj_pkgs->lane[lane_id].pkg[j],cJSON_GetArrayItem(package, j));
-        }
-        #endif
-        LYY_LOGD("ndj_pkgs->lane[%d].pkg",lane_id);
-        pay_package_update(&ndj_pkgs->lane[lane_id].pkg,cJSON_GetArrayItem(package, 0));
-    }
-
-    cJSON_Delete(cJsonData);//清除结构体
-    vTaskDelay(500 / portTICK_PERIOD_MS);   
-
-    lyy_tjc_page_package();
-
+    (void)params; /* NDJ is not supported by the dedicated ZCJ firmware. */
     return 1;
 
 }
@@ -793,9 +509,6 @@ int property_write_pay_channel(cJSON *params)
         }
         channel_t->chnl_sum = cJSON_GetArraySize(cJsonData);	//获取数组成员个数 
 
-        //ndj_add
-        set_channel_sum(channel_t->chnl_sum);
-
         LYY_LOGD("=============== channel_t->chnl_sum %d", channel_t->chnl_sum);
         for(i=0; i<channel_t->chnl_sum; i++)
         {
@@ -837,47 +550,8 @@ int property_write_dev_infor(cJSON* params)
         dev_info_t->business.bind_state = data->type==cJSON_True ? 0x01:0x00;
         LYY_LOGD("bind_state %d", dev_info_t->business.bind_state);
 
-        if(dev_info_t->business.bind_state == 0x00)
-        {
-            tjc_infor_t.get_regist_flag = 0x01;
-            if (get_dev_type_code() == DEVICE_TYPE_UART_DFSSJ)
-            {
-                device_dfssj_bind_state_info(0); // 未绑定
-            }
-        }
-        else
-        {
-            if (get_dev_type_code() == DEVICE_TYPE_UART_DFSSJ)
-            {
-                device_dfssj_bind_state_info(1); // 扫码+刷卡
-            }
-        }
+        if (dev_info_t->business.bind_state == 0) tjc_infor_t.get_regist_flag = 1;
     }
-
-    data = cJSON_GetObjectItem(params, "equipment_num");
-    if(data != NULL && data->type == cJSON_String)
-    {
-        memset(dev_info_t->business.dev_id, 0x00, sizeof(dev_info_t->business.dev_id));
-        LYY_LOGD("dev_id %s", data->valuestring);
-        strcpy(dev_info_t->business.dev_id, data->valuestring);
-    }
-    data = cJSON_GetObjectItem(params, "region");
-    if(data != NULL && data->type == cJSON_String)
-    {
-        memset(dev_info_t->business.region, 0x00, sizeof(dev_info_t->business.region));
-        LYY_LOGD("region %s", data->valuestring);
-        strcpy(dev_info_t->business.region, data->valuestring);
-    }
-
-    data = cJSON_GetObjectItem(params, "language");
-    if(data != NULL && data->type == cJSON_String)
-    {
-        memset(dev_info_t->business.language, 0x00, sizeof(dev_info_t->business.language));
-        LYY_LOGD("language %s", data->valuestring);
-        strcpy(dev_info_t->business.language, data->valuestring);
-    }
-
-
 
     return 1;
 
@@ -902,17 +576,21 @@ int property_write_pulse_param(cJSON* params)
     if(data == NULL)    return -1;
     pxPulseInfo->ulPulseWidth = data->valueint;
 
+    data = cJSON_GetObjectItem(params, "output_port");
+    if (data == NULL) return -1;
+    ulPulsetype.bytes[1] = data->valueint;
     data = cJSON_GetObjectItem(params, "output_type");
     if(data == NULL)    return -1;
     if(strstr(data->valuestring,"level"))
     {
-        pxPulseInfo->ulPulsetype = START_TYPE_LEVEL;
+        ulPulsetype.bytes[0] = START_TYPE_LEVEL;
     }else
     {
-        pxPulseInfo->ulPulsetype = START_TYPE_COIN;
+        ulPulsetype.bytes[0] = START_TYPE_COIN;
     }
 
     APP_lSetParamUpdate();
+    APP_lPulseParamSetInfo(ulPulsetype.value);
 
     
     LYY_LOGD(">>> update gap : [%d] width: [%d] type[%d]", 
@@ -932,84 +610,7 @@ int property_write_pulse_param(cJSON* params)
 void ndj_lane_param_update(LANE_INFOR_TABLE_DEF *lane, cJSON *body,uint8_t cnt)
 {
 
-    //ndj_add
-    uint8_t lane_id = 0;
-    cJSON *data = cJSON_GetArrayItem(body, cnt);
-    if(data == NULL || data->type != cJSON_String)
-    {
-        LYY_LOGD("lane data is error"); 
-        return ;   
-    }
-    LYY_LOGD("ndj_lane: %s", data->valuestring);      
-    cJSON *cJsonData = cJSON_Parse(data->valuestring);
-    if(cJsonData == NULL)   
-    {
-        LYY_LOGD("cJSON_Parse fail");
-        return ;
-    }
-    cJSON *temp = cJSON_GetObjectItem(cJsonData, "positionX");
-    if(temp != NULL && temp->type == cJSON_Number && (temp->valueint >= 1))
-    {
-        lane_id = temp->valueint - 1;
-        if(lane_id >= NDJ_LANE_MAX)
-        {
-            cJSON_Delete(cJsonData);
-            return ; // 仓位ID过大
-        }         
-        lane->lane[lane_id].position_x = temp->valueint ;
-        LYY_LOGD("lane[%d].position_x = %d",lane_id,lane->lane[lane_id].position_x);
-        if(lane_id >= NDJ_LANE_MAX)  
-        {
-            cJSON_Delete(cJsonData);
-            return ;
-        }
-    }
-    else  
-    {
-        cJSON_Delete(cJsonData);
-        return ;
-    }
-    
-    temp = cJSON_GetObjectItem(cJsonData, "playTime");
-    if(temp != NULL && temp->type == cJSON_Number)
-    {
-        lane->lane[lane_id].play_time = temp->valueint;
-        LYY_LOGD("lane[%d].play_time = %d",lane_id,lane->lane[lane_id].play_time);
-    }
-    temp = cJSON_GetObjectItem(cJsonData, "status");
-    if(temp != NULL && temp->type == cJSON_Number)
-    {
-        lane->lane[lane_id].status = temp->valueint;
-        LYY_LOGD("lane[%d].status = %d",lane_id,lane->lane[lane_id].status);
-    }
-    temp = cJSON_GetObjectItem(cJsonData, "startupUnit");
-    if(temp != NULL && temp->type == cJSON_Number)
-    {
-        lane->lane[lane_id].startup_unit = temp->valueint;
-        LYY_LOGD("lane[%d].startup_unit = %d",lane_id,lane->lane[lane_id].startup_unit);
-    }
-    temp = cJSON_GetObjectItem(cJsonData, "enable");
-    if(temp != NULL)
-    {
-        lane->lane[lane_id].enable = (temp->type == cJSON_False ? 0 :1);  //主板协议 0 ：在线  1：离线 所以设置时需要取反
-        LYY_LOGD("lane[%d].enable = %d",lane_id,lane->lane[lane_id].enable);
-    } 
-    temp = cJSON_GetObjectItem(cJsonData, "giftId");
-    if(temp != NULL && temp->type == cJSON_Number)
-    {
-        lane->lane[lane_id].giftId = temp->valueint;
-        LYY_LOGD("lane[%d].giftId = %ld",lane_id,lane->lane[lane_id].giftId);
-    }
-    temp = cJSON_GetObjectItem(cJsonData, "giftName");
-    if(temp != NULL && temp->type == cJSON_String)
-    {
-        memset(lane->lane[lane_id].giftName,0,sizeof(lane->lane[lane_id].giftName));
-        strcpy(lane->lane[lane_id].giftName,temp->valuestring);
-        LYY_LOGD("lane[%d].giftName = %s",lane_id,lane->lane[lane_id].giftName);
-    }
-    lane->flag[lane_id] = 1;     //数据线缓存再使能标志位
-    cJSON_Delete(cJsonData);        //释放资源
-
+    (void)lane; (void)body; (void)cnt;
 }
 
 /**
@@ -1020,23 +621,7 @@ void ndj_lane_param_update(LANE_INFOR_TABLE_DEF *lane, cJSON *body,uint8_t cnt)
 int property_write_ndj_lane(cJSON* params)
 {
 
-    //ndj_add
-    PLANE_INFOR_TABLE_DEF lane = ndj_net_lane_infor();
-    uint8_t i;
-    if((params == NULL) || (params->type != cJSON_Array))
-    {
-        LYY_LOGD("lane infor error");
-        return -1;
-    }
-    lane->number = cJSON_GetArraySize(params);	//获取数组成员个数 
-    lane->number = (lane->number >= NDJ_LANE_MAX ? NDJ_LANE_MAX : lane->number);
-    LYY_LOGD("lane->number: %d",lane->number);
-
-    for(i=0;i<lane->number;i++)
-    {
-        ndj_lane_param_update(lane,params,i);
-    }
-    vTaskDelay(500 / portTICK_PERIOD_MS);  
+    (void)params;
     return 1;
 
 }
@@ -1091,6 +676,44 @@ char *get_fault_msg(uint16_t code)
     }
     // sprintf(temp,"undefine");
     return "undefine";
+}
+int property_read_zcj_param(cJSON *reply)
+{
+    ZCJ_PARAM_DEF *param = zcj_param_get();
+    char note_type[20] = {0};
+    cJSON *data;
+    if (reply == NULL) return -1;
+    if (zcj_cmd_get_param() == 0) return -2;
+    data = cJSON_CreateObject();
+    if (data != NULL) {
+        zcj_note_type_to_string(note_type, param->note_type);
+        cJSON_AddStringToObject(data, "bill_machine_type", note_type);
+        cJSON_AddNumberToObject(data, "width", param->width);
+        cJSON_AddNumberToObject(data, "gap", param->space);
+        cJSON_AddNumberToObject(data, "brt", 115200);
+        cJSON_AddStringToObject(data, "mode", api_pluse_getLevel() == PULSE_EXPORT_NO ? "NO" : "NC");
+        cJSON_AddStringToObject(data, "startup_type", param->IctStartMode == 1 ? "A" : "B");
+        cJSON_AddItemToObject(reply, "bill_machine_params", data);
+    }
+    return 1;
+}
+int property_write_zcj_param(cJSON *params)
+{
+    if (zcj_cmd_get_param() == 0) return -2;
+    ZCJ_PARAM_DEF param = *zcj_param_get();
+    cJSON *temp;
+    if (params == NULL || params->type != cJSON_Object) return -1;
+    temp = cJSON_GetObjectItem(params, "bill_machine_type");
+    if (temp != NULL && temp->type == cJSON_String) param.note_type = zcj_note_type_to_value(temp->valuestring);
+    temp = cJSON_GetObjectItem(params, "gap");
+    if (temp != NULL && temp->type == cJSON_Number) param.space = temp->valueint;
+    temp = cJSON_GetObjectItem(params, "width");
+    if (temp != NULL && temp->type == cJSON_Number) param.width = temp->valueint;
+    temp = cJSON_GetObjectItem(params, "mode");
+    if (temp != NULL && temp->type == cJSON_String) param.level = strstr(temp->valuestring, "NC") != NULL;
+    temp = cJSON_GetObjectItem(params, "startup_type");
+    if (temp != NULL && temp->type == cJSON_String) param.IctStartMode = strstr(temp->valuestring, "A") != NULL;
+    return zcj_cmd_set_param(&param) == 0 ? -1 : 1;
 }
 
 /**
@@ -1202,26 +825,6 @@ int property_read_brt_param(cJSON* reply)
     return 1;
 }
 
-int property_read_wifi_info(cJSON *reply)
-{
-    cJSON *cjData = NULL;
-
-    if (reply == NULL)
-    {
-        return -1;
-    }
-
-    cjData = cJSON_CreateObject(); // 需要返回到上一层，不需要delete
-    if (cjData != NULL)
-    {
-        cJSON_AddStringToObject(cjData, "wifi_name", APP_pcGetParamWifiSsid());
-        cJSON_AddStringToObject(cjData, "wifi_password", APP_pcGetParamWifiPwd());
-
-        cJSON_AddItemToObject(reply, "wifi_info", cjData);
-    }
-
-    return 1;
-}
 
 /**
  * @brief
@@ -1276,8 +879,9 @@ int property_read_pulse_para(cJSON* reply)
 
         cJSON_AddNumberToObject(cjData, "gap",      pxPulseInfo->ulPulseSpace);
         cJSON_AddNumberToObject(cjData, "width",    pxPulseInfo->ulPulseWidth);
-        cJSON_AddStringToObject(cjData, "mode",     !APP_ulGetMachtineLvl() ? ("NO"):("NC"));
-        cJSON_AddStringToObject(cjData, "output_type", ((START_TYPE_LEVEL == APP_pxlGetParamePulse()->ulPulsetype) ?("level"):("pulse")));
+        cJSON_AddNumberToObject(cjData, "output_port", ulPulsetype.bytes[1]);
+        cJSON_AddStringToObject(cjData, "mode", APP_ulGetMachtineLvl() ? "NO" : "NC");
+        cJSON_AddStringToObject(cjData, "output_type", ulPulsetype.bytes[0] == START_TYPE_LEVEL ? "level" : "pulse");
         cJSON_AddItemToObject(reply, "pulse_para", cjData);
 
     }
@@ -1422,6 +1026,27 @@ int property_read_dev_infor(cJSON* reply)
 
     return 1;
 }
+int property_read_dev_mcu_version(cJSON *reply)
+{
+    ZCJ_PARAM_VER_DEF *ver = zcj_param_ver_get();
+    cJSON *data;
+    if (reply == NULL) return -1;
+    if (zcj_cmd_get_param_ver() == 0) return -2;
+    data = cJSON_CreateObject();
+    if (data == NULL) return -3;
+    cJSON_AddStringToObject(data, "hard_ver", ver->ver_hard);
+    cJSON_AddStringToObject(data, "soft_ver", ver->ver_soft);
+    cJSON_AddItemToObject(reply, "mcu_version", data);
+    return 1;
+}
+void property_post_dev_mcu_version(char *soft_ver, char *hard_ver)
+{
+    cJSON *data = cJSON_CreateObject();
+    if (data == NULL) return;
+    cJSON_AddStringToObject(data, "soft_ver", soft_ver);
+    cJSON_AddStringToObject(data, "hard_ver", hard_ver);
+    thing_property_post(data);
+}
 
 
 
@@ -1547,40 +1172,13 @@ void property_post_csq_level(void)
 
     //network_type-网络类型
     cJSON_AddNumberToObject(network_level,  "csq",              HAL_lGetWifiRssiToCsq());
-    cJSON_AddStringToObject(network_level,  "network_type",     "WIFI");
+    cJSON_AddStringToObject(network_level, "network_type", "WIFI2.4G");
     cJSON_AddItemToObject(params,           "network_level",    network_level);
 
     thing_property_post(params);
     
 }
 
-/**
- * @brief
- * 上报wifi账号密码
- */
-void property_post_wifi_info(void)
-{
-
-    cJSON *params = cJSON_CreateObject();
-    if (params == NULL)
-    {
-        LYY_LOGE("### params create fail");
-        return;
-    }
-
-    cJSON *wifi_info = cJSON_CreateObject();
-    if (wifi_info == NULL)
-    {
-        LYY_LOGE("### wifi_info create fail");
-        return;
-    }
-    cJSON_AddStringToObject(wifi_info, "wifi_name", APP_pcGetParamWifiSsid());
-    cJSON_AddStringToObject(wifi_info, "wifi_password", APP_pcGetParamWifiPwd());
-
-    cJSON_AddItemToObject(params, "wifi_info", wifi_info);
-
-    thing_property_post(params);
-}
 
 /**
  * @brief 
@@ -1602,7 +1200,7 @@ void property_post_lbs_cell(void *para)
         cJSON_AddNumberToObject(data, "rssi", 31);
 
         //devid-设备唯一码
-        cJSON_AddStringToObject(data, "network_type", "WIFI");
+        cJSON_AddStringToObject(data, "network_type", "WIFI2.4G");
 
         cJSON* network_level = NULL;
         network_level = cJSON_CreateObject();

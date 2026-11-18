@@ -36,13 +36,6 @@
 #include "utils.h"
 
 #include "lyy_device.h"
-#include "lyy_xyj.h"
-#include "lyy_hgj.h"
-#include "lyy_cwhgj.h"
-#include "lyy_cwxyj.h"
-#include "lyy_cwxhj.h"
-#include "lyy_mshgj.h"
-#include "lyy_dfssj.h"
 
 int lyy_thing_down_property(char *payload, uint32_t payload_len);
 int lyy_thing_event_reply(char *payload, uint32_t payload_len);
@@ -143,27 +136,6 @@ void dev_type_update(cJSON *member)
     if(member == NULL) 
         return ; //成员为空
 
-    DEV_TYPE_DEF dev_type_t[] =
-        {
-            {"dev_type_default"},
-            {"dev_type_pulse"},
-            {"dev_type_level"},
-            {"dev_type_uart_custom"},
-            {"dev_type_uart_wwj_lyy"},
-            {"dev_type_uart_dbj_lyy"},
-            {"dev_type_uart_ndj_lyy"},
-            {"dev_type_uart_amy_lyy"},
-            {"dev_type_uart_xyj_lyy"},
-            {"dev_type_uart_note_lyy"},
-            {"dev_type_uart_qhxyj_lyy"}, /*乔禾洗衣机 add by dxw,20241010*/
-            {"dev_type_uart_qhhgj_lyy"}, /*乔禾烘干机 add by dxw,20241010*/
-            {"dev_type_uart_ljxyj_lyy"}, /*蓝鲸洗衣机 add by dxw,20241210*/
-            {"dev_type_uart_ljhgj_lyy"}, /*蓝鲸烘干机 add by dxw,20241210*/
-            {"dev_type_uart_cwxyj_lyy"}, /*创维滚筒洗衣机 add by zyl,20250605*/
-            {"dev_type_uart_mshgj_lyy"},
-            {"dev_type_uart_cwhgj_lyy"}, /*创维烘干机*/
-            {"dev_type_uart_cwxhj_lyy"}, /*创维洗烘机*/
-        };
 
     cJSON *temp = cJSON_GetObjectItem(member, "dev_type");
 
@@ -174,21 +146,6 @@ void dev_type_update(cJSON *member)
 
         if(memcmp(temp->valuestring, APP_pcGetDevType(), strlen(temp->valuestring)) != 0) //不一样
         {
-
-            for (uint8_t i = 0; i < sizeof(dev_type_t) / sizeof(dev_type_t[0]); i++)   //为了解决洗衣机烘干机默认波特率9600的问题。
-            {
-                if (strstr(dev_type_t[i].name, temp->valuestring) != NULL) // 一样
-                {
-                    if (i > DEVICE_TYPE_UART_NOTE)
-                    {
-                        APP_lParamSetBaundRate(9600);
-                        HAL_vUartSetParam(HAL_UART_MAIN_BOARD, 9600);
-                    }
-
-                    break;
-                }
-            }
-
             APP_lserSetDevTypeInfo(temp->valuestring);
             HAL_vReset("update dev_type to reset!!", 1000);
         }
@@ -382,68 +339,7 @@ int lyy_thing_down_ctlb(char *payload, uint32_t payload_len)
     {
         data = (uint8_t *)payload + 1;
     }
-    LYY_LOGD("get_dev_type_code: %d", get_dev_type_code());
-    switch (get_dev_type_code())
-    {
-    case DEVICE_TYPE_UART_QHHGJ:
-        if (cmd == HGJ_PARAM_CMD_QUERY)
-            device_qhhgj_factory_param_get();
-        else if (cmd == HGJ_PARAM_CMD_SET)
-            device_qhhgj_factory_param_set_forqhhgj(data, payload_len - 1);
-        break;
-    case DEVICE_TYPE_UART_LJHGJ:
-        if (cmd == HGJ_PARAM_CMD_QUERY)
-            device_qhhgj_factory_param_get();
-        else if (cmd == HGJ_PARAM_CMD_SET)
-            device_qhhgj_factory_param_set(data, payload_len - 1);
-        break;
-    case DEVICE_TYPE_UART_QHXYJ:
-    case DEVICE_TYPE_UART_LJXYJ:
-
-        if (cmd == HGJ_PARAM_CMD_QUERY)
-            device_qhxyj_factory_param_get();
-        else if (cmd == HGJ_PARAM_CMD_SET)
-            device_qhxyj_factory_param_set(data, payload_len - 1);
-        if (cmd == XYJ_GLOBAL_PARAM_CMD_QUERY)
-            device_qhxyj_global_param_get();
-        else if (cmd == XYJ_GLOBAL_PARAM_CMD_SET)
-            device_qhxyj_global_param_set(data, payload_len - 1);
-        if (cmd == XYJ_STEP1_PARAM_CMD_QUERY)
-            device_qhxyj_step_param_get(0);
-        else if (cmd == XYJ_STEP1_PARAM_CMD_SET)
-            device_qhxyj_step_param_set(0, data, payload_len - 1);
-        if (cmd == XYJ_STEP2_PARAM_CMD_QUERY)
-            device_qhxyj_step_param_get(1);
-        else if (cmd == XYJ_STEP2_PARAM_CMD_SET)
-            device_qhxyj_step_param_set(1, data, payload_len - 1);
-        break;
-    case DEVICE_TYPE_UART_SKYWORTH_GTXYJ: // 创维滚筒洗衣机
-
-        break;
-    case DEVICE_TYPE_UART_SKYWORTH_GTHGJ: // 创维滚筒洗衣机
-
-        break;
-    case DEVICE_TYPE_UART_SKYWORTH_GTXHJ: // 创维滚筒洗衣机
-
-        break;
-    case DEVICE_TYPE_UART_MSHGJ: // 麦穗烘干机
-
-        break;
-    case DEVICE_TYPE_UART_TCLXYJ: //TCL洗衣机
-
-        break;
-    case DEVICE_TYPE_UART_DFSSJ: // 德锋售水机
-
-        break;
-    case DEVICE_TYPE_UART_THXCJ: // 探虎洗车机
-
-        break;
-    default:
-        // 发送到串口
-        device_packet_data_length(cmd, data, payload_len - 1);
-        break;
-    }
-
+    device_packet_data_length(cmd, data, payload_len - 1);
 
     //应答-down_raw_reply
     thing_ctlb_down_raw_reply();
@@ -482,7 +378,7 @@ int lyy_thing_raw_down(char *payload, uint32_t payload_len)
         data = (uint8_t *)payload + 6;
 
     // 串口发送
-    HAL_vUartSend(HAL_UART_MAIN_BOARD, data,payload_len-6, 800);
+    HAL_vUartSend(HAL_UART_MAIN_BOARD, data, payload_len - 6, 1000);
 
     //应答-down_raw_reply
     thing_raw_down_reply();
@@ -544,104 +440,6 @@ void ctlb_up_raw_board_error(uint8_t err)
 }
 
 
-static uint32_t g_ulWriteOffset;
-
-static void APP_prvBoardUpdataDataRvCd(char *pcData, uint32_t ulLen)
-{
-
-    int lRet = HAL_vFileWriteOffset(THING_IOT_BOARD_PATH, 
-                                    (uint8_t *)pcData, 
-                                    ulLen,
-                                    g_ulWriteOffset);
-    
-    if(lRet < 0 || lRet != (int)ulLen) {
-
-        LYY_LOGE("###  write fail");
-        return ;
-    } 
-
-    LYY_LOGD(">>> board ota write datalen : [%d]   offset :[%d]", ulLen, g_ulWriteOffset);
-
-    g_ulWriteOffset += ulLen;
-
-}
-
-static void APP_prvScreenUpdataDataRvCd(char *pcData, uint32_t ulLen)
-{
-
-    int lRet = HAL_vFileWriteOffset(THING_IOT_SCREEN_PATH,
-                                    (uint8_t *)pcData,
-                                    ulLen,
-                                    g_ulWriteOffset);
-
-    if (lRet < 0 || lRet != (int)ulLen)
-    {
-
-        LYY_LOGE("###  write fail");
-        return;
-    }
-
-    LYY_LOGD(">>> Screen ota write datalen : [%d]   offset :[%d]", ulLen, g_ulWriteOffset);
-
-    g_ulWriteOffset += ulLen;
-}
-
-static void APP_prvBoardUpdataRes(uint8_t ucRes, uint32_t ulLen)
-{
-    (void)ucRes;
-
-    LYY_LOGD("HTTP RECV DATA len: [%d]", ulLen);
-
-    if(HTTP_GET_SUCCESS == ucRes) {
-
-        if(g_ulWriteOffset == ulLen) {
-
-            LYY_LOGD(" board write succes :[%s]", THING_IOT_BOARD_PATH);
-            board_ota_status_send();
-
-        }else{
-
-            HAL_vFileClear(THING_IOT_BOARD_PATH);
-            g_ulWriteOffset = 0x00;
-        }
-
-    }else{
-
-        HAL_vFileClear(THING_IOT_BOARD_PATH);
-        g_ulWriteOffset = 0x00;
-    }
-}
-
-static void APP_prvScreenUpdataRes(uint8_t ucRes, uint32_t ulLen)
-{
-    (void)ucRes;
-
-    LYY_LOGD("HTTP RECV DATA len: [%d]", ulLen);
-
-    if (HTTP_GET_SUCCESS == ucRes)
-    {
-
-        if (g_ulWriteOffset == ulLen)
-        {
-
-            LYY_LOGD(" Screen write succes :[%s]", THING_IOT_SCREEN_PATH);
-            //board_ota_status_send();
-            board_ota_param_t.status = SCREEN_OTA_STATUS_INIT;  
-        }
-        else
-        {
-
-            HAL_vFileClear(THING_IOT_SCREEN_PATH);
-            g_ulWriteOffset = 0x00;
-        }
-    }
-    else
-    {
-
-        HAL_vFileClear(THING_IOT_SCREEN_PATH);
-        g_ulWriteOffset = 0x00;
-    }
-}
 
 /**
  * @description: 物模型ota处理
@@ -725,50 +523,20 @@ int lyy_thing_down_ota(char *payload, uint32_t payload_len)
     LYY_LOGD("get ota version  %s", version->valuestring);  
 
 
-    if(strstr("board", module->valuestring) != NULL) {
-  
-        board_ota_param_init(version->valuestring,NULL,size->valueint);
-
-        g_ulWriteOffset = 0x00;
-        HAL_vFileClear(THING_IOT_BOARD_PATH);
-
-        //异步不了， 资源不够
-        APP_UpgradeDelNetWorkDev(   APP_UPGRADE_HTTP, 
-                                    APP_UPGRADE_DEVICE,  
-                                    (uint8_t *)url->valuestring, 
-                                    strlen(url->valuestring),
-                                    APP_prvBoardUpdataDataRvCd,
-                                    APP_prvBoardUpdataRes);
+    if (!size || size->type != cJSON_Number || size->valueint <= 0) {
+        cJSON_Delete(cJsonData);
+        return -7;
     }
-    else if (strstr("screen", module->valuestring) != NULL)
-    {
-        screen_ota_param_init(version->valuestring, NULL, size->valueint);
-
-        g_ulWriteOffset = 0x00;
-        HAL_vFileClear(THING_IOT_SCREEN_PATH);
-
-        // 异步不了， 资源不够
+    if (!strcmp(module->valuestring, "zcjBoard") || !strcmp(module->valuestring, "board")) {
+        board_ota_param_init(version->valuestring, NULL, size->valueint);
         APP_UpgradeDelNetWorkDev(APP_UPGRADE_HTTP,
-                                 APP_UPGRADE_SCREEN,
-                                 (uint8_t *)url->valuestring,
-                                 strlen(url->valuestring),
-                                 APP_prvScreenUpdataDataRvCd,
-                                 APP_prvScreenUpdataRes);
-    }
-    else if (strstr("sdk", module->valuestring) != NULL)
-    {
-
-    }
-    else
-    {
-
-        // 异步不了， 资源不够
-        APP_UpgradeDelNetWorkDev(APP_UPGRADE_HTTP,
-                                    APP_UPGRADE_APP,
-                                    (uint8_t *)url->valuestring,
-                                    strlen(url->valuestring),
-                                    NULL,
-                                    NULL);
+            !strcmp(module->valuestring, "zcjBoard") ? APP_UPGRADE_ZCJ : APP_UPGRADE_DEVICE,
+            (uint8_t *)url->valuestring, strlen(url->valuestring));
+    } else if (!strcmp(module->valuestring, "default")) {
+        APP_UpgradeDelNetWorkDev(APP_UPGRADE_HTTP, APP_UPGRADE_APP,
+            (uint8_t *)url->valuestring, strlen(url->valuestring));
+    } else {
+        LYY_LOGE("Unsupported OTA module: %s", module->valuestring);
     }
 
     cJSON_Delete(cJsonData);//清除结构体

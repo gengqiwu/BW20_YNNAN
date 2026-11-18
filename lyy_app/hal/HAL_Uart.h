@@ -18,6 +18,8 @@ enum {
     HAL_UART_SCREEN,
 
     HAL_UART_MAX,
+    /* SDK LOG UART: factory prompts only, not a machine/screen port. */
+    HAL_UART_DEBUG = HAL_UART_MAX,
 
 };
 

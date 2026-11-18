@@ -164,29 +164,9 @@ void box_get_cloud_pay_param(void)
 
     event_post_query_pay_channels(); //支付渠道
     vTaskDelay(500  / portTICK_PERIOD_MS);
-    event_post_query_marketing_point_config(); //获取积分营销配置
-    vTaskDelay(500 / portTICK_PERIOD_MS);
-
-    
-    // ndj_add
-    if (get_dev_type_code() == DEVICE_TYPE_UART_NDJ) // 扭蛋机
-    {
-        event_post_query_lane_info_post();
-        vTaskDelay(1000  / portTICK_PERIOD_MS);
-        event_post_query_pay_packages_ndj("CONSUMPTION",1,0,"true");
-        vTaskDelay(1000  / portTICK_PERIOD_MS);
-    }   
-    else  //其他都是一样的方式
-    {
-        event_post_query_pay_packages("CONSUMPTION");
-        vTaskDelay(1000  / portTICK_PERIOD_MS);
-    } 
-
-
+    event_post_query_pay_packages("CONSUMPTION");
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
     event_post_query_business_infor(); //区域信息
-    
-    vTaskDelay(1000  / portTICK_PERIOD_MS);
-    event_post_err_message("en-US",login_mark_get());
 
 }
 
@@ -209,12 +189,6 @@ void box_post_cloud_device_infor(void)
 
     property_post_uart_brt_infor(); //上报波特率
     vTaskDelay(1000  / portTICK_PERIOD_MS);
-
-    property_post_wifi_info(); // 上报WIFI账号密码
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
-
-    thing_ota_inform_version(tjc_infor_t.tjc_ver, THING_OTA_SCREEN); // 上报屏幕版本信息
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
 
     thing_ota_inform_version(CFG_APP_VERSION , THING_OTA_DEFAULT);  //上报版本信息
     vTaskDelay(2000  / portTICK_PERIOD_MS);//延时等待获取设备品类  
@@ -310,6 +284,7 @@ static void lyy_mqtt_sta(unsigned char lmqSta)
 
             APP_vLedSstSta(LED_RED, LED_STA_OFF);
             APP_vLedSstSta(LED_GREEN, LED_STA_SLOW_FLASH);
+            set_led_status(LED_STATUS_LOGIN_SUCCESS);
 
             
         } break;
@@ -337,7 +312,6 @@ static void lyy_mqtt_sta(unsigned char lmqSta)
 void lyy_mqtt_model_init(void)
 {
 
-    lyy_init_device();
     lyy_mqtt_thing_init();
 
     lyy_mqtt_paramInit(APP_pcGetParamDevId());

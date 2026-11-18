@@ -9,6 +9,8 @@
 #define __THING_PROPERTY_H__
 
 
+#include <stdint.h>
+#include "cJSON.h"
 
 #define FAULT_MSG_MAX           16
 
@@ -28,7 +30,7 @@ typedef struct
 typedef struct
 {
     int         errCode;         //故障代码
-    char        errMsg[64];      //文本信息    
+    char errMsg[32];
     uint8_t     errFlag;         //等级，是否报故障
 }__attribute__((aligned(1), packed))FAULT,*PFAULT;
 
@@ -66,10 +68,11 @@ extern void thing_property_read(cJSON* params);
 extern void device_login_infor_update(uint16_t login,uint8_t flag,char *msg);
 extern void property_post_login_flag(uint16_t login_flag,uint8_t result,char *message);
 extern void pay_package_update(void *package,cJSON *body);
+extern void property_post_dev_mcu_version(char *soft_ver, char *hard_ver);
+extern int property_read_dev_mcu_version(cJSON *reply);
 
 extern void property_post_csq_level(void);
 extern void property_post_lbs_cell(void *para);
-extern void property_post_wifi_info(void);
 extern char *get_fault_msg(uint16_t code);
 extern void dev_fault_init(void);
 extern DEV_FAULT *get_dev_fault_para(void);

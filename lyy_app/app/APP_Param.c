@@ -28,6 +28,40 @@
 static APP_SER_T        g_xAppSer;
 static APP_PARAM_T      g_xAppParam;
 static APP_DEV_INFO_T   g_xAppDevInfo;
+union U ulPulsetype;
+
+int APP_lPulseParamSetInfo(uint32_t value)
+{
+    ulPulsetype.value = value;
+    return HAL_vFileWrite("ZCJ_PULSE_INFO", (uint8_t *)&ulPulsetype, sizeof(ulPulsetype)) == sizeof(ulPulsetype)
+        ? LYY_SUCCESS : LYY_WRITE_PARAM_FAIL;
+}
+
+int APP_lPulseParaInit(void)
+{
+    if (HAL_vFileRead("ZCJ_PULSE_INFO", (uint8_t *)&ulPulsetype, sizeof(ulPulsetype)) != sizeof(ulPulsetype)) {
+        ulPulsetype.value = 0;
+        ulPulsetype.bytes[0] = START_TYPE_COIN;
+        ulPulsetype.bytes[1] = PULSE_ZCJ_1;
+        return LYY_READ_PARAM_FAIL;
+    }
+    return LYY_SUCCESS;
+}
+
+int APP_lSerParamInit(void)
+{
+    return g_xAppSer.cInitMark == APP_MASK_INIT_LOGO ? LYY_SUCCESS : LYY_READ_PARAM_FAIL;
+}
+
+int32_t lyy_para_read(const char *name, uint8_t *data, uint32_t len)
+{
+    return HAL_vFileRead(name, data, len);
+}
+
+int32_t lyy_para_write(const char *name, uint8_t *data, uint32_t len)
+{
+    return HAL_vFileWrite(name, data, len);
+}
 
 
 char *APP_pcGetSerUrl(void)
@@ -218,7 +252,7 @@ int APP_lParamSetWifiInfo(WIFI_INFO_T *pcWifiInfo)
 int APP_vDevInfoInit(const char *pcDevId)
 {
 
-    if(pcDevId) {
+    if(pcDevId && strlen(pcDevId) < sizeof(g_xAppDevInfo.pcDevId)) {
 
         memset( g_xAppDevInfo.pcDevId, 
                 0x00, 
@@ -302,10 +336,11 @@ int APP_lParamInit(void)
 
     /* 获取设备号 */
     int lSize = sizeof(APP_DEV_INFO_T);
-
-    if(lSize != HAL_vFileRead(APP_DEV_INFO, (uint8_t *)&g_xAppDevInfo, lSize) 
-                                    ||  g_xAppDevInfo.cInitMark != APP_MASK_INIT_LOGO) {
-
+    int read_size = HAL_vFileRead(APP_DEV_INFO, (uint8_t *)&g_xAppDevInfo, lSize);
+    /* Older BW20 images used 32 bytes without room for a maximum-length ID. */
+    g_xAppDevInfo.pcDevId[sizeof(g_xAppDevInfo.pcDevId) - 1] = 0;
+    if ((read_size != lSize && read_size != lSize - 1) ||
+        g_xAppDevInfo.cInitMark != APP_MASK_INIT_LOGO) {
 
         LYY_LOGE("### READ Devid ERR");
 
@@ -357,6 +392,7 @@ int APP_lParamInit(void)
     }    
 
 
+    APP_lPulseParaInit();
     APP_vParamDebug();
     
     return LYY_SUCCESS;

@@ -9,6 +9,8 @@
 
 
 extern void APP_vFactoryInit(void);
+extern void APP_vTestInit(void);
+extern void APP_vParamInfoInit(char *devId);
 
 #endif
 

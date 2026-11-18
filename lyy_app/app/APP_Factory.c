@@ -1,233 +1,134 @@
 #include <stdio.h>
 #include <string.h>
-
+#include <stdint.h>
 #include "HAL_Log.h"
 #include "HAL_Uart.h"
-#include "HAL_Gpio.h"
 #include "HAL_System.h"
-
 #include "APP_Led.h"
-#include "APP_Pluse.h"
 #include "APP_Param.h"
-#include "APP_Timer.h"
-#include "APP_Detect.h"
 #include "APP_Factory.h"
-
 #include "lyy_start.h"
 
-#include "USER_Config.h"
+#define FACTORY_PROMPT "write device_id:include(letter,number, @ - : . _)(4-32byte)"
+#define FACTORY_COMMAND "write device_id:"
+static uint8_t loopback;
+static char command[128];
+static size_t used;
+static uint32_t recv_tick;
+static SemaphoreHandle_t command_lock;
 
-
-//短接标识
-static uint8_t g_djLogo;
-
-
-static void APP_prvRecvFunc(uint8_t *pucData, uint32_t ulLen)
+void APP_vParamInfoInit(char *id)
 {
+    APP_PARAM_T param = {0};
+    param.ulBaudRate = 38400;
+    strcpy(param.xWifiInfo.pcSsid, LYY_WIFI_SSID);
+    strcpy(param.xWifiInfo.pcPwd, LYY_WIFI_PWD);
+    param.xWifiInfo.xMode = WIFI_STA;
+    param.xDevPulse.ulPulsetype = START_TYPE_COIN;
+    param.xDevPulse.ulPulseWidth = 50;
+    param.xDevPulse.ulPulseSpace = 200;
+    if (id && APP_lParamSetInfo(&param) == LYY_SUCCESS)
+        APP_vDevInfoInit(id);
+}
 
-    //短接
-    if(strstr((char *)pucData,"write device_id:include") != NULL)  {
-
-        g_djLogo = 1;
-        APP_vLedSstSta(LED_GREEN,   LED_STA_QUICK_FLASH);
-        APP_vLedSstSta(LED_RED,     LED_STA_QUICK_FLASH);
-        return ;
-    }  
-
-#define TEST_GIFT_SEND_DATA      "BBBBBBBB"
-
-
-    if(strstr((char *)pucData, TEST_GIFT_SEND_DATA) == NULL && 
-                strstr((char *)pucData,"write device_id:include") == NULL)  {
-
-        LYY_LOGD(">>>> TEST");
-        HAL_vUartSend(HAL_UART_MAIN_BOARD, pucData, ulLen, 100);  
+static int valid_id(const char *id, size_t len)
+{
+    if (len < 4 || len > 32) return 0;
+    for (size_t i = 0; i < len; ++i) {
+        char c = id[i];
+        if ((c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') ||
+            (c >= 'A' && c <= 'Z') || c == '@' || c == '-' ||
+            c == ':' || c == '.' || c == '_') continue;
+        return 0;
     }
-         
- 
-#define WRITE_DEVICE_ID_CMD     "write device_id:"
+    return 1;
+}
 
-    char cWarning[100]   = {0};
-    char *pcDevid        = strchr((char *)pucData,':') + 1;
-
-    if((strstr((char *)pucData, WRITE_DEVICE_ID_CMD) == NULL)) {
-
-        sprintf(cWarning, " command is error, there is not \"%s\" ", WRITE_DEVICE_ID_CMD);
-
-        LYY_LOGE("%s", cWarning);
-        return ;    
+static void factory_commit(void)
+{
+    const char *prefix = FACTORY_COMMAND;
+    if (used < strlen(prefix) || strncmp(command, prefix, strlen(prefix))) return;
+    char *id = command + strlen(prefix);
+    if (!valid_id(id, strlen(id))) return;
+    APP_vParamInfoInit(id);
+    /* Acknowledge only after both parameters and device ID reached flash. */
+    if (strcmp(APP_pcGetParamDevId(), id) || APP_lParamInit() != LYY_SUCCESS ||
+        strcmp(APP_pcGetParamDevId(), id)) {
+        LYY_LOGE("factory parameter write failed");
+        return;
     }
+    char response[100];
+    snprintf(response, sizeof(response), "\r\ndevice id is ok,devid:%s\r\n", id);
+    HAL_vUartSend(HAL_UART_MAIN_BOARD, (uint8_t *)response, strlen(response), 1000);
+    HAL_vReset("> device ID_Config_OK <", 200);
+}
 
-    if(strlen(pcDevid) > 32||strlen(pcDevid) < 4){
-
-        sprintf(cWarning, "%s"," length is error,> 32 or < 4 ");
-
-        LYY_LOGE("%s", cWarning);
-        return ;        
+static void factory_recv(uint8_t *data, uint32_t len)
+{
+    if (xSemaphoreTake(command_lock, portMAX_DELAY) != pdTRUE) return;
+    if (HAL_ucTickTimeout(recv_tick, 200)) used = 0;
+    recv_tick = HAL_ulGetSysTick();
+    if (len && len < sizeof(command)) {
+        char text[128];
+        memcpy(text, data, len);
+        text[len] = 0;
+        if (strstr(text, "write device_id:include")) {
+            loopback = 1;
+            set_led_status(LED_STATUS_NO_DEVID);
+            APP_vLedSstSta(LED_GREEN, LED_STA_QUICK_FLASH);
+            APP_vLedSstSta(LED_RED, LED_STA_QUICK_FLASH);
+            used = 0;
+            xSemaphoreGive(command_lock);
+            return;
+        }
+        if (!strstr(text, "BBBBBBBB")) HAL_vUartSend(HAL_UART_MAIN_BOARD, data, len, 1000);
     }
-
-    for(uint8_t ucCnt = 0; ucCnt < strlen(pcDevid); ucCnt++) {
-
-        if(pcDevid[ucCnt]>='0'&&pcDevid[ucCnt]<='9') //数字
-            continue;
-
-        if(pcDevid[ucCnt]>='a'&&pcDevid[ucCnt]<='z') //字母
-            continue;
-
-        if(pcDevid[ucCnt]>='A'&&pcDevid[ucCnt]<='Z') //字母
-            continue;
-
-        if(pcDevid[ucCnt]=='@'||pcDevid[ucCnt]=='-')
-            continue;
-
-        if(pcDevid[ucCnt]==':'||pcDevid[ucCnt]=='.')
-            continue;
-
-        if(pcDevid[ucCnt]=='_')
-            continue;
-
-        if(ucCnt == 0)
-            sprintf(cWarning," there is invalid char in the deviceid,the invalid char[%d] is '%c', between ':' and '%c' ",ucCnt,pcDevid[ucCnt],pcDevid[ucCnt+1]);    
-        else if(ucCnt == strlen(pcDevid) - 1)
-            sprintf(cWarning," there is invalid char in the deviceid,the invalid char[%d] is '%c', between '%c' and 'end' ",ucCnt,pcDevid[ucCnt],pcDevid[ucCnt-1]);
-        else
-            sprintf(cWarning," there is invalid char in the deviceid,the invalid char[%d] is '%c', between '%c' and '%c' ",ucCnt,pcDevid[ucCnt],pcDevid[ucCnt-1],pcDevid[ucCnt+1]);
-
-        LYY_LOGE("%s", cWarning);
-
-        return ;
+    for (uint32_t i = 0; i < len; ++i) {
+        if (data[i] == '\r' || data[i] == '\n' || data[i] == 0) continue;
+        if (used + 1 >= sizeof(command)) { used = 0; continue; }
+        command[used++] = data[i];
     }
-    
-    char pcDevId[32] = {0x00, };
-
-    strcpy(pcDevId, strchr((char *)pucData,':') + 1);
-
-    LYY_LOGD(">>> devid :[%s]", pcDevId);
-
-    sprintf(cWarning, "\r\ndevice id is ok,devid:%s\r\n", pcDevId);
-
-    HAL_vUartSend(HAL_UART_MAIN_BOARD, (uint8_t *)cWarning, strlen(cWarning), 100);
-
-    APP_vDevInfoInit((const char *)pcDevId);
-
-    HAL_vReset("> device ID_Config_OK < ", 200);
+    command[used] = 0;
+    xSemaphoreGive(command_lock);
 }
 
-
-
-static void APP_prvScanFunc(uint8_t *pucData, uint32_t ulLen)
+static void factory_poll(void *arg)
 {
-
-    (void)ulLen;
-
-    //短接
-    if(strstr((char *)pucData,"write device_id:include") != NULL)  {
-
-        g_djLogo = 1;
-        APP_vLedSstSta(LED_GREEN,   LED_STA_QUICK_FLASH);
-        APP_vLedSstSta(LED_RED,     LED_STA_QUICK_FLASH);
-    }  
-
-}
-
-
-
-static void APP_prvTestCoinIn(void *pvArg)
-{
-
-    APP_vPulseStart(APP_COIN_PLUSE, *((uint32_t *)pvArg));
-
-    LYY_LOGD(">>> CoinIn test : [%d]", *((uint32_t *)pvArg));
-
-}
-
-
-static void APP_prvTestGiftOut(void *pvArg)
-{
-
-    HAL_vUartSend(  HAL_UART_MAIN_BOARD, 
-                    (uint8_t *)TEST_GIFT_SEND_DATA, 
-                    strlen(TEST_GIFT_SEND_DATA),
-                    100);
-
-    LYY_LOGD(">>> GiftOut test : [%d]", *((uint32_t *)pvArg));
-
-}
-
-
-
-static void APP_PrvUartSendTask(void *pvArg)
-{
-
-    (void)pvArg;
-
-#define APP_TEST_UART_SEND_DATA             "write device_id:include(letter,number, @ - : . _)(4-32byte)"
-
-
-    HAL_vUartSend(  HAL_UART_MAIN_BOARD,  
-                    (uint8_t *)APP_TEST_UART_SEND_DATA, 
-                    strlen(APP_TEST_UART_SEND_DATA), 
-                    100);
-
-    HAL_vUartSend(  HAL_UART_SCREEN,      
-                    (uint8_t *)APP_TEST_UART_SEND_DATA, 
-                    strlen(APP_TEST_UART_SEND_DATA), 
-                    100);
-
-    if(g_djLogo) {
-        
-        g_djLogo = 0x00;
-        APP_vLedSstSta(LED_GREEN,   LED_STA_SLOW_FLASH);
-        APP_vLedSstSta(LED_RED,     LED_STA_SLOW_FLASH);
+    (void)arg;
+    /* Frame completion is independent of UART DMA chunk boundaries. */
+    if (xSemaphoreTake(command_lock, 0) != pdTRUE) return;
+    if (used && HAL_ucTickTimeout(recv_tick, 100)) {
+        factory_commit();
+        used = 0;
     }
-
+    xSemaphoreGive(command_lock);
 }
 
-
-
-void APP_vFactoryInit(void)
+static void factory_prompt(void *arg)
 {
-
-    APP_vLedSstSta(LED_GREEN,   LED_STA_SLOW_FLASH);
-    APP_vLedSstSta(LED_RED,     LED_STA_SLOW_FLASH);
-
-    APP_vDetectInit();
-    APP_Timer1msInit();
-
-    APP_vDeteclRegisterFunc(APP_INPUT_GIFT,     APP_prvTestGiftOut);
-    APP_vDeteclRegisterFunc(APP_INPUT_COIN,     APP_prvTestCoinIn);
-
-
- #define SCAN_UART_BRT               (115200)
-
-    HAL_vUartInit(HAL_UART_SCREEN,          SCAN_UART_BRT);
-    HAL_vUartRecvProc(HAL_UART_SCREEN,      APP_prvScanFunc); 
-    HAL_vUartRecvProc(HAL_UART_MAIN_BOARD,  APP_prvRecvFunc);
-
-#define APP_UART_SEND_TASK           (4 * 1000)
-
-
-    static struct HalSoftTimer AppUartSendTask;
-
-    HAL_vSoftTimeInit(  &AppUartSendTask, 
-                        APP_PrvUartSendTask, 
-                        APP_UART_SEND_TASK,
-                        NULL);
-
+    (void)arg;
+    const char prompt[] = FACTORY_PROMPT;
+    HAL_vUartSend(HAL_UART_MAIN_BOARD, (uint8_t *)prompt, sizeof(prompt), 1000);
+    HAL_vUartSend(HAL_UART_DEBUG, (uint8_t *)prompt, sizeof(prompt), 1000);
+    if (loopback) {
+        loopback = 0;
+        APP_vLedSstSta(LED_GREEN, LED_STA_SLOW_FLASH);
+        APP_vLedSstSta(LED_RED, LED_STA_SLOW_FLASH);
+    }
+    set_led_status(LED_STATUS_NO_DEVID);
 }
 
+void APP_vTestInit(void)
+{
+    command_lock = xSemaphoreCreateMutex();
+    if (!command_lock) return;
+    set_led_status(LED_STATUS_NO_DEVID);
+    APP_vLedSstSta(LED_GREEN, LED_STA_SLOW_FLASH);
+    APP_vLedSstSta(LED_RED, LED_STA_SLOW_FLASH);
+    HAL_vUartRecvProc(HAL_UART_MAIN_BOARD, factory_recv);
+    static struct HalSoftTimer prompt, poll;
+    HAL_vSoftTimeInit(&prompt, factory_prompt, 4000, NULL);
+    HAL_vSoftTimeInit(&poll, factory_poll, 20, NULL);
+}
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+void APP_vFactoryInit(void) { APP_vTestInit(); }

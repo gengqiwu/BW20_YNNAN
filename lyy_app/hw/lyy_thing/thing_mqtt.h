@@ -23,6 +23,7 @@ typedef enum
     MQTT_STATE_SUBSCRIBE,               /* MQTT启动订阅 */
     MQTT_STATE_DISCONNECTED,            /* MQTT处于断开连接状态 */
     MQTT_STATE_SUCCESS,
+    MQTT_STATE_ISPAUSED,
 }PACKED MQTT_CLIENT_STATE_T;
 
 
@@ -77,6 +78,7 @@ extern void lyy_mqtt_disconnected(void);
 extern void lyy_mqtt_status_task(void *arg);
 extern void lyy_mqtt_set_status(uint8_t status);
 
+extern void lyy_mqtt_set_step(int para);
 extern int  lyy_mqtt_get_step(void);
 extern int  lyy_mqtt_get_status(void);
 extern int  lyy_mqtt_connect_result(void);

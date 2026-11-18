@@ -173,6 +173,8 @@ extern int lyy_display_recvPic(unsigned char * pack,unsigned int  len);
 extern int lyy_hw_tjc_pic_info_start(void (*pic_result_cb)(INFOR_PIC_VAIR *));
 extern void thread_tjcPicDealThread(void *arg);
 extern void set_tjcScreen(char * type);
+extern void set_tjc_Screen(char *type);
+extern void set_tjc_screen_type(char *type);
 extern void lyy_picInit(void);
 extern void lyy_pic_infoAllClean(void);
 #endif

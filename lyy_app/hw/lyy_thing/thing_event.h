@@ -8,6 +8,7 @@
 #ifndef __MODEL_EVENT_H__ 
 #define __MODEL_EVENT_H__
 
+#include <stdint.h>
 #include <string.h>
 #include "cJSON.h"
 #include "lyy_device.h"
@@ -31,6 +32,8 @@ extern void event_post_query_pay_packages(char *package_type);
 extern void event_post_query_pay_packages_ndj(char *package_type,int x,int y,char *package_all);
 extern void event_post_query_lane_info_post(void);
 extern void event_post_account_ndj(uint16_t coin,uint32_t coins,uint16_t gift,uint32_t gifts,uint8_t lane_id,char *order);
+extern void event_post_account_note(uint32_t inc, uint32_t sum, char *pay_mode, char *order, char *event_id, int32_t channel);
+extern void event_post_start_result_note(uint32_t result, uint32_t channel, char *order);
 extern void event_post_board_err_ndj(uint8_t error,uint8_t x,uint8_t y);
 extern void event_post_start_result_ndj(uint16_t result,uint8_t x,uint8_t y,char *order);
 
@@ -46,17 +49,4 @@ extern void event_post_account_amy_uart(char *pay_method,uint32_t coin_sum,uint3
 extern void event_post_start_result_wwj(uint32_t gifts,uint32_t coins,uint32_t refund,char *order);
 extern void event_post_err_message(char *language, int login);
 
-extern void event_post_log(char *log);
-extern void event_post_log_hextostring(uint8_t *data, uint16_t len);
-extern void event_post_start_result_dfssj(uint16_t volume, uint8_t x, uint8_t y, char *order);
-extern void event_post_query_marketing_point_config(void);
-extern void event_post_query_dynamic_url_std_points(char *package_id, char *channel, char *channel_number, cJSON_bool use_point_flag, char *auth_token, char *expected_deduct_points, char *expected_deduct_amount, char *expected_pay_amount);
-extern void event_post_query_dynamic_url_ndj_points(char *package_id, char *channel, char *channel_number, uint32_t x, uint32_t y, cJSON_bool use_point_flag, char *auth_token, char *expected_deduct_points, char *expected_deduct_amount, char *expected_pay_amount);
-
-extern void event_post_ntp_req(uint64_t timestamp);
-extern void event_post_new_offline_accounts(BillCacheItem_t *item);
-
-extern void event_post_pos_order_create_result(char *transaction_number, uint8_t result);
-extern void event_post_pos_order_detail(char *transaction_number, uint8_t transaction_result);
-extern void event_post_pos_order_cleaing(char *transaction_number);
 #endif // !

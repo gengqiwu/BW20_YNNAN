@@ -14,7 +14,7 @@
 
 typedef struct {
 
-#define MAX_ID_NUM              				(32U)
+#define MAX_ID_NUM                      (33U)
 
     char  cInitMark;		
     char  pcDevId[MAX_ID_NUM];
@@ -61,6 +61,14 @@ typedef struct {
 
 #pragma pack(pop)
 
+/* The STM32 protocol stores output mode and bill channel as separate bytes. */
+enum { PULSE_COIN, PULSE_ZCJ_1, PULSE_ZCJ_2 };
+union U { uint32_t value; uint8_t bytes[4]; };
+extern union U ulPulsetype;
+extern int APP_lPulseParaInit(void);
+extern int APP_lSerParamInit(void);
+extern int32_t lyy_para_read(const char *file_name, uint8_t *data, uint32_t len);
+extern int32_t lyy_para_write(const char *file_name, uint8_t *data, uint32_t len);
 
 /*  */
 extern int          APP_lParamInit(void);

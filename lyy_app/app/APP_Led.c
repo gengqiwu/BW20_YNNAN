@@ -7,6 +7,9 @@
 
 #include "APP_Led.h"
 
+static uint8_t led_status = LED_STATUS_START_SYSTEM;
+uint8_t get_led_status(void) { return led_status; }
+void set_led_status(uint8_t status) { led_status = status; }
 
 /* 慢闪间隔 450ms */
 #define APP_LED_SLOW_FLASH                 (500U)

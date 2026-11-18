@@ -66,14 +66,8 @@
 #define CFG_PM_MODEL		(CFG_PM_DWIN)
 
 
-/* 版本信息 */
-/*
-2.0.0开始，兼容积分和非积分。
-2.0.1增加韩国POS取消功能
-2.0.2优化新帐目脉冲账目功能
-
-*/
-#define CFG_APP_VERSION                         "BW20_POINTS_V2.0.2"        
+/* Dedicated STM32 cash-box firmware; business baseline ESP32C2_ZCJ_V1.0.4. */
+#define CFG_APP_VERSION                         "BW20_ZCJ_V1.0.0"
 #define CFG_SDK_VERSION                         "AMEBA_RTOS_SDK_V1.0.1"    
 #define CFG_HARD_VERSION                        "BW20_LYY_V1.00"    
 

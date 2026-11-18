@@ -10,7 +10,6 @@
 
 #include "HAL_Log.h"
 #include "HAL_System.h"
-#include "APP_Pluse.h"
 #include "APP_Detect.h"
 
 
@@ -37,8 +36,7 @@ static void APP_prvTimerMs(void *pvArg)
 
     (void)pvArg;
 
-    APP_vPulseimerMs();
-    APP_vDetecTimerMs();
+    APP_prvDetectNetWorkKey();
 
 
 }
@@ -53,7 +51,7 @@ void APP_Timer1msInit(void)
 
     HAL_vRtosTimerCreate(   &g_AppRtosTime,
                             "Rtostimer",
-                            NULL,
+                            0,
                             APP_TIME_US / APP_TIME_US,
                             1,
                             APP_prvTimerMs);

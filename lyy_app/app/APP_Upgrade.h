@@ -15,6 +15,7 @@ enum
     APP_UPGRADE_SDK,
     APP_UPGRADE_DEVICE,
     APP_UPGRADE_SCREEN,
+    APP_UPGRADE_ZCJ,
 };
 
 enum 
@@ -25,8 +26,6 @@ enum
 };
 
 
-typedef void (*vUpdataDataCd)(char *pcData, uint32_t ulLen);
-typedef void (*vUpdataRes)(uint8_t ucRes, uint32_t ulLen);
 
 typedef struct 
 {
@@ -36,20 +35,13 @@ typedef struct
     uint8_t         ucDataType;     
     uint16_t        usDataLen;
     uint8_t         *pucData;
-    vUpdataDataCd   vDataFunc;
-    vUpdataRes      vRes;
 }APP_UPGRADE_INFO_T;
 
 
 
 extern void APP_UpgradeInit(void);
 extern void APP_UpgradeDel(uint8_t *pucData, uint32_t ulLen);
-extern void APP_UpgradeDelNetWorkDev(   uint8_t ucUpgradeType, 
-                                        uint8_t ucDataType, 
-                                        uint8_t *pucData, 
-                                        uint32_t ulLen, 
-                                        vUpdataDataCd vDataFunc, 
-                                        vUpdataRes vRes);
+extern void APP_UpgradeDelNetWorkDev(uint8_t ucUpgradeType, uint8_t ucDataType, uint8_t *pucData, uint32_t ulLen);
 
 #endif
 

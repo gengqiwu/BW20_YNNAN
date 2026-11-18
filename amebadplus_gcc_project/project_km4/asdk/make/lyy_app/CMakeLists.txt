@@ -50,7 +50,6 @@ set(
     ${APP}/APP_Factory.c
     ${APP}/APP_Param.c
     ${APP}/APP_Timer.c
-    ${APP}/APP_Pluse.c
     ${APP}/APP_DevAp.c
     ${APP}/APP_Event.c
     ${APP}/APP_Guide.c
@@ -62,21 +61,10 @@ set(
     ${DIR}/APP_main.c 
     ${HW}/lyy_screen/lyy_pic.c
     ${HW}/lyy_screen/lyy_tjc.c
-    ${HW}/lyy_device/lyy_ndj.c
-    ${HW}/lyy_device/lyy_amy.c
-    ${HW}/lyy_device/lyy_dbj.c
-    ${HW}/lyy_device/lyy_wwj.c
     ${HW}/lyy_device/lyy_device.c
-    ${HW}/lyy_device/lyy_xyj.c
-    ${HW}/lyy_device/lyy_hgj.c
-    ${HW}/lyy_device/lyy_cwxyj.c
-    ${HW}/lyy_device/lyy_cwhgj.c
-    ${HW}/lyy_device/lyy_cwxhj.c
-    ${HW}/lyy_device/lyy_mshgj.c
-    ${HW}/lyy_device/lyy_tclxyj.c
-    ${HW}/lyy_device/lyy_dfssj.c
-    ${HW}/lyy_device/lyy_koreapos.c
-    ${HW}/lyy_device/lyy_xcj.c
+    ${HW}/lyy_device/lyy_zcj.c
+    ${HW}/lyy_device/lyy_frame.c
+    ${HW}/lyy_device/lyy_mcu_ota.c
     ${HW}/lyy_user/lyy_start.c
     ${HW}/lyy_user/lyy_para.c
     ${HW}/lyy_thing/mqtt_api.c

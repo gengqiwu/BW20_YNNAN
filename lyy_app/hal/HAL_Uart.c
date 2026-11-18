@@ -109,6 +109,7 @@ static HAL_UART_CONFING_T g_xHalUartConfig[HAL_UART_MAX] = {
         "uartEventScreen"}
 
 };
+static SemaphoreHandle_t tx_lock[HAL_UART_MAX];
 
 
 static void HAL_prvUartXTxIRQHandlerCb(uint8_t *pucSemSta, xSemaphoreHandle xTxSem, 
@@ -255,6 +256,9 @@ static uint32_t HAL_prulUart1RxIRQHandlerCb(void *pvArg)
 
 void HAL_vUartSetParam(uint8_t ucPort,uint32_t ulBaud)
 {
+    if (ucPort >= HAL_UART_MAX) return;
+    /* STM32 link is fixed; machine baud is a parameter inside its protocol. */
+    if (ucPort == HAL_UART_MAIN_BOARD) ulBaud = 115200;
 
 #define HAL_UART_IDLE_TIMEOUT                   (30U)
 
@@ -272,6 +276,7 @@ void HAL_vUartSetParam(uint8_t ucPort,uint32_t ulBaud)
 
 void HAL_vUartRecvProc(uint8_t ucPort, vRecvFunc xRecvFunc)
 {
+    if (ucPort >= HAL_UART_MAX) return;
     g_xHalUartConfig[ucPort].xRecvFunc = xRecvFunc;
 }
 
@@ -279,56 +284,24 @@ void HAL_vUartRecvProc(uint8_t ucPort, vRecvFunc xRecvFunc)
 void HAL_vUartSend(uint8_t ucPort, uint8_t *pucData, uint32_t ulLen, uint32_t ulTimeout)
 {
 
-    if (g_xHalUartConfig[ucPort].xTxSem == NULL || g_xHalUartConfig[ucPort].xRxSem == NULL)
-    {
+    if (!pucData || !ulLen) return;
+    if (ucPort == HAL_UART_DEBUG) {
+        for (uint32_t i = 0; i < ulLen; ++i) DiagPutChar(pucData[i]);
         return;
     }
-
-    DCache_CleanInvalidate((u32)pucData, ulLen);
-
-    GDMA_InitTypeDef xGDMATxInitStruct = g_xHalUartConfig[ucPort].xGDMATxInitStruct;
-
-    UART_TXDMACmd(g_xHalUartConfig[ucPort].pxUart,      DISABLE);
-
-    GDMA_Cmd(   xGDMATxInitStruct.GDMA_Index, 
-                xGDMATxInitStruct.GDMA_ChNum, 
-                DISABLE);
-
-	if (((ulLen & 0x03) == 0) && (((uint32_t)(pucData) & 0x03) == 0)) {
-
-		xGDMATxInitStruct.GDMA_SrcMsize        = MsizeOne;
-		xGDMATxInitStruct.GDMA_SrcDataWidth    = TrWidthFourBytes;
-		xGDMATxInitStruct.GDMA_BlockSize       = ulLen >> 2;
-
-	} else {
-
-		xGDMATxInitStruct.GDMA_SrcMsize        = MsizeFour;
-		xGDMATxInitStruct.GDMA_SrcDataWidth    = TrWidthOneByte;
-		xGDMATxInitStruct.GDMA_BlockSize       = ulLen;
-	}
-
-    xGDMATxInitStruct.GDMA_SrcAddr = (uint32_t)(pucData);
-
-	GDMA_Init(  xGDMATxInitStruct.GDMA_Index, 
-                xGDMATxInitStruct.GDMA_ChNum, 
-                &xGDMATxInitStruct);
-
-    
-	GDMA_Cmd(   xGDMATxInitStruct.GDMA_Index,  
-                xGDMATxInitStruct.GDMA_ChNum, 
-                ENABLE);
-
-
-    UART_TXDMAConfig(g_xHalUartConfig[ucPort].pxUart,   HAL_DMA_TX_BURST_SIZE);
-    UART_TXDMACmd(g_xHalUartConfig[ucPort].pxUart,      ENABLE);
-
-    if (ulTimeout)
-    {
-
-        g_xHalUartConfig[ucPort].ucTxSemSta = 0x01;
-        xSemaphoreTake(g_xHalUartConfig[ucPort].xTxSem, ulTimeout);
-        g_xHalUartConfig[ucPort].ucTxSemSta = 0x00;
+    if (ucPort >= HAL_UART_MAX || !tx_lock[ucPort]) return;
+    if (xSemaphoreTake(tx_lock[ucPort], portMAX_DELAY) != pdTRUE) return;
+    uint32_t start = HAL_ulGetSysTick();
+    uint32_t timeout = ulTimeout ? ulTimeout : 1000;
+    for (uint32_t i = 0; i < ulLen; ++i) {
+        while (!UART_Writable(g_xHalUartConfig[ucPort].pxUart)) {
+            if (HAL_ucTickTimeout(start, timeout)) goto tx_done;
+            taskYIELD();
+        }
+        UART_CharPut(g_xHalUartConfig[ucPort].pxUart, pucData[i]);
     }
+tx_done:
+    xSemaphoreGive(tx_lock[ucPort]);
 }
 
 
@@ -350,6 +323,7 @@ static void HAL_prvUartEventMainTask(void *pvArg)
                                                 pucData, 
                                                 ulDataLen);
 
+            pucData[ulDataLen] = 0;
             if(g_xHalUartConfig[eUartDev0].xRecvFunc && ulDataLen > 0) {
                 
                 g_xHalUartConfig[eUartDev0].xRecvFunc(pucData, ulDataLen);
@@ -382,6 +356,7 @@ static void HAL_prvUartEventScreenTask(void *pvArg)
             ulDataLen = ring_buffer_real_read(&g_xHalUartConfig[eUartDev1].xRingBuffer, 
                                                 pucData, 
                                                 ulDataLen);
+            pucData[ulDataLen] = 0;
 
             if(g_xHalUartConfig[eUartDev1].xRecvFunc && ulDataLen > 0) {
                 
@@ -399,6 +374,11 @@ static void HAL_prvUartEventScreenTask(void *pvArg)
 
 void HAL_vUartInit(uint8_t ucPort, uint32_t ulBaud)
 {
+    /* LOG UART is already initialized by the SDK. */
+    if (ucPort >= HAL_UART_MAX) return;
+    if (g_xHalUartConfig[ucPort].pucUartRxDmaBuff) return;
+    tx_lock[ucPort] = xSemaphoreCreateMutex();
+    if (!tx_lock[ucPort]) return;
 
 
 	if(!g_xHalUartConfig[ucPort].pucUartRxDmaBuff) {
