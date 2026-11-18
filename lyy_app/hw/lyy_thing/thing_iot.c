@@ -1,3 +1,7 @@
+/**
+ * @file thing_iot.c
+ * @brief MQTT 物模型消息解析、属性服务路由、透传及 OTA 模块选择。
+ */
 /*
  * @author: e.he
  * @Date: 2024-06-14 10:53:53
@@ -126,9 +130,9 @@ void lyy_thing_down_parse(char *payload, uint32_t payload_len, char *topic)
 
 
 /**
- * @brief 
- * 
- * @param member 
+ * @brief 比较云端设备类型并在不一致时保存、安排复位。
+ * @param[in] member 可包含字符串 dev_type 的对象，NULL 时忽略。
+ * @note 按云端字符串长度比较，不再依据设备类型自动切换串口波特率。
  */
 void dev_type_update(cJSON *member)
 {
@@ -325,9 +329,10 @@ void thing_ctlb_down_raw_reply(void)
 }
 
 /**
- * @description: 物模型ctlb处理-下行
- * @param {*}
- * @return {*}
+ * @brief 将正向透传的首字节命令及剩余数据交给主板封包入口。
+ * @param[in] payload 含命令字节的有效缓冲区，不得为 NULL。
+ * @param[in] payload_len 字节数，调用方须保证至少为 1。
+ * @retval 0 完成转交并调用透传应答，不代表主板执行成功。
  */
 int lyy_thing_down_ctlb(char *payload, uint32_t payload_len)
 {
@@ -367,9 +372,11 @@ void thing_raw_down_reply(void)//
 
 
 /**
- * @description: 物模型ctlb处理-下行
- * @param {*}
- * @return {*}
+ * @brief 跳过六字节前缀，将反向透传数据发往主板串口。
+ * @param[in] payload 有效接收缓冲区。
+ * @param[in] payload_len 含前缀的长度，调用方须保证大于 6。
+ * @retval 0 固定返回，不检查串口发送结果。
+ * @note 串口发送超时参数为 1000，随后发送固定成功透传应答。
  */
 int lyy_thing_raw_down(char *payload, uint32_t payload_len)
 {
@@ -442,9 +449,18 @@ void ctlb_up_raw_board_error(uint8_t err)
 
 
 /**
- * @description: 物模型ota处理
- * @param {*}
- * @return {*}
+ * @brief 解析 OTA 下发参数并按模块精确匹配选择升级目标。
+ * @param[in] payload 以零结尾的 JSON 字符串。
+ * @param[in] payload_len 有效载荷长度；仅用于非零检查，解析依赖字符串结尾。
+ * @retval -1 空指针或零长度。
+ * @retval -2 JSON 解析失败。
+ * @retval -3 缺少 data。
+ * @retval -4 url 缺失或非字符串。
+ * @retval -5 module 缺失或非字符串。
+ * @retval -6 version 缺失或非字符串。
+ * @retval -7 size 缺失、非数值或 valueint 不大于零。
+ * @retval 0 已处理解析结果，不表示升级完成；不支持的模块仅记录日志，也返回 0。
+ * @note default 路由 APP_UPGRADE_APP；board 路由 APP_UPGRADE_DEVICE；zcjBoard 路由 APP_UPGRADE_ZCJ，后两者先初始化主板 OTA 参数。
  */
 int lyy_thing_down_ota(char *payload, uint32_t payload_len)
 {

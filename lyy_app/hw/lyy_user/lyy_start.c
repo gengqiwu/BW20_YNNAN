@@ -1,3 +1,7 @@
+/**
+ * @file lyy_start.c
+ * @brief 支付请求事件提交、纸钞主板申请及启动即时应答衔接。
+ */
 /*
  * @author: e.he
  * @Date: 2022-10-17 11:28:37
@@ -120,6 +124,12 @@ uint8_t pay_url_wallet_number_get(void)
 
 #endif
 
+/**
+ * @brief 消费支付申请事件，等待主板申请应答并回复云端。
+ * @param[in] pucData 指向 HW_PAY_APPLY 的事件缓冲区，调用方须保证结构完整。
+ * @param[in] ulLen 缓冲区长度；实现仅检查非零，不检查完整结构长度。
+ * @note 仅脉冲、电平、纸钞类型发起请求；命令等待失败使用 timeout，其余使用主板申请结果。
+ */
 void lyy_start_pay_apply(uint8_t *pucData, uint32_t ulLen)
 {
 
@@ -145,6 +155,13 @@ void lyy_start_pay_apply(uint8_t *pucData, uint32_t ulLen)
 }
 
 
+/**
+ * @brief 消费启动事件并发送即时接单状态应答。
+ * @param[in] pucData 至少包含一个 HW_PAY_APPLY 的事件缓冲区。
+ * @param[in] ulLen 缓冲区字节数，不足结构大小时忽略。
+ * @note 脉冲、电平类型实际下发 NOTE_CHANNLE_PULSE，云端应答仍携带原事件通道。
+ * @note 主板即时结果 0/1/5 映射为 startup_failed/start_normally/timeout，其余为 other；不是 0x07 最终执行事件。
+ */
 void lyy_start_pay_start(uint8_t *pucData, uint32_t ulLen)
 {
 
@@ -165,6 +182,18 @@ void lyy_start_pay_start(uint8_t *pucData, uint32_t ulLen)
 }
 
 
+/**
+ * @brief 复制支付参数并尝试提交到启动事件队列。
+ * @param[in] type START_TYPE_PAY_APPLY 或 START_TYPE_PAY_START；其他值不提交。
+ * @param[in] num 启动数量，原样保存。
+ * @param[in] order 订单号，最多复制 63 字节并保留结尾零。
+ * @param[in] x 主板通道，保存到事件的 channel 字段。
+ * @param[in] y 保留兼容参数，未使用。
+ * @param[in] id 云端请求标识，最多复制 63 字节。
+ * @retval 0 order 或 id 为 NULL。
+ * @retval 1 其余情况，包括不支持的 type。
+ * @warning 不读取 APP_vEventSendBuff 的投递结果；返回 1 仅表示入队尝试结束，不保证投递、接单或执行成功。
+ */
 int api_std_start_entryQue(uint8_t type,uint16_t num,char *order , uint16_t x, uint16_t y, char *id)
 {
 

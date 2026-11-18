@@ -1,3 +1,8 @@
+/**
+ * @file thing_service.h
+ * @brief 物模型服务分发及纸钞申请、即时启动应答的公开接口。
+ * @note pay_start 应答并非最终出钞事件，最终结果通过 start_result 上报。
+ */
 #ifndef __THING_SERVICE_H__
 #define __THING_SERVICE_H__
 #include <stdint.h>

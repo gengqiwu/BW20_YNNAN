@@ -1,3 +1,4 @@
+/** @file APP_Led.h @brief 模块本地灯控制及供 STM32 轮询的系统状态码。 */
 #ifndef __APP_LED_H__
 #define __APP_LED_H__
 
@@ -18,7 +19,7 @@ enum
     LED_STA_MAX   
 };
 
-/* Values are part of the STM32 network-status protocol. */
+/** @brief 随 D6/0B 下发的系统状态编号，与 STM32 保持一致，禁止随意重排。 */
 enum {
     LED_STATUS_LOGIN_SUCCESS = 0,
     LED_STATUS_DEFAULT,
@@ -33,7 +34,12 @@ enum {
     LED_STATUS_WIFI_AP,
     LED_STATUS_WIFI_SMART,
 };
+/** @brief 获取当前缓存的系统灯状态。 @return LED_STATUS_* 编号，不是 GPIO 电平。 */
 extern uint8_t get_led_status(void);
+/**
+ * @brief 更新供 STM32 配置轮询读取的系统状态缓存，不直接发送串口命令。
+ * @param[in] status LED_STATUS_* 编号；当前不执行范围检查。
+ */
 extern void set_led_status(uint8_t status);
 
 extern void APP_vLedInit(void);

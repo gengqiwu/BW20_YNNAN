@@ -1,3 +1,8 @@
+/**
+ * @file lyy_device.c
+ * @brief 标准主板协议代理、纸钞 D6 分发、启动总账/登录同步及旧 CD 升级。
+ * @note UART 实际接收经 lyy_frame_feed() 累积完整帧，D6 业务由 lyy_zcj 模块处理。
+ */
 /*
  * @author: e.he
  * @Date: 2022-10-09 11:19:43
@@ -53,11 +58,10 @@ DEVICE_COM_DEF  tdevCom = {0};
 BOARD_OTA_PARAM_DEF     board_ota_param_t;
 
 /**
- * @brief 
- * 扩展帧
- * @param cmd 
- * @param packet_data 
- * @param len_data 
+ * @brief 封装并发送旧主板 CD 扩展帧。
+ * @param[in] cmd 保留形参，当前忽略并固定发送 0xCD。
+ * @param[in] packet_data 已含扩展长度/子命令的载荷。
+ * @param[in] len_data 载荷字节数，调用者保证不超过工作区容量。
  */
 void device_packet_ext_send(uint8_t cmd,uint8_t *packet_data,uint16_t len_data)
 {
@@ -80,13 +84,13 @@ void device_packet_ext_send(uint8_t cmd,uint8_t *packet_data,uint16_t len_data)
     HAL_vUartSend(HAL_UART_MAIN_BOARD, tp_packet, len, 1000);
 }
 /**
- * @brief 
- * 发送数据包 -- 主板升级
- * @param file_name 
- * @param sum 
- * @param num 
- * @param data_len 
- * @param context 
+ * @brief 构造旧 CD 升级的一个数据块，组帧后立即释放临时工作区。
+ * @param[in] file_name NUL 结尾的版本/名称，当前最多复制 19 字节。
+ * @param[in] file_size 协议 16 位文件大小字段，大镜像由调用者按旧约定取 FFFF。
+ * @param[in] sum 总包数。
+ * @param[in] num 从 1 开始的当前包序号。
+ * @param[in] len 当前数据字节数，不得超过 512。
+ * @param[in] context 至少 len 字节的固件内容。
  */
 void device_board_ota_data_send(char *file_name,uint16_t file_size,uint16_t sum,uint16_t num,uint16_t len,uint8_t *context)
 {
@@ -131,8 +135,9 @@ void device_board_ota_data_send(char *file_name,uint16_t file_size,uint16_t sum,
 }
 
 /**
- * @brief 
- * 主板升级，盒子获取主板本地固件信息应答处理
+ * @brief 校验旧主板版本查询应答的名称/版本边界，再上报 board 模块版本。
+ * @param[in] data 从名称长度字段起的协议载荷。
+ * @param[in] len 可读载荷字节数。
  */
 void board_ota_reply_get_infor(uint8_t *data, uint16_t len)
 {
@@ -148,10 +153,9 @@ void board_ota_reply_get_infor(uint8_t *data, uint16_t len)
 }
 
 /**
- * @brief 
- * 上报主板固件信息
- * @param data 
- * @param len 
+ * @brief 确认旧主板主动版本上报，再发送云端 board 版本信息。
+ * @param[in] data 包含子命令及版本长度的载荷。
+ * @param[in] len 可读字节数，短帧或版本过长时忽略。
  */
 void board_ota_update_infor(uint8_t *data, uint16_t len)
 {
@@ -172,8 +176,10 @@ void board_ota_update_infor(uint8_t *data, uint16_t len)
 }
 
 /**
- * @brief 
- * 主板升级，发送升级数据包应答处理
+ * @brief 校验旧 CD 升级 ACK 长度，结果为成功或续传时发送下一个数据块。
+ * @param[in] data 含子命令、名称和 ACK 结构的载荷。
+ * @param[in] len 可读字节数。
+ * @note 此旧链路不采用 D6/0E 的偏移匹配状态机。
  */
 void board_ota_data_ack(uint8_t *data, uint16_t len)
 {
@@ -194,10 +200,10 @@ void board_ota_data_ack(uint8_t *data, uint16_t len)
         board_ota_status_send();                    //继续传输
 }
 /**
- * @brief
- * 主板升级指令解析
- * @param pBuf 数据
- * @param len 数据长度
+ * @brief 分发旧主板 CD 升级子命令：数据 ACK、主动版本和版本查询。
+ * @param[in] subCmd 升级子命令，未知值忽略。
+ * @param[in] data 指向旧协议载荷，NULL 时忽略。
+ * @param[in] len 载荷字节数。
  */
 void board_ota_packet_parse(uint8_t subCmd, uint8_t *data, uint16_t len)
 {
@@ -221,10 +227,11 @@ void board_ota_packet_parse(uint8_t subCmd, uint8_t *data, uint16_t len)
     }
 }
 /**
- * @brief 
- * 
- * @param version 
- * @param file_name 
+ * @brief 清空升级上下文，设置版本、镜像总长和 512 字节包计数。
+ * @param[in] version NUL 结尾版本，最多缓存 20 字节。
+ * @param[in] file_name 兼容形参，当前未使用。
+ * @param[in] file_size 下载镜像总字节数，容量限制由下载层检查。
+ * @note 新 D6/0E 也复用此上下文中的版本/总长，其块长由独立发送任务决定。
  */
 void board_ota_param_init(char *version,char *file_name,uint32_t file_size)
 {
@@ -253,8 +260,9 @@ void board_ota_param_init(char *version,char *file_name,uint32_t file_size)
 }
 
 /**
- * @brief 
- * 发送主板ota数据包
+ * @brief 读取镜像缓存中的下一个至多 512 字节块，发送后推进旧协议偏移/序号。
+ * @retval 1 已调用数据块发送函数，不代表对端 ACK 或物理发送成功。
+ * @retval 0 镜像已读完或缓存读取失败。
  */
 int board_ota_status_send(void)
 {
@@ -288,11 +296,10 @@ int board_ota_status_send(void)
 }
 
 /**
- * @brief
- * 设备数据帧组包
- * @param pack
- * @return char
- * 发送队列已有的成员个数
+ * @brief 按普通协议 LEN 补帧头/索引/XOR/DD 并直接发送。
+ * @param[in,out] pack 已设置长度、命令及载荷的工作区。
+ * @return 发送帧长转换为 char 后的值，不是队列深度或可靠成功标记。
+ * @note 使用 8 位普通帧长度，调用者应限制范围，不能用于大包升级扩展帧。
  */
 char device_buildPacket(PDEVICE_PACK_DEF pack)
 {
@@ -426,12 +433,13 @@ char opposite_isPacket(uint8_t *pack, uint16_t len)
 
 
 /**
- * @brief
- * 叠包处理 正向才会使用
- * @param pbuff
- * @param len
- * @param parse
- * @return char
+ * @brief 保留的单缓冲拆包接口，普通帧或屏幕型扩展长度校验后调用 parse。
+ * @param[in,out] pbuff 当前块，回调可能修改其中的数据。
+ * @param[in] len 当前块字节数，不跨调用缓存半帧。
+ * @param[in] parse 同步完整帧回调，可为 NULL。
+ * @retval 0 输入缓冲为 NULL。
+ * @retval 1 已扫描缓冲，即使没有合法帧也返回 1。
+ * @note 正式 UART 流入口使用 lyy_frame_feed()，不使用本接口处理跨 DMA 块半帧。
  */
 char device_overlap(uint8_t *pbuff, uint16_t len, void (*parse)(uint8_t *, uint16_t))
 {
@@ -564,10 +572,10 @@ uint16_t login_mark_get(void)
 
 
 /**
- * @brief
- * 正向协议解析
- * @param package
- * @param len
+ * @brief 分发标准协议命令，并将 D6 交给纸钞模块、CD 交给旧升级解析。
+ * @param[in,out] package 已校验的完整可写帧。
+ * @param[in] len 完整帧长，包含 AA/XOR/DD；CD 子分发另减去外层开销。
+ * @pre 调用者已完成长度累积和 XOR/帧尾校验，不能直接递交原始 UART 块。
  */
 void std_packetParse(uint8_t *package, uint16_t len)
 {
@@ -676,6 +684,12 @@ void opposite_packetParse(uint8_t *package, uint16_t len)
 }
 
 
+/**
+ * @brief 正常模式 UART 接收入口，将任意接收块递交持久流式分帧状态。
+ * @param[in] pdata 本次接收字节。
+ * @param[in] len 字节数，可能含多帧或半帧。
+ * @note 仅由同一个 UART 接收任务调用，流状态跨调用保留。
+ */
 void lyy_DevDataParse(uint8_t *pdata,uint32_t len)
 {
     static lyy_frame_stream stream;
@@ -683,6 +697,12 @@ void lyy_DevDataParse(uint8_t *pdata,uint32_t len)
 }
 
 
+/**
+ * @brief 周期推进启动总账查询、主板登录及联网后的累计账目上报。
+ * @param[in] arg 定时参数，未使用。
+ * @note 总账未准备时只发非阻塞查询并返回，不在公共软定时循环等待 ACK。
+ *       之后取得登录标识，MQTT 在线时上报增量为 0 的总账并标记已登录。
+ */
 void APP_PrvDevLoginTask(void *arg)
 {
 
@@ -731,10 +751,9 @@ void APP_PrvDevLoginTask(void *arg)
 
 
 /**
- * @brief
- * 初始化设备
- * 串口版本才需要初始化
- * 其他版本不初始化
+ * @brief 初始化故障缓存和 D6 请求锁，再注册正常 UART 接收及 2 秒登录轮询。
+ * @pre 主板 UART 已由启动流程按 115200 初始化。
+ * @note 正常与配网模式均需调用一次以维持 STM32 轮询应答；不注册本地现金脉冲处理。
  */
 void lyy_init_device(void)
 { 

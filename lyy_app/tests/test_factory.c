@@ -1,3 +1,8 @@
+/**
+ * @file test_factory.c
+ * @brief 工厂烧号与参数持久化主机回归：空存储、提示、ID 边界、分包、写失败和旧号兼容。
+ * @note 运行真实 APP_Factory/APP_Param，替换串口、定时器与存储依赖，不代表实机验证。
+ */
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>

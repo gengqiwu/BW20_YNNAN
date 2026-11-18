@@ -1,3 +1,7 @@
+/**
+ * @file thing_init.c
+ * @brief MQTT 鉴权参数初始化、登录后云端配置同步及设备信息上报。
+ */
 /*
  * @Author: e.he
  * @Date: 2022-05-27 17:33:56
@@ -156,8 +160,8 @@ void lyy_mqtt_paramInit(char *devid)
 
 
 /**
- * @brief 
- * 获取云端支付参数
+ * @brief 顺序请求支付渠道、CONSUMPTION 套餐及业务信息。
+ * @note 请求之间分别延时 500 ms 和 1000 ms，不等待或核验云端返回。
  */
 void box_get_cloud_pay_param(void)
 {
@@ -172,8 +176,8 @@ void box_get_cloud_pay_param(void)
 
 
 /**
- * @brief 
- * 上报设备信息
+ * @brief 登录后查询设备标签并顺序上报设备、网络、串口及盒子版本信息。
+ * @note 本流程有任务延时，盒子版本上报后延时 2000 ms；不再从此处上报主板或屏幕 OTA 版本。
  */
 void box_post_cloud_device_infor(void)
 {

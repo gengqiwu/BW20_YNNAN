@@ -1,3 +1,7 @@
+/**
+ * @file lyy_tjc.c
+ * @brief 淘晶驰屏幕页面显示、触摸命令解析及经纸钞主板 D6 的数据透传。
+ */
 /*
  * @author: e.he
  * @Date: 2022-10-18 09:58:29
@@ -105,10 +109,10 @@ const TJC_PACKET_PARSE_DEF tjc_packet_parse_t[] =
 };
 
 /**
- * @brief
- * 发送数据到串口屏
- * @param objName 对象名称
- * @param txt 对象内容
+ * @brief 经纸钞主板 D6 屏幕透传接口发送原始屏幕数据。
+ * @param[in] data 屏幕命令或二进制图片数据。
+ * @param[in] len 有效字节数。
+ * @note 不在此处追加结束符，也不返回主板或屏幕的接收结果。
  */
 void lyy_tjc_cmd_send(char *data, uint16_t len)
 {
@@ -116,10 +120,10 @@ void lyy_tjc_cmd_send(char *data, uint16_t len)
 }
 
 /**
- * @brief 
- * taojingchi串口屏控件txt修改
- * @param objName 对象名称
- * @param txt 对象内容
+ * @brief 封装控件 txt 设置命令并经主板透传，发送后延时 5 ms。
+ * @param[in] objName 控件名称，NULL 时不处理。
+ * @param[in] txt 控件文本，NULL 时不处理。
+ * @warning 不校验拼接后长度，调用方须保证命令不超出 TJC_BUFF_MAX。
  */
 void lyy_tjc_objTxt(char *objName, char *txt)
 {
@@ -409,9 +413,9 @@ void lyy_tjc_pay_page(PTJC_PAY_PAGE_DEF pay)
 }
 #endif
 /**
- * @brief 
- * 显示金额和支付二维码
- * @param pay 
+ * @brief 刷新支付页的渠道图片、金额及非空二维码链接。
+ * @param[in] pay 有效支付页参数，金额与 get_money_unit() 拼接显示。
+ * @note 图片序号取全局钱包序号加 1；链接发送后延时 20 ms，不检查图片绑定结果。
  */
 void lyy_tjc_pay_url_money(PTJC_PAY_PAGE_DEF pay)
 {
@@ -521,8 +525,7 @@ void lyy_tjc_pay_url_show(char *url,char *money)
 //     lyy_tjc_set_status(TJC_SHOW_PAY_URL);
 // }
 /**
- * @brief 
- * 
+ * @brief 根据图片套餐编译选项显示套餐页，非图片分支统一显示通用套餐。
  */
 void lyy_tjc_packages_show(void)
 {
@@ -585,11 +588,8 @@ void lyy_tjc_vis_pkg_std(uint8_t id)
 }
 
 /**
- * @brief 
- * 显示套餐页
- * @param money 
- * @param value 
- * @param pkg_num 
+ * @brief 切换到 pkg_std2 页面并按缓存刷新套餐控件。
+ * @note 从套餐缓存的零基下标读取，控件编号从 1 开始；多余控件隐藏，显示金额、价值及单位。
  */
 void lyy_tjc_page_pkgs_std(void)
 {
@@ -619,12 +619,11 @@ void lyy_tjc_page_pkgs_std(void)
 }
 
 /**
- * @brief 
- * 显示套餐---扭蛋机
- * @param name 
- * @param money 
- * @param value 
- * @param pkg_num 
+ * @brief 保留扭蛋机套餐控件接口，本固件不执行显示。
+ * @param[in] name 未使用。
+ * @param[in] money 未使用。
+ * @param[in] value 未使用。
+ * @param[in] pkg_num 未使用。
  */
 void lyy_tjc_pkg_ndj(char *name,char *money,char *value,uint8_t pkg_num)
 {
@@ -634,11 +633,7 @@ void lyy_tjc_pkg_ndj(char *name,char *money,char *value,uint8_t pkg_num)
 }
 
 /**
- * @brief 
- * 显示套餐页---扭蛋机
- * @param money 
- * @param value 
- * @param pkg_num 
+ * @brief 保留扭蛋机套餐页入口，本固件不执行显示。
  */
 void lyy_tjc_page_pkgs_ndj(void)
 {
@@ -766,9 +761,7 @@ void lyy_tjc_ndj_priceShow(uint8_t id,char *unit,float price,char *name)
     lyy_tjc_ndj_price(id,temp,name);
 }
 /**
- * @brief 
- * 
- * @param num_page 
+ * @brief 保留扭蛋机支付套餐显示入口，本固件不执行操作。
  */
 void lyy_tjc_pay_package_ndj(void)
 {
@@ -790,18 +783,15 @@ void lyy_tjc_pay_result(uint16_t time,uint8_t next_status)
     lyy_tjc_set_status(TJC_SHOW_PAY_RESULT);    
 }
 /**
- * @brief 
- * 显示支付结果
+ * @brief 请求显示支付结果 10 秒后返回套餐状态。
+ * @note 仅修改显示状态，不判断支付或出钞是否成功。
  */
 void lyy_tjc_page_pay_reuslt(void)
 {
     lyy_tjc_pay_result(10, TJC_SHOW_PACKAGES);
 }
 /**
- * @brief 
- * 操作控件
- * @param time 
- * @param next_status 
+ * @brief 切换到 result 页面并刷新设备信息。
  */
 void lyy_tjc_page_obj_pay_result(void)
 {
@@ -810,8 +800,8 @@ void lyy_tjc_page_obj_pay_result(void)
 }
 
 /**
- * @brief
- * taojingchi串口屏-显示pay结果页面
+ * @brief MQTT 连接状态变化时更新 net_status 文本。
+ * @note 使用静态缓存抑制相同状态的重复显示，初始离线状态不主动刷新。
  */
 void lyy_tjc_net_status(void)
 {
@@ -974,10 +964,10 @@ void lyy_tjc_page_logining(void)
 
 
 /**
- * @brief 
- * 倒计时显示
- * @param time 
- * @param next_status 
+ * @brief 保存倒计时参数并切换到倒计时显示状态。
+ * @param[in] time 倒计时时间。
+ * @param[in] next_status 倒计时结束后目标显示状态。
+ * @note time 为 0 时延时 1000 ms 后使用 waring.next_status，而非本次 next_status。
  */
 void lyy_tjc_count_down(uint16_t time, uint8_t next_status)
 {
@@ -1195,20 +1185,19 @@ int lyy_tjc_pay_id_isok(uint8_t package_id ,uint8_t wallet_id)
 }
 
 /**
- * @brief 
- * 
- * @param id  套餐id 从1开始
- * @param wallet_id 
+ * @brief 保留扭蛋机二维码请求入口，本固件不发送请求。
+ * @param[in] id 未使用。
+ * @param[in] wallet_id 未使用。
  */
 void lyy_tjc_get_pay_url_ndj(uint8_t id,uint8_t wallet_id)
 {
     (void)id; (void)wallet_id;
 }
 /**
- * @brief 
- * 
- * @param id  从1开始
- * @param wallet_id 
+ * @brief 校验套餐及钱包后请求通用动态支付二维码。
+ * @param[in] id 套餐缓存的零基下标。
+ * @param[in] wallet_id 支付渠道的零基下标。
+ * @note 校验失败显示提示并返回；此入口不再发送积分抵扣请求。
  */
 void lyy_tjc_get_pay_url_std(uint8_t id,uint8_t wallet_id)
 {
@@ -1271,10 +1260,9 @@ void lyy_tjc_packages_choose(uint8_t id,uint8_t wallet_number)
     lyy_tjc_get_pay_qrcode(id,wallet_number); //显示等待支付二维码界面
 }
 /**
- * @brief Get the package id object
- * 
- * @param package 
- * @return int 
+ * @brief 将套餐按钮名称转换为缓存下标。
+ * @param[in] package 有效的零结尾按钮字符串。
+ * @return package1～package8 对应 0～7，未匹配返回 8。
  */
 int get_package_id(char *package)
 {
@@ -1289,10 +1277,9 @@ int get_package_id(char *package)
     else return 8;
 }
 /**
- * @brief 
- * 点击套餐
- * @param pack 
- * @param len 
+ * @brief 套餐触摸入口，选择按钮对应套餐并使用第一个钱包。
+ * @param[in] pack 有效的零结尾按钮字符串。
+ * @param[in] len 未使用，解析依赖字符串结束符。
  */
 void lyy_tjc_touch_package(char *pack,uint16_t len)
 {
@@ -1372,10 +1359,10 @@ void lyy_tjc_page_regist_set(void)
     lyy_tjc_set_status(TJC_SHOW_DEVICE_REGIST); 
 }
 /**
- * @brief 
- * 定时发送版本
- * @param pack 
- * @param len 
+ * @brief 从屏幕版本字符串更新方向及缓存版本，随后关闭 tm0。
+ * @param[in] pack 有效的零结尾版本字符串；长度大于 1 且小于版本缓存容量时保存。
+ * @param[in] len 未使用，字符串操作依赖零结尾。
+ * @note 仅识别 _00_ 和 _270_ 方向；不在此处发送 OTA 版本上报。
  */
 void lyy_tjc_time_version(char *pack,uint16_t len)
 {
@@ -1389,6 +1376,12 @@ void lyy_tjc_time_version(char *pack,uint16_t len)
     lyy_tjc_time_en("tm0", 0);
 }
 
+/**
+ * @brief 先处理图片二进制确认，再按表顺序分发首个匹配的屏幕文本命令。
+ * @param[in] packet 原始屏幕数据，NULL 时忽略。
+ * @param[in] len 字节数，零长度时忽略。
+ * @note 文本最多复制 254 字节并补零，跳过首个零字节；仅做子串匹配，不校验屏幕帧尾。
+ */
 void tjc_packet_parse(uint8_t *packet, uint16_t len)
 {
     char text[255] = {0};
@@ -1404,18 +1397,30 @@ void tjc_packet_parse(uint8_t *packet, uint16_t len)
         }
     }
 }
+/**
+ * @brief 兼容旧入队名称，实际同步解析屏幕数据。
+ * @param[in] pack 接收缓冲区。
+ * @param[in] len 有效字节数。
+ * @retval -1 指针为空或长度为零。
+ * @retval 1 已调用解析，不保证命令被识别或执行成功。
+ */
 int tjc_packet_queEntry(uint8_t *pack, uint16_t len)
 {
     if (pack == NULL || len == 0) return -1;
     tjc_packet_parse(pack, len);
     return 1;
 }
+/**
+ * @brief 保留屏幕出队兼容接口，无实际队列读取。
+ * @param[out] unit 未使用，不写入任何数据。
+ * @retval -1 固定返回。
+ */
 int tjc_packet_queOut(STORAGE_QUE_DEF *unit) { (void)unit; return -1; }
 /**
- * @brief 
- * 
- * @param pack 
- * @param len 
+ * @brief 解析屏幕型号与旋转方向，更新图片请求的屏幕配置。
+ * @param[in] pack 含型号和方向标记的零结尾字符串。
+ * @param[in] len 未使用。
+ * @note 屏幕版本由独立 screen_ver 命令处理，此处不更新版本。
  */
 void lyy_tjc_vlaue_screen_type(char *pack,uint16_t len)
 {
@@ -1496,10 +1501,10 @@ int tjc_isPacket(uint8_t *packet,uint16_t len)
 
 
 /**
- * @brief 
- * 
- * @param pack 
- * @param len 
+ * @brief 将主板屏幕透传接收数据交给统一解析入口。
+ * @param[in] pack 接收数据。
+ * @param[in] len 字节数，转交 uint16_t 长度入口时会收窄。
+ * @note 当前同步解析，不拷贝入队，不在此处进行拆包或帧尾校验。
  */
 void tjc_recv_packet_handle(uint8_t *pack,uint32_t len)
 {
@@ -1647,8 +1652,7 @@ void amy_time_to_string(uint32_t time,char *pstring)
 
 
 /**
- * @brief 
- * 
+ * @brief 记录毫秒起始时间并进入按摩椅倒计时显示页。
  */
 void lyy_tjc_page_change_amy_time(void)
 {
@@ -1660,8 +1664,8 @@ void lyy_tjc_page_change_amy_time(void)
     tjc_infor_t.status = TJC_SHOW_AMY_TIME_WORK;   
 }
 /**
- * @brief 
- * 
+ * @brief 根据 HAL 毫秒时间差换算已用秒数，刷新剩余时间并处理结束状态。
+ * @note 每次延时 100 ms，剩余时间未变化时不刷新控件。
  */
 void lyy_tjc_page_amy_time_work(void)
 {
@@ -1688,9 +1692,9 @@ void lyy_tjc_page_amy_time_work(void)
     // lyy_tjc_page_obj_count_down("Count Down",time); 
 }
 /**
- * @brief 
- * 
- * @return int 
+ * @brief 剩余工作时间不少于 4 秒时恢复倒计时页面。
+ * @retval 1 已恢复页面及工作状态。
+ * @retval 0 剩余时间不足 4 秒，不更新页面。
  */
 int amy_time_redisplay(void)
 {
@@ -1866,8 +1870,9 @@ void thread_page_display(void *arg)
 
 
 /**
- * @brief 
- * 显示屏业务
+ * @brief 执行首页、登录及图片初始化流程，然后进入页面显示循环。
+ * @param[in] arg 未使用，可为 NULL。
+ * @note 图片处理直接同步调用，结束后显示其结果，不另起图片任务。
  */
 void thread_screen_init(void *arg)
 {
@@ -1957,8 +1962,9 @@ void thread_screen_init(void *arg)
 
 
 /**
- * @brief 
- * taojingchi串口屏始化
+ * @brief 初始化图片信号量、默认屏幕版本及首页步骤，创建屏幕任务。
+ * @note 默认版本为 tjc_default_v3.0.0；任务内部同步执行图片更新后进入页面显示循环。
+ * @warning 不检查信号量或任务创建结果，调用方不得将返回视为初始化成功确认。
  */
 void lyy_init_tjc(void)
 {

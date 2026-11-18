@@ -1,9 +1,15 @@
+/**
+ * @file test_flash.c
+ * @brief 真实文件缓存适配的偏移读写、截断、短读及虚拟地址越界回归。
+ * @note TEST_FLASH_PREFIX 指向工程外临时目录，避免改写工程文件。
+ */
 #include <assert.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
 #include "HAL_Flash.h"
 #include "HAL_Ota.h"
+/** @brief 执行镜像缓存断言。 @return 全部断言通过时返回 0。 */
 int main(void)
 {
     uint8_t data[1024], readback[1024];

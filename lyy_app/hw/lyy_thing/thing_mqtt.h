@@ -1,3 +1,7 @@
+/**
+ * @file thing_mqtt.h
+ * @brief MQTT 客户端状态、物模型主题分类及通信控制接口声明。
+ */
 /*
  * @Author: your name
  * @Date: 2022-01-24 17:42:00
@@ -78,6 +82,11 @@ extern void lyy_mqtt_disconnected(void);
 extern void lyy_mqtt_status_task(void *arg);
 extern void lyy_mqtt_set_status(uint8_t status);
 
+/**
+ * @brief 设置客户端状态机阶段，不负责主动断开连接。
+ * @param[in] para 阶段枚举值，内部转为 uint8_t；调用方负责取值合法。
+ * @note 暂停阶段仅停止状态推进，不保证停止所有 MQTT 活动。
+ */
 extern void lyy_mqtt_set_step(int para);
 extern int  lyy_mqtt_get_step(void);
 extern int  lyy_mqtt_get_status(void);

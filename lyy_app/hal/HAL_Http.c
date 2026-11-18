@@ -1,3 +1,8 @@
+/**
+ * @file HAL_Http.c
+ * @brief 单实例 HTTP/HTTPS GET：复制 URL 字段后在独立任务中解析响应并回调 body 分片。
+ * @note 全局状态只支持一个活动请求，调用者不能并行下载不同资源。
+ */
 #include <stdint.h>
 #include <string.h>
 
@@ -44,6 +49,13 @@ typedef struct {
 static HAL_HTTPC_T g_HalHttpC;
 
 
+/**
+ * @brief HTTP 解析器 body 回调，先同步递交分片，再累计实际接收长度。
+ * @param[in] pxHttpParser 解析器上下文，当前未使用。
+ * @param[in] pcAt 当前分片起始地址，仅在本次回调期间有效。
+ * @param[in] xLength 分片字节数，不保证 NUL 结尾。
+ * @return 固定为 0，让解析器继续接收。
+ */
 int lBody(http_parser *pxHttpParser, const char *pcAt, size_t xLength)
 {
 
@@ -65,6 +77,12 @@ int lBody(http_parser *pxHttpParser, const char *pcAt, size_t xLength)
 
 }
 
+/**
+ * @brief 标记 HTTP 消息已经完整解析。
+ * @param[in] pxParser 解析器上下文，用于记录响应状态码。
+ * @return 固定为 0。
+ * @note 消息结束和业务成功不同，外层还要求状态码为 200。
+ */
 int lOnResponseComplete(http_parser *pxParser) 
 {
 
@@ -77,6 +95,13 @@ int lOnResponseComplete(http_parser *pxParser)
 }
 
 
+/**
+ * @brief 在已连接 TCP/TLS 通道发送 GET，解析 body 直到完整响应或失败。
+ * @param[in] ucHttpType eHttp 或 eHttps。
+ * @param[in] pvArg HTTP 为 socket 句柄地址，HTTPS 为 hal_tls_t 指针。
+ * @return HTTP_GET_SUCCESS 表示完整 200 响应；其他情况为 HTTP_GET_ERR。
+ * @note 无数据进展 10 秒超时；分片可跨网络读取，结束长度使用实际 body 计数。
+ */
 static uint8_t HAL_prucHttpcOp(uint8_t ucHttpType, void *pvArg)
 {
 
@@ -282,6 +307,11 @@ static uint8_t HAL_prucHttpcGet(void)
 
 }
 
+/**
+ * @brief 独立 GET 任务，选择 HTTP/HTTPS、通知结果并恢复全局空闲状态。
+ * @param[in] pvArg 任务参数，未使用。
+ * @note 结果回调执行期间请求仍被标为忙，回调内不能立即复用此单实例发起新 GET。
+ */
 static void HAL_prvHttpcThread(void *pvArg)
 {
 
@@ -310,6 +340,13 @@ static void HAL_prvHttpcThread(void *pvArg)
 }
 
 
+/**
+ * @brief 校验并复制 URL 主机名/路径，再创建异步 GET 任务。
+ * @param[in] pcUrl NUL 结尾的 HTTP/HTTPS URL，须包含主机后的斜杠路径。
+ * @param[in] xHttpDataCd body 分片回调，可为 NULL，缓冲仅在回调期间有效。
+ * @param[in] xHttpRes 结束结果回调，可为 NULL，第二参数是实际 body 字节数。
+ * @note 忙、URL 无效或任务创建失败时会同步回调错误；URL 不被修改，返回后调用方可释放。
+ */
 void HAL_vHttpGet(const char *pcUrl, vHttpDataCd xHttpDataCd, vHttpRes xHttpRes)
 {
 

@@ -1,3 +1,8 @@
+/**
+ * @file test_mcu_ota.c
+ * @brief STM32 升级发送任务回归：块偏移、ACK 字段匹配、短 ACK、超时及资源/读取失败。
+ * @note 模拟 RTOS 和对端应答，仅证明本机状态机路径，不确认对端实际烧录成功。
+ */
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>

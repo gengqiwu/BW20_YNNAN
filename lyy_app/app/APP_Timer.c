@@ -1,3 +1,7 @@
+/**
+ * @file APP_Timer.c
+ * @brief 创建毫秒级周期回调，仅轮询配网按键，不采集现金脉冲。
+ */
 /*
  * @Author: linjunqi linjunqi@leyaoyao.org
  * @Date: 2024-06-19 14:35:04
@@ -31,6 +35,11 @@ static HAL_TIME_HANDLE_T g_pxTimerHandle = {
 
 #endif
 
+/**
+ * @brief 周期调用配网按键检测，不执行本地投币或现金脉冲采样。
+ * @param[in] pvArg 定时器参数，未使用。
+ * @note 回调运行上下文由所选 HAL 定时器实现决定，不在此承诺中断或任务上下文。
+ */
 static void APP_prvTimerMs(void *pvArg)
 {
 
@@ -42,6 +51,10 @@ static void APP_prvTimerMs(void *pvArg)
 }
 
 
+/**
+ * @brief 按配置创建自动周期 RTOS 定时器或 1000 微秒硬件定时器，驱动配网按键检测。
+ * @note RTOS 分支传入周期值 1，实际时间单位由 HAL 定义；本模块不再注册现金脉冲采集。
+ */
 void APP_Timer1msInit(void)
 {
 

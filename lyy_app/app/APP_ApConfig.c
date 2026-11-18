@@ -1,3 +1,7 @@
+/**
+ * @file APP_ApConfig.c
+ * @brief 设备热点配网：接收 UDP 凭据、保存站点配置并请求重启。
+ */
 /*
  * @Author: linjunqi linjunqi@leyaoyao.org
  * @Date: 2023-10-19 17:18:47
@@ -69,6 +73,13 @@ static void APP_prvUdpSendSuccess(void)
 }
 
 
+/**
+ * @brief 校验配网 JSON 中的凭据，保存后回复成功并请求重启。
+ * @param[in] pucData 调用方已补 NUL 结尾的 UDP 数据，不在此释放。
+ * @param[in] ulDataLen 接收字节数；当前解析仅依赖字符串结尾，不用此值限长。
+ * @note SSID 必须为 1～32 字节字符串；密码可为空，但须小于密码数组容量。
+ *       保存接口返回值未检查，回复成功不代表已确认持久化成功。
+ */
 static void APP_prvUdpRecvDataProc(uint8_t *pucData, uint32_t ulDataLen)
 {
 
@@ -119,6 +130,13 @@ cjson_exit:
 }
 
 
+/**
+ * @brief 创建设备热点及 8266 端口 UDP 服务，循环接收配网请求。
+ * @param[in] pvArg 任务参数，未使用。
+ * @note 热点名称最多 32 字节；每包最多接收 255 字节并补 NUL 后解析。
+ *       套接字创建失败时删除当前任务；正常路径持续运行。
+ * @warning 调试日志输出原始 UDP 内容，可能包含配网密码。
+ */
 static void APP_prvApTask(void *pvArg)
 {
 

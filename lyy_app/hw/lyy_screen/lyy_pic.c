@@ -1,3 +1,7 @@
+/**
+ * @file lyy_pic.c
+ * @brief 支付渠道图片 URL 维护、HTTP 下载及经主板 D6 透传的屏幕分包传输。
+ */
 /*
  * @author: lyz
  * @Date: 2022-10-18 09:58:29
@@ -67,11 +71,10 @@ static INFOR_PIC_Flash_INFO g_pxTjcPicFlashInfo;
 void (*tjc_pic_result_cb)(INFOR_PIC_VAIR *) = NULL;
 
 /**
- * @description: 发送
- * 
- * @param [in]    data 数据  
- * @param [in]    len 长度 
- * 
+ * @brief 通过统一屏幕发送入口转交图片控制命令或分包数据。
+ * @param[in] data 待发送字节缓冲区。
+ * @param[in] len 字节数，传给 uint16_t 长度入口，调用方须控制不超过其范围。
+ * @note 发送走主板 D6 屏幕透传，不再直接写屏幕串口；不返回发送结果。
  */
 void lyy_display_send(unsigned char *data, unsigned int len)
 {
@@ -85,10 +88,12 @@ int is_empty(const char *str)
 }
 
 /**
- * @brief 
- * 图片信息保存以及启动
- * @param arg 
- *
+ * @brief 装载渠道图片元数据并启动 URL 获取流程。
+ * @param[in] pic_result_cb 图片处理完成回调，须非空。
+ * @retval -1 回调为空或元数据分配失败。
+ * @retval -2 支付渠道数为零。
+ * @retval 0 初始化流程结束。
+ * @note 渠道数截断至 CHANNELINFO_MAX；为全部渠道的 PIC_INFO_MAX 张图片分配元数据空间。
  */
 int lyy_hw_tjc_pic_info_start(void (*pic_result_cb)(INFOR_PIC_VAIR *))
 {
@@ -201,9 +206,8 @@ void lyy_pic_infoAllClean(void)
     LYY_LOGD("==================  delete end ");
 }
 /**
- * @brief 
- * 设置淘晶驰屏幕类型
- * @param [char *] type 
+ * @brief 更新屏幕型号字符串。
+ * @param[in] type 零结尾型号；NULL 或长度达到 64 字节时忽略。
  */
 void set_tjc_Screen(char *type)
 {
@@ -214,9 +218,8 @@ void set_tjc_Screen(char *type)
 
 }
 /**
- * @brief 
- * 设置淘晶驰屏幕类型
- * @param arg 
+ * @brief 更新屏幕方向或布局类型字符串。
+ * @param[in] type 零结尾类型；NULL 或长度达到 64 字节时忽略。
  */
 void set_tjc_screen_type(char *type)
 {
@@ -225,7 +228,15 @@ void set_tjc_screen_type(char *type)
     memcpy(lyy_screenType,type,strlen(type));
     LYY_LOGD("set_tjcScreenType:%s",lyy_screenType);
 }
+/**
+ * @brief 兼容旧命名的屏幕型号设置入口。
+ * @param[in] type 型号字符串，约束同 set_tjc_Screen。
+ */
 void set_tjcScreen(char *type) { set_tjc_Screen(type); }
+/**
+ * @brief 兼容旧命名的屏幕布局类型设置入口。
+ * @param[in] type 类型字符串，约束同 set_tjc_screen_type。
+ */
 void set_tjcScreenType(char *type) { set_tjc_screen_type(type); }
 /**
  * @brief 
@@ -330,8 +341,8 @@ void getTjcPicUrl_page(char *page,unsigned char wallet)
 
 
 /**
- * @brief 
- * 获取tjc图片的url
+ * @brief 按渠道逐个请求图片 URL，随后进入图片更新阶段。
+ * @note 每渠道最多等待 10000 ms，超时将该渠道两张图片标记为更新失败；元数据为空时退出至空闲。
  */
 void getTjcPicUrl(void)
 {
@@ -372,8 +383,17 @@ void getTjcPicUrl(void)
 }
 
 /**
- * @brief 
- * 接收tjc图片的url
+ * @brief 解析当前请求渠道的图片布局应答并更新两张图片状态。
+ * @param[in] params valuestring 为布局 JSON 字符串的节点。
+ * @retval -1 参数、缓存或当前渠道下标无效，或 JSON 解析失败。
+ * @retval -2 缺少 device_type。
+ * @retval -3 缺少 screen_type。
+ * @retval -4 缺少 components。
+ * @retval -5 缺少 selected。
+ * @retval -10 wallet_url 缺失、无字符串值或过长。
+ * @retval -11 scan_url 缺失、无字符串值或过长。
+ * @retval 0 更新完成并按等待标志释放 URL 信号量。
+ * @note URL 变化或原文件大小为零则标记待下载，否则标记待传输；中途失败不回滚已更新的前一张图片。
  */
 int tjc_recv_pic_url(cJSON* params)
 {
@@ -588,9 +608,9 @@ static void APP_prvHttpRes(uint8_t ucRes, uint32_t ulLen)
 }
 
 /**
- * @description: 发送http获取图片
- * @param {*}
- * @return {*}
+ * @brief 下载当前渠道指定类型图片并保存文件及元数据。
+ * @param[in] type 图片类型下标 PIG_WALLET 或 PIG_SCAN。
+ * @note 调用前须准备有效元数据、当前渠道及信号量；每次清除旧文件和残留信号，最多等待 15000 ms，写入长度为零时再重试一次。
  */
 void lyy_http_get_xiPic(unsigned char type) 
 {
@@ -724,8 +744,8 @@ void lyy_pic_objTxt(char *objName, char *txt)
 
 }
 /**
- * @brief 
- * tjc图片传输
+ * @brief 将待传输图片依次发送到屏幕 RAM 文件。
+ * @note 每张图发送前清除残留完成信号，最多等待 20000 ms；超时退出传输模式并标记失败，流程结束转为空闲。
  */
 void getTjcPicTran(void)
 {
@@ -891,12 +911,12 @@ int lyy_display_sendPic(char *  addr, char * fileName, unsigned int  fileSize)
 }
 
 /**
- * @description: 外部图片传输接收处理
- * 
- * @param [in]    pack 接收返回数据
- * @param [in]    len  数据大小  
- * 
- * @return {unsigned char } 1成功/0失败
+ * @brief 在图片传输模式下处理屏幕返回的二进制确认。
+ * @param[in] pack 接收数据，不要求零结尾。
+ * @param[in] len 数据字节数；四字节确认使用长度检查和 memcmp。
+ * @retval 0 参数为空、长度为零或当前不在图片传输状态。
+ * @retval 1 已进入处理流程，包含未识别确认的情况，不等同图片发送成功。
+ * @note 0x05 推进分包，0x04 重发当前包，结束确认使等待方获得信号量。
  */
 int lyy_display_recvPic(unsigned char * pack,unsigned int  len)
 {
@@ -951,11 +971,10 @@ int lyy_display_recvPic(unsigned char * pack,unsigned int  len)
 }
 
 /**
- * @description: 外部图片传输接收处理
- * 
- * @param [in]    packet 发送第几包数据
- * 
- * @return {unsigned char } 1成功/0失败
+ * @brief 从本地图片文件读取指定分包并转交屏幕发送入口。
+ * @param[in] packet 从 0 开始的分包序号。
+ * @return 重复发送保护触发或读取结果检查失败时为 0；序号不小于总包数时为 1 且不发送；否则返回内部文件读取结果。
+ * @note 最后一包按文件剩余字节发送，上限为 LYY_SEND_PIC_PACKET_SIZE；返回值不检查 D6 实际送达情况。
  */
 int lyy_display_pick(unsigned int  packet)
 {
@@ -1059,17 +1078,15 @@ int lyy_display_setPicPath(char * name,char *  path)
     return 1;
 }
 /**
- * @description: 显示图片
- * 
- * @param [in]    page 哪一页
- * @param [in]    walletNum 哪一个钱包
- * 
- * @return {unsigned char } 
- * 1成功/
- *  0 参数有误/
- * -1 无该页面图片显示/
- * -2 钱包个数大于最大钱包数/
- * -3 没有对应图片
+ * @brief 将指定钱包的两张支付图片绑定到屏幕控件。
+ * @param[in] page 页面字符串，目前仅含 pay 的页面执行图片绑定。
+ * @param[in] walletNum 从 1 开始的钱包序号。
+ * @retval 0 page 为 NULL 或钱包序号为 0。
+ * @retval -1 select、result、working 或 warn 页面不提供图片。
+ * @retval -2 钱包超出已有数量或页面不受支持。
+ * @retval -3 元数据未准备或任一图片大小为零。
+ * @retval 1 已请求绑定 wallet 和 wallet_type 控件，不保证屏幕显示成功。
+ * @note 图片索引为 (walletNum-1)*PIC_INFO_MAX，与渠道序号一致。
  */
 int lyy_display_showpic(char *page,unsigned char walletNum)
 {
@@ -1127,9 +1144,9 @@ int lyy_display_showpic(char *page,unsigned char walletNum)
 
 
 /**
- * @brief 
- * 图片事件处理
- * @param arg 
+ * @brief 同步推进图片 URL、下载及传输状态，空闲后返回。
+ * @param[in] arg 未使用，可为 NULL。
+ * @note 传输阶段结束调用结果回调；此函数在屏幕初始化任务中直接调用，不自行创建或删除任务。
  */
 void thread_tjcPicDealThread(void *arg)
 {

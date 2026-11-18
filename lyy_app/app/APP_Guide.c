@@ -1,3 +1,7 @@
+/**
+ * @file APP_Guide.c
+ * @brief 异步请求设备引导服务，拼接 HTTP 正文、解密配置并在配置改变时请求重启。
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -32,6 +36,16 @@ typedef struct {
 
 static APP_GUIDE_T g_xAppGuideInfo;
 
+/**
+ * @brief 校验引导响应中的十六进制密文，AES 解密后更新服务器配置。
+ * @param[in] pcData 已补 NUL 结尾的完整 HTTP 正文，解析期间保持有效。
+ * @param[in] ulLen 正文字节数；仅用于非空检查，JSON 解析依赖 NUL 结尾。
+ * @note 密文须为非空十六进制串、长度为 32 的倍数且不超过 1024 字符；
+ *       使用当前产品密钥进行 AES-ECB-128 解密，明文长度须为 1～512 字节。
+ *       broker 仅接受 mqtts://主机:端口（可带末尾斜杠），端口范围为 1～65535。
+ * @note 未提供的配置保留当前值，设备类型保持不变；配置变化时调用保存接口并请求 1 秒后重启。
+ *       未检查保存返回值；解析完成才置结束状态，错误由结果回调收敛为失败。
+ */
 static void APP_prvHttpDataParse(char *pcData, uint32_t ulLen)
 {
     cJSON *pxRoot = NULL;
@@ -140,7 +154,13 @@ exit:
     cJSON_Delete(pxRoot);
 }
 
-/* BW HTTP delivers body chunks, unlike the ESP whole-body callback. */
+/**
+ * @brief 依次追加异步 HTTP 正文分片，并保留 NUL 结尾空间。
+ * @param[in] pcData 本次正文分片；由 HTTP 层提供，回调内复制、不接管所有权。
+ * @param[in] ulLen 本分片字节数，不要求分片自身以 NUL 结尾。
+ * @note 只在请求运行且缓冲区存在时接收；累计正文须小于 1536 字节，超限置失败。
+ *       此回调只拼接，完整 JSON 留给请求结果回调解析。
+ */
 static void APP_prvHttpDataRvCd(char *pcData, uint32_t ulLen)
 {
     if (!g_xAppGuideInfo.pHttpRevData || g_xAppGuideInfo.xGuideSta != GUIDE_RUNNING) {
@@ -155,6 +175,12 @@ static void APP_prvHttpDataRvCd(char *pcData, uint32_t ulLen)
     g_xAppGuideInfo.pHttpRevData[g_xAppGuideInfo.ulDataLen] = '\0';
 }
 
+/**
+ * @brief 在 HTTP 成功且未超限时解析完整正文，随后释放接收缓冲区。
+ * @param[in] ucRes HTTP 请求结果，仅 HTTP_GET_SUCCESS 触发解析。
+ * @param[in] ulLen HTTP 层报告的长度，未使用；以分片累计长度为准。
+ * @note 非结束状态统一转失败；缓冲区由此回调释放并置空，不在分片回调释放。
+ */
 static void APP_prvHttpRes(uint8_t ucRes, uint32_t ulLen)
 {
     (void)ulLen;
@@ -171,6 +197,11 @@ static void APP_prvHttpRes(uint8_t ucRes, uint32_t ulLen)
     }
 }
 
+/**
+ * @brief 空闲时发起一次异步 HTTPS 引导请求，设备编号经 AES 加密后转十六进制入参。
+ * @note 使用当前产品密钥；分配接收缓冲区后置运行状态，由分片和结果回调完成处理。
+ *       分配失败仍为空闲，可在后续调用重试；运行、结束或失败状态均不再发起请求。
+ */
 void APP_vGuideLoop(void)
 {
     uint8_t pucDeviceIdBuff[48] = {0};

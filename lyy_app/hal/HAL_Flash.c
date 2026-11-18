@@ -1,3 +1,8 @@
+/**
+ * @file HAL_Flash.c
+ * @brief BW20 VFS 参数文件及对端升级镜像缓存访问。
+ * @note HAL_lFlashAddr 系列仅把兼容虚拟地址转换为缓存文件偏移，不直接操作物理 Flash。
+ */
 /*
  * @Author: linjunqi linjunqi@leyaoyao.org
  * @Date: 2023-10-11 17:26:03
@@ -36,6 +41,13 @@ static void HAL_prvFileGetVfsPath(const char *pcStore, char *pcPath, uint16_t ul
 }
 
 
+/**
+ * @brief 以 wb+ 重写参数或缓存文件。
+ * @param[in] pcStore 相对于 VFS_REGION_1 的文件名。
+ * @param[in] pucDuf 待写入字节。
+ * @param[in] xSize 字节数，0 时仍打开并截断文件。
+ * @return fwrite 实际写入字节数；打开失败返回 -1，调用者应比较期望长度。
+ */
 int HAL_vFileWrite(const char *pcStore, uint8_t *pucDuf, size_t xSize)
 {
     int  lRet = -1;
@@ -120,6 +132,15 @@ void HAL_vFileClear(const char *pcStore)
 }
 
 
+/**
+ * @brief 在文件偏移处写入，文件不存在时尝试创建。
+ * @param[in] pcStore VFS 文件名。
+ * @param[in] pucDuf 源数据。
+ * @param[in] xSize 请求写入字节数。
+ * @param[in] xOffset 从文件头起的字节偏移。
+ * @return 实际写入字节数；打开失败为 0，定位失败为 -1。
+ * @note 不截断已有文件；调用者应串行化同一镜像的下载与读取。
+ */
 int HAL_vFileWriteOffset(const char *pcStore, uint8_t *pucDuf, size_t xSize, size_t xOffset)
 {
 
@@ -154,6 +175,14 @@ int HAL_vFileWriteOffset(const char *pcStore, uint8_t *pucDuf, size_t xSize, siz
 }
 
 
+/**
+ * @brief 从指定偏移读取文件，可能因文件较短而只返回部分数据。
+ * @param[in] pcStore VFS 文件名。
+ * @param[out] pucDuf 至少 xSize 字节的目标缓冲。
+ * @param[in] xSize 请求读取字节数。
+ * @param[in] xOffset 字节偏移。
+ * @return 实际读取字节数；打开失败为 0，定位失败为 -1。
+ */
 int HAL_vFileReadOffset(const char *pcStore, uint8_t *pucDuf, size_t xSize, size_t xOffset)
 {
 
@@ -190,6 +219,13 @@ int HAL_vFileReadOffset(const char *pcStore, uint8_t *pucDuf, size_t xSize, size
 }
 
 
+/**
+ * @brief 校验镜像虚拟基址及容量后，将整个缓存文件截断为零长度。
+ * @param[in] ulAddr 必须等于 FILE_NAME_HW_DEVICE_OTA_LOAD。
+ * @param[in] xSize 仅用于容量校验，不代表局部擦除范围。
+ * @retval 0 截断文件成功。
+ * @retval -1 地址/长度非法或文件打开失败。
+ */
 int HAL_lFlashAddrErase(uint32_t ulAddr, size_t xSize)
 {
     if (ulAddr != FILE_NAME_HW_DEVICE_OTA_LOAD || xSize > FILE_NAME_HW_DEVICE_OTA_SIZE) return -1;
@@ -197,6 +233,14 @@ int HAL_lFlashAddrErase(uint32_t ulAddr, size_t xSize)
 }
 
 
+/**
+ * @brief 将虚拟地址转换为缓存文件偏移，要求完整写入。
+ * @param[in] ulAddr 镜像虚拟地址，基址起的偏移须落在容量范围内。
+ * @param[in] pucDuf 源数据。
+ * @param[in] xSize 请求字节数。
+ * @retval 0 实际写入长度等于请求长度。
+ * @retval -1 越界、定位失败或未完整写入。
+ */
 int HAL_lFlashAddrWrite(uint32_t ulAddr, uint8_t *pucDuf, size_t xSize)
 {
     if (ulAddr < FILE_NAME_HW_DEVICE_OTA_LOAD || xSize > FILE_NAME_HW_DEVICE_OTA_SIZE ||
@@ -206,6 +250,14 @@ int HAL_lFlashAddrWrite(uint32_t ulAddr, uint8_t *pucDuf, size_t xSize)
 
 
 
+/**
+ * @brief 从镜像缓存虚拟地址读取，拒绝越界和短读。
+ * @param[in] ulAddr FILE_NAME_HW_DEVICE_OTA_LOAD 加镜像字节偏移。
+ * @param[out] pucDuf 至少 xSize 字节的接收缓冲。
+ * @param[in] xSize 要求完整读取的字节数。
+ * @retval 0 完整读取成功。
+ * @retval -1 地址越界、文件操作失败或缓存内容不足。
+ */
 int HAL_lFlashAddrRead(uint32_t ulAddr, uint8_t *pucDuf, size_t xSize)
 {
     if (ulAddr < FILE_NAME_HW_DEVICE_OTA_LOAD || xSize > FILE_NAME_HW_DEVICE_OTA_SIZE ||

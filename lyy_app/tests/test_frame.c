@@ -1,3 +1,8 @@
+/**
+ * @file test_frame.c
+ * @brief 帧接收器主机回归：任意切分、粘包、错校验、扩展长度、噪声、超时及计时回绕。
+ * @note 使用真实 lyy_frame 实现，测试回调只记录合法帧数量和长度。
+ */
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>

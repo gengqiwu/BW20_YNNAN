@@ -1,3 +1,7 @@
+/**
+ * @file thing_property.c
+ * @brief 物模型属性读写分发、支付配置及纸钞主板参数和版本上报。
+ */
 /*
  * @author: e.he
  * @Date: 2024-06-20 17:42:36
@@ -81,9 +85,9 @@ void login_flag_packet(cJSON *login,uint16_t login_flag,uint8_t result,char *mes
 
 DEV_LOGIN_INFOR_DEF     dev_login_infor_t;
 /**
- * @brief 
- * 属性设置
- * @param params 
+ * @brief 按属性表顺序只处理首个命中的属性并发送设置应答。
+ * @param[in] params 属性对象，NULL 时直接返回且不应答。
+ * @note 写回调返回非负数视为 success；无写回调或未命中为 fail。应答标识重新随机生成。
  */
 void thing_property_set(cJSON* params)
 {
@@ -295,9 +299,9 @@ void pay_package_update(void *package, cJSON *body)
 
 
 /**
- * @description: 支付套餐设置
- * @param {*}
- * @return {*}
+ * @brief 保留扭蛋机套餐属性写入口，纸钞固件不执行配置。
+ * @param[in] params 未使用。
+ * @retval 1 固定返回，不代表更新了套餐。
  */
 int property_write_pay_pkgs_ndj(cJSON* params)
 {   
@@ -558,9 +562,11 @@ int property_write_dev_infor(cJSON* params)
 }
 
 /**
- * @description: 脉冲参数设置
- * @param {*}
- * @return {*}
+ * @brief 顺序更新本地脉冲间隔、宽度、输出端口及输出类型。
+ * @param[in] params 含 gap、width、output_port 和字符串 output_type 的对象。
+ * @retval -1 任一必需字段缺失；此前已写入的字段不会回滚。
+ * @retval 0 已标记参数更新并设置组合输出参数，不检查底层设置返回值。
+ * @note output_type 含 level 子串时选择电平，否则为脉冲；output_port 保存至组合参数第 1 字节。
  */
 int property_write_pulse_param(cJSON* params)
 {
@@ -602,10 +608,10 @@ int property_write_pulse_param(cJSON* params)
 }
 
 /**
- * @brief 
- * 
- * @param param 
- * @param body 
+ * @brief 保留扭蛋机货道更新接口，本固件不执行操作。
+ * @param[in] lane 未使用。
+ * @param[in] body 未使用。
+ * @param[in] cnt 未使用。
  */
 void ndj_lane_param_update(LANE_INFOR_TABLE_DEF *lane, cJSON *body,uint8_t cnt)
 {
@@ -614,9 +620,9 @@ void ndj_lane_param_update(LANE_INFOR_TABLE_DEF *lane, cJSON *body,uint8_t cnt)
 }
 
 /**
- * @description: 货道信息设置
- * @param {*}
- * @return {*}
+ * @brief 保留货道属性写入口，本固件不修改配置。
+ * @param[in] params 未使用。
+ * @retval 1 固定返回，不代表已配置货道。
  */
 int property_write_ndj_lane(cJSON* params)
 {
@@ -677,6 +683,14 @@ char *get_fault_msg(uint16_t code)
     // sprintf(temp,"undefine");
     return "undefine";
 }
+/**
+ * @brief 查询主板当前参数并向应答对象添加 bill_machine_params。
+ * @param[in,out] reply 调用方持有的 JSON 对象；新增子对象由其负责释放。
+ * @retval -1 reply 为空。
+ * @retval -2 主板参数查询返回 0。
+ * @retval 1 查询返回非零；即使子对象分配失败也返回此值。
+ * @note brt 固定报告 115200；mode 来自本地脉冲电平，startup_type 按主板 IctStartMode 为 1 选 A，否则 B。
+ */
 int property_read_zcj_param(cJSON *reply)
 {
     ZCJ_PARAM_DEF *param = zcj_param_get();
@@ -697,6 +711,15 @@ int property_read_zcj_param(cJSON *reply)
     }
     return 1;
 }
+/**
+ * @brief 先查询主板参数，在当前副本上更新有效字段后整包写回。
+ * @param[in] params 纸钞参数对象，支持 bill_machine_type、gap、width、mode、startup_type。
+ * @retval -2 前置参数查询返回 0；此检查先于参数对象校验。
+ * @retval -1 params 为空或不是对象，或设置命令返回 0。
+ * @retval 1 设置命令返回非零。
+ * @note 缺失或类型不匹配的字段保持原值；mode 含 NC 则 level 为 1，startup_type 含 A 则 IctStartMode 为 1，否则相应值为 0。
+ * @warning 此入口不校验数值范围；返回值仅沿用命令等待结果，不额外验证主板参数实际生效。
+ */
 int property_write_zcj_param(cJSON *params)
 {
     if (zcj_cmd_get_param() == 0) return -2;
@@ -859,10 +882,11 @@ int property_read_infor_net(cJSON *reply)
 }
 
 /**
- * @brief 
- * 读取脉冲参数
- * @param reply 
- * @return char 
+ * @brief 向应答对象添加本地 pulse_para 参数。
+ * @param[in,out] reply 调用方持有并释放的 JSON 对象。
+ * @retval -1 reply 为空。
+ * @retval 1 其余情况，包括子对象分配失败。
+ * @note 输出端口取组合参数第 1 字节，类型取第 0 字节；机器电平非零报告 NO，否则 NC。
  */
 int property_read_pulse_para(cJSON* reply)
 {
@@ -1026,6 +1050,14 @@ int property_read_dev_infor(cJSON* reply)
 
     return 1;
 }
+/**
+ * @brief 查询主板软硬件版本并添加 mcu_version 子对象。
+ * @param[in,out] reply 调用方持有并释放的应答对象。
+ * @retval -1 reply 为空。
+ * @retval -2 主板版本查询返回 0。
+ * @retval -3 JSON 子对象分配失败。
+ * @retval 1 已添加版本字段。
+ */
 int property_read_dev_mcu_version(cJSON *reply)
 {
     ZCJ_PARAM_VER_DEF *ver = zcj_param_ver_get();
@@ -1039,6 +1071,12 @@ int property_read_dev_mcu_version(cJSON *reply)
     cJSON_AddItemToObject(reply, "mcu_version", data);
     return 1;
 }
+/**
+ * @brief 直接上报主板版本字段 soft_ver 和 hard_ver。
+ * @param[in] soft_ver 主板软件版本字符串。
+ * @param[in] hard_ver 主板硬件版本字符串。
+ * @note 此主动上报不套 mcu_version 子对象；JSON 分配失败时不发送。
+ */
 void property_post_dev_mcu_version(char *soft_ver, char *hard_ver)
 {
     cJSON *data = cJSON_CreateObject();

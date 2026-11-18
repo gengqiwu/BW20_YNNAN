@@ -1,3 +1,7 @@
+/**
+ * @file APP_NetWork.c
+ * @brief 管理 Wi-Fi 与 TLS 客户端连接、MQTT 收发任务及 HTTP/OTA 期间的连接暂停。
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -40,6 +44,11 @@ APP_CLIENT_STA_T APP_pxGetClientSta(void)
 }
 
 
+/**
+ * @brief 设置客户端状态，进入暂停状态时记录本次暂停起点。
+ * @param[in] xSta 目标客户端状态；CLIENT_ISPAUSED 触发 10 分钟恢复计时。
+ * @note 重复设置暂停会刷新起点；此接口不关闭 TLS，也不提供状态访问互斥。
+ */
 void APP_pxSetClientSta(APP_CLIENT_STA_T xSta)
 {
     if (xSta == CLIENT_ISPAUSED) {
@@ -48,6 +57,10 @@ void APP_pxSetClientSta(APP_CLIENT_STA_T xSta)
     g_xAppNetInfo.xClientSta = xSta;
 }
 
+/**
+ * @brief 关闭现有 TLS 连接并清空句柄；有连接时再延时约 300 毫秒。
+ * @note 不改变客户端状态，不提供与读写任务的互斥；须由调用方协调访问及状态切换。
+ */
 void APP_prvClientCloseSocket(void)
 {
 
@@ -79,6 +92,11 @@ int APP_lClientWrite(char *pcBuf, int lLen)
 
 
 
+/**
+ * @brief Wi-Fi 状态变化时更新连接记录及本地、设备状态指示灯。
+ * @param[in] xSta Wi-Fi 层报告的工作状态；与已记录状态相同则忽略。
+ * @note Wi-Fi 连接指示不等价于 MQTT 已完成登录。
+ */
 void APP_prvWifiWorkSta(WIFI_WORK_STA_T xSta)
 {
 
@@ -130,6 +148,15 @@ void APP_prvWifiWorkSta(WIFI_WORK_STA_T xSta)
 }
 
 
+/**
+ * @brief 持续驱动 Wi-Fi 重试、引导请求、TLS 重连及 MQTT 接收解析。
+ * @param[in] pvArg 任务参数，未使用。
+ * @note Wi-Fi 未连接时约每 10 秒交替尝试保存凭据和默认凭据，连接后清除重试计数。
+ *       TLS 断开状态会先通知 MQTT 断线、关闭旧句柄，再以 10 秒超时建立新连接；读错误转断开状态。
+ * @note 暂停期间跳过该任务的联网、引导及 TLS 处理，约每秒检查；
+ *       距最近一次设置暂停满 10 分钟后转断开状态，下轮恢复连接流程。
+ *       暂停本身不关闭已有 TLS，亦不停止独立的 MQTT 状态任务。
+ */
 static void APP_prvClientTlsTask(void *pvArg)
 {
     
@@ -327,6 +354,10 @@ static void APP_prvMqttTask(void *arg)
 }
 
 
+/**
+ * @brief 设置网络注册指示灯，并分别创建 TLS 客户端任务和 MQTT 状态维护任务。
+ * @note TLS 任务负责接收及重连，MQTT 任务约每 100 毫秒维护协议状态；未检查任务创建返回值。
+ */
 void APP_vNetWorkInit(void)
 {
 

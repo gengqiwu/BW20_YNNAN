@@ -1,3 +1,7 @@
+/**
+ * @file thing_mqtt.c
+ * @brief MQTT 连接、订阅、心跳及客户端阶段状态管理。
+ */
 /*
  * @Author: linjunqi linjunqi@leyaoyao.org
  * @Date: 2022-05-27 17:33:56
@@ -377,6 +381,11 @@ void lyy_mqtt_set_status(uint8_t status)
     mqttClient.clientSta = status;
 }
 
+/**
+ * @brief 直接设置 MQTT 客户端处理阶段。
+ * @param[in] para 阶段值，赋值到 uint8_t clientSta，不作范围校验。
+ * @note MQTT_STATE_ISPAUSED 阶段不推进状态机，但任务仍会调用已注册的状态回调。
+ */
 void lyy_mqtt_set_step(int para)
 {
     mqttClient.clientSta = para;

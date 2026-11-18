@@ -1,3 +1,4 @@
+/** @file APP_Led.c @brief 本地双色灯闪烁调度及纸钞盒系统状态缓存。 */
 #include <stdio.h>
 
 #include "USER_Config.h"
@@ -8,7 +9,9 @@
 #include "APP_Led.h"
 
 static uint8_t led_status = LED_STATUS_START_SYSTEM;
+/** @brief 返回供 STM32 的 0B 轮询使用的状态码。 @return LED_STATUS_* 缓存值。 */
 uint8_t get_led_status(void) { return led_status; }
+/** @brief 仅更新系统状态缓存。 @param[in] status STM32 网络状态协议编号。 */
 void set_led_status(uint8_t status) { led_status = status; }
 
 /* 慢闪间隔 450ms */

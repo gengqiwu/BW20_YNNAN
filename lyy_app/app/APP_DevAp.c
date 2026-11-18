@@ -1,3 +1,7 @@
+/**
+ * @file APP_DevAp.c
+ * @brief 连接预置配网热点，通过 UDP 广播发现设备并接收新 Wi-Fi 凭据。
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -73,6 +77,11 @@ static void APP_prvUdpSendSuccess(void)
 }
 
 
+/**
+ * @brief 在 Wi-Fi 已连接且广播地址非空时广播设备 hello 信息。
+ * @param[in] pvArg 软件定时器参数，未使用。
+ * @note 可由工作任务或周期定时器调用；此处不提供并发互斥。
+ */
 static void APP_prvUdpSendHandShake(void *pvArg)
 {
 
@@ -107,6 +116,13 @@ static void APP_prvUdpSendHandShake(void *pvArg)
 }
 
 
+/**
+ * @brief 校验并保存 UDP JSON 中的站点凭据，回复 bye 后请求重启。
+ * @param[in] pucData 调用方已补 NUL 结尾的接收数据，不在此释放。
+ * @param[in] ulDataLen 接收字节数；当前未用于限制 JSON 解析范围。
+ * @note SSID 必须为 1～32 字节字符串；密码可为空但不能占满密码数组。
+ *       保存接口返回值未检查，回复不代表已确认持久化成功。
+ */
 static void APP_prvUdpRecvDataProc(uint8_t *pucData, uint32_t ulDataLen)
 {
 
@@ -158,6 +174,13 @@ cjson_exit:
 }
 
 
+/**
+ * @brief 连接预置热点，在 8684 端口接收配网数据并更新广播地址。
+ * @param[in] pvArg 任务参数，未使用。
+ * @note 联网后向 8888 端口广播；接收最多 255 字节并补 NUL 后解析。
+ *       创建 UDP 服务失败会删除当前任务，否则循环运行。
+ * @warning 调试日志输出原始 UDP 内容，可能包含配网密码。
+ */
 static void APP_prvDevApTask(void *pvArg)
 {
 

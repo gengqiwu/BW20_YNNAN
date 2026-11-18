@@ -1,3 +1,8 @@
+/**
+ * @file lyy_para.h
+ * @brief 设备类型、支付套餐、业务参数及设备配置存储接口定义。
+ * @note 设备配置初始化仍使用 DEVICE_TYPE_DEFAULT，不将默认配置强制识别为纸钞类型。
+ */
 /*
  * @author: e.he
  * @Date: 2022-02-17 10:59:30

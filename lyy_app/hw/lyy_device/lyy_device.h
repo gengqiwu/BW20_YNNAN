@@ -1,3 +1,4 @@
+/** @file lyy_device.h @brief 标准主板代理协议、即时支付状态和旧 CD 镜像分包上下文。 */
 /*
  * @author: e.he
  * @Date: 2022-10-09 11:20:15
@@ -174,11 +175,19 @@ extern BOARD_OTA_PARAM_DEF     board_ota_param_t;
 
 
 
+/** @brief 初始化正常串口协议及登录/总账轮询，在 APP 启动分支选择前调用一次。 */
 extern void lyy_init_device(void);
 extern void device_qureyConect(uint8_t type);
 extern char device_buildPacket(PDEVICE_PACK_DEF pack);
 extern void device_packet_data_length(uint8_t cmd, uint8_t *data, uint16_t dataLen);
+/** @brief 读取缓存并发下一旧 CD 升级块。 @retval 1 已调用发送封装。 @retval 0 已结束或读失败。 */
 extern int board_ota_status_send(void);
+/**
+ * @brief 重置升级上下文，缓存版本与镜像大小。
+ * @param[in] version NUL 结尾版本，最多保留 20 字节。
+ * @param[in] file_name 当前未使用的兼容形参。
+ * @param[in] file_size 总字节数，下载层另检查容量。
+ */
 extern void board_ota_param_init(char *version,char *file_name,uint32_t file_size);
 extern uint16_t login_mark_get(void);
 

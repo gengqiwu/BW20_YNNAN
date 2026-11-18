@@ -1,3 +1,7 @@
+/**
+ * @file lyy_start.h
+ * @brief 支付事件参数、申请及启动结果码和启动队列提交接口。
+ */
 /*
  * @author: e.he
  * @Date: 2022-03-24 14:28:33
@@ -63,6 +67,10 @@ typedef struct
 }__attribute__ ((aligned (1), packed)) GET_PAY_URL_PARAM_DEF;
 
 
+/**
+ * @brief 事件队列复制的支付请求，channel 表示主板通道而非原货道二维坐标。
+ * @note uniqueid 与 pay_apply_id 分别保存订单号和云端请求标识，提交入口均最多复制 63 字节。
+ */
 typedef struct {
 
     uint32_t    number;
@@ -90,6 +98,17 @@ extern char     *get_py_url_uinque_code(uint8_t id);
 extern uint8_t  pay_url_package_id_get(void);
 extern void     pay_url_package_id_set(uint8_t package_id);
 extern uint8_t  pay_url_wallet_number_get(void);
+/**
+ * @brief 尝试复制并提交支付申请或启动事件。
+ * @param[in] type 仅 START_TYPE_PAY_APPLY、START_TYPE_PAY_START 触发提交。
+ * @param[in] num 启动数量。
+ * @param[in] order 订单号，可截断为 63 字节。
+ * @param[in] x 主板通道。
+ * @param[in] y 未使用的兼容参数。
+ * @param[in] id 请求标识，可截断为 63 字节。
+ * @retval 0 order 或 id 为空。
+ * @retval 1 其余情况，不代表实际入队或硬件处理成功。
+ */
 extern int      api_std_start_entryQue(uint8_t type,uint16_t num,char *order , uint16_t x, uint16_t y, char *id);
 
 

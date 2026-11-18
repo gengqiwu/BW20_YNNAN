@@ -1,3 +1,8 @@
+/**
+ * @file test_zcj.c
+ * @brief 真实 D6 编解码主机回归：参数 ACK、订单/通道关联、32 位接单结果、现金 ACK/去重及配置字段。
+ * @note 用模拟传输同步注入应答，另覆盖非阻塞总账查询与短帧，不替代真实并发和硬件联调。
+ */
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>

@@ -1,3 +1,7 @@
+/**
+ * @file lyy_tjc.h
+ * @brief 淘晶驰屏幕页面状态、支付显示参数及主板透传收发接口。
+ */
 /*
  * @author: lyz
  * @Date: 2022-10-18 09:58:29
@@ -55,6 +59,10 @@ typedef enum
     TJC_SHOW_SCREEN_OTA,   // 
 } TJC_SHOW_STATE;
 
+/**
+ * @brief 保留的接收队列单元描述。
+ * @note 当前接收入口直接解析而非入队，出队兼容接口固定返回 -1。
+ */
 typedef struct {
     uint16_t len;
     uint8_t *packet;

@@ -1,3 +1,8 @@
+/**
+ * @file lyy_mcu_ota.c
+ * @brief 以 1024 字节为块向 STM32 发送缓存固件，每块等待匹配 ACK 后前进。
+ * @note 对端要求严格递进偏移，超时或缓存读失败时停止，不自动重发已可能写入的块。
+ */
 #include <string.h>
 #include "HAL_System.h"
 #include "HAL_Flash.h"
@@ -12,8 +17,10 @@ static volatile uint8_t active;
 static uint32_t expected_offset, expected_len, expected_total;
 static char expected_name[20];
 
+/** @brief 返回当前传输任务忙状态，详细语义见 lyy_mcu_ota.h。 */
 int lyy_mcu_ota_busy(void) { return active; }
 
+/** @brief 验证当前块 ACK 后释放信号量，帧要求见 lyy_mcu_ota.h。 */
 void lyy_mcu_ota_ack(const uint8_t *frame, uint16_t length)
 {
     ZJC_OPEN_UPDATE_RES_T ack;
@@ -25,6 +32,12 @@ void lyy_mcu_ota_ack(const uint8_t *frame, uint16_t length)
     xSemaphoreGive(ack_sem);
 }
 
+/**
+ * @brief 独立传输任务：读取缓存、清旧信号、发块并等待最多 5 秒。
+ * @param[in] arg 任务参数，未使用。
+ * @note 所有块确认后仅表示传输已确认，仍须等待 STM32 复位并核对运行版本。
+ *       结束时清忙标记并删除当前任务，信号量保留供后续升级复用。
+ */
 static void mcu_ota_thread(void *arg)
 {
     (void)arg;
@@ -49,6 +62,7 @@ static void mcu_ota_thread(void *arg)
     vTaskDelete(NULL);
 }
 
+/** @brief 创建单次传输任务并初始化应答匹配字段，返回契约见 lyy_mcu_ota.h。 */
 int lyy_mcu_ota_start(void)
 {
     if (active || !board_ota_param_t.file_size || board_ota_param_t.file_size > FILE_NAME_HW_DEVICE_OTA_SIZE) return 0;

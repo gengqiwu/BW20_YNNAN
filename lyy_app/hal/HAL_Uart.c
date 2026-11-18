@@ -1,3 +1,8 @@
+/**
+ * @file HAL_Uart.c
+ * @brief BW20 硬件 UART 接收 DMA/任务适配及互斥 FIFO 发送。
+ * @note UART0 PA30/PA31 为 STM32 主链路；LOG UART 由 SDK 初始化并单独处理。
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -254,6 +259,11 @@ static uint32_t HAL_prulUart1RxIRQHandlerCb(void *pvArg)
 }
 
 
+/**
+ * @brief 设置串口速率和空闲阈值，主板链路强制固定为 115200。
+ * @param[in] ucPort 硬件串口索引。
+ * @param[in] ulBaud 目标速率，对 MAIN_BOARD 的请求值会被覆盖。
+ */
 void HAL_vUartSetParam(uint8_t ucPort,uint32_t ulBaud)
 {
     if (ucPort >= HAL_UART_MAX) return;
@@ -274,6 +284,11 @@ void HAL_vUartSetParam(uint8_t ucPort,uint32_t ulBaud)
 
 }
 
+/**
+ * @brief 注册串口任务的同步接收回调。
+ * @param[in] ucPort 硬件串口索引，DEBUG 和越界值忽略。
+ * @param[in] xRecvFunc 当前接收处理函数，可为 NULL。
+ */
 void HAL_vUartRecvProc(uint8_t ucPort, vRecvFunc xRecvFunc)
 {
     if (ucPort >= HAL_UART_MAX) return;
@@ -281,6 +296,13 @@ void HAL_vUartRecvProc(uint8_t ucPort, vRecvFunc xRecvFunc)
 }
 
 
+/**
+ * @brief 将发送数据复制到 UART FIFO，接口约束和毫秒超时语义见 HAL_Uart.h。
+ * @param[in] ucPort 硬件端口或独立 LOG UART。
+ * @param[in] pucData 源缓冲，函数返回后不再被本函数引用。
+ * @param[in] ulLen 字节数。
+ * @param[in] ulTimeout 等待 FIFO 可写的毫秒上限，0 使用 1000 ms。
+ */
 void HAL_vUartSend(uint8_t ucPort, uint8_t *pucData, uint32_t ulLen, uint32_t ulTimeout)
 {
 
@@ -305,6 +327,11 @@ tx_done:
 }
 
 
+/**
+ * @brief 主板接收任务：读取环形缓冲、补终止符并递交实际字节数。
+ * @param[in] pvArg 任务参数，未使用。
+ * @note DMA 接收块不是协议帧；正常业务由流式分帧处理，工厂模式单独累积 ASCII。
+ */
 static void HAL_prvUartEventMainTask(void *pvArg)
 {
 
@@ -339,6 +366,10 @@ static void HAL_prvUartEventMainTask(void *pvArg)
 }
 
 
+/**
+ * @brief 保留的第二硬件 UART 接收任务，纸钞盒屏幕业务不使用此物理口。
+ * @param[in] pvArg 任务参数，未使用。
+ */
 static void HAL_prvUartEventScreenTask(void *pvArg)
 {
 
@@ -372,6 +403,12 @@ static void HAL_prvUartEventScreenTask(void *pvArg)
 }
 
 
+/**
+ * @brief 创建单端口互斥锁、接收 DMA/环形缓冲及接收任务。
+ * @param[in] ucPort 硬件串口索引，LOG UART 无需在此重复初始化。
+ * @param[in] ulBaud 初始速率，主启动流程为 STM32 链路传入 115200。
+ * @note 非法端口或已有接收缓冲时直接返回；资源创建失败没有状态返回。
+ */
 void HAL_vUartInit(uint8_t ucPort, uint32_t ulBaud)
 {
     /* LOG UART is already initialized by the SDK. */

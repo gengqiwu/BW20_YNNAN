@@ -1,3 +1,7 @@
+/**
+ * @file thing_event.c
+ * @brief 物模型业务事件封装，包含纸钞通道账目及最终启动结果上报。
+ */
 /*
  * @author: e.he
  * @Date: 2024-06-20 17:41:30
@@ -64,6 +68,17 @@ void event_post_out_coin_result(char *result, uint32_t out_coins, char *unique_c
     }
 }
 
+/**
+ * @brief 更新纸钞通道累计值并上报账目事件。
+ * @param[in] inc 本次通道增量。
+ * @param[in] sum 该通道最新累计值。
+ * @param[in] pay_mode 支付方式字符串。
+ * @param[in] order 订单号；NULL 时生成随机字符串。
+ * @param[in] event_id 云端事件标识。
+ * @param[in] channel 主板通道；硬币脉冲 101 写入 ch_acc[0]，纸钞脉冲 100 写入 ch_acc[1]，两者上报通道均为 9；0～10 写入 ch_acc[1+channel]。
+ * @note channel_count 仅拼接 ch_acc[2..9] 和 ch_acc[0]，不含 ch_acc[1]。
+ * @warning 总账 ch_sum 为 0 时直接丢弃，不更新累计值也不补发；JSON 分配失败也不发送，不提供离线持久化。
+ */
 void event_post_account_note(uint32_t inc, uint32_t sum, char *pay_mode, char *order, char *event_id, int32_t channel)
 {
     char sum_acc[128] = {0};
@@ -89,6 +104,13 @@ void event_post_account_note(uint32_t inc, uint32_t sum, char *pay_mode, char *o
     cJSON_AddStringToObject(value, "order", order == NULL ? get_random_string() : order);
     thing_event_post(value, event_id);
 }
+/**
+ * @brief 将主板 0x07 最终执行结果封装为 start_result 事件。
+ * @param[in] result 最终结果码，通过 get_apply_start_result_type 转为字符串。
+ * @param[in] channel 主板返回通道，原值上报。
+ * @param[in] order 对应订单号。
+ * @note 区别于 pay_start 即时接单应答；JSON 分配失败时直接返回。
+ */
 void event_post_start_result_note(uint32_t result, uint32_t channel, char *order)
 {
     cJSON *value = cJSON_CreateObject();

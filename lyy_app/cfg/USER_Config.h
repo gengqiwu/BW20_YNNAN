@@ -66,7 +66,7 @@
 #define CFG_PM_MODEL		(CFG_PM_DWIN)
 
 
-/* Dedicated STM32 cash-box firmware; business baseline ESP32C2_ZCJ_V1.0.4. */
+/** @brief 纸钞盒分支固件标识，业务基准 ESP32C2_ZCJ_V1.0.4，云端按 BW20 镜像升级。 */
 #define CFG_APP_VERSION                         "BW20_ZCJ_V1.0.0"
 #define CFG_SDK_VERSION                         "AMEBA_RTOS_SDK_V1.0.1"    
 #define CFG_HARD_VERSION                        "BW20_LYY_V1.00"    

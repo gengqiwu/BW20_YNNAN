@@ -1,3 +1,7 @@
+/**
+ * @file thing_property.h
+ * @brief 物模型属性回调、故障数据及主板版本上报接口声明。
+ */
 /*
  * @author: e.he
  * @Date: 2024-06-20 17:42:12

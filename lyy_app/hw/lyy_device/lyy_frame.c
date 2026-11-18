@@ -1,12 +1,24 @@
+/** @file lyy_frame.c @brief 串口半包累积、粘包拆分和校验错误后的帧头重同步。 */
 #include "lyy_frame.h"
 #include <string.h>
 
+/**
+ * @brief 丢弃缓存头部指定数量的字节并前移剩余数据。
+ * @param[in,out] s 接收流。
+ * @param[in] count 丢弃字节数，调用者保证不大于 s->used。
+ */
 static void discard(lyy_frame_stream *s, size_t count)
 {
     s->used -= count;
     memmove(s->data, s->data + count, s->used);
 }
 
+/**
+ * @brief 消费缓存中的完整合法帧，遇到未接收完整的帧时保留并返回。
+ * @param[in,out] s 当前接收流，回调返回后会移动内部缓存。
+ * @param[in] callback 可为空的同步业务回调。
+ * @note D6 屏幕长度位于字节 5/6，CD 长度位于字节 4/5，均为小端，不能混用。
+ */
 static void drain(lyy_frame_stream *s, lyy_frame_callback callback)
 {
     while (s->used) {
@@ -38,6 +50,7 @@ static void drain(lyy_frame_stream *s, lyy_frame_callback callback)
     }
 }
 
+/** @brief 流式接收入口，参数与缓存生命周期约定见 lyy_frame.h。 */
 void lyy_frame_feed(lyy_frame_stream *s, const uint8_t *data, size_t len,
                     uint32_t tick, lyy_frame_callback callback)
 {

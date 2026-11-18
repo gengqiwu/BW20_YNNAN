@@ -1,3 +1,4 @@
+/** @file APP_Param.c @brief 保留 BW20 文件布局，适配纸钞盒参数持久化和旧设备号兼容读取。 */
 /*
  * @Author: linjunqi linjunqi@leyaoyao.org
  * @Date: 2023-10-13 18:30:02
@@ -30,6 +31,11 @@ static APP_PARAM_T      g_xAppParam;
 static APP_DEV_INFO_T   g_xAppDevInfo;
 union U ulPulsetype;
 
+/**
+ * @brief 将 4 字节输出模式/端口配置更新到内存并保存为 ZCJ_PULSE_INFO。
+ * @param[in] value bytes[0] 为软件输出模式，bytes[1] 为对端输出端口，其余保留。
+ * @return LYY_SUCCESS 或 LYY_WRITE_PARAM_FAIL，文件保存失败时内存值不回滚。
+ */
 int APP_lPulseParamSetInfo(uint32_t value)
 {
     ulPulsetype.value = value;
@@ -37,6 +43,11 @@ int APP_lPulseParamSetInfo(uint32_t value)
         ? LYY_SUCCESS : LYY_WRITE_PARAM_FAIL;
 }
 
+/**
+ * @brief 读取独立输出配置，读不到完整 4 字节时采用脉冲/ZCJ1 默认值。
+ * @return LYY_SUCCESS 表示完整读到；LYY_READ_PARAM_FAIL 表示使用内存默认值。
+ * @note 默认值不会在本接口内立即写回文件。
+ */
 int APP_lPulseParaInit(void)
 {
     if (HAL_vFileRead("ZCJ_PULSE_INFO", (uint8_t *)&ulPulsetype, sizeof(ulPulsetype)) != sizeof(ulPulsetype)) {
@@ -48,16 +59,31 @@ int APP_lPulseParaInit(void)
     return LYY_SUCCESS;
 }
 
+/** @brief 检查已经加载的服务缓存标记，不访问文件。 @return LYY_SUCCESS 或 LYY_READ_PARAM_FAIL。 */
 int APP_lSerParamInit(void)
 {
     return g_xAppSer.cInitMark == APP_MASK_INIT_LOGO ? LYY_SUCCESS : LYY_READ_PARAM_FAIL;
 }
 
+/**
+ * @brief 适配业务参数文件读取，不改变底层短读语义。
+ * @param[in] name 文件名。
+ * @param[out] data 接收缓冲。
+ * @param[in] len 请求字节数。
+ * @return 实际读到的字节数，打开失败为 0。
+ */
 int32_t lyy_para_read(const char *name, uint8_t *data, uint32_t len)
 {
     return HAL_vFileRead(name, data, len);
 }
 
+/**
+ * @brief 适配业务参数整文件保存，原文件被截断。
+ * @param[in] name 文件名。
+ * @param[in] data 待保存数据。
+ * @param[in] len 字节数。
+ * @return 实际写入字节数，打开失败为 -1。
+ */
 int32_t lyy_para_write(const char *name, uint8_t *data, uint32_t len)
 {
     return HAL_vFileWrite(name, data, len);
@@ -249,6 +275,12 @@ int APP_lParamSetWifiInfo(WIFI_INFO_T *pcWifiInfo)
 }
 
 
+/**
+ * @brief 将设备号缓存清零后写入完整文件，允许最多 32 字节正文。
+ * @param[in] pcDevId NUL 结尾设备号，NULL 或超出缓冲长度时拒绝。
+ * @return LYY_SUCCESS 为完整写入，LYY_WRITE_PARAM_FAIL 为短写，LYY_FAIL 为输入非法。
+ * @note 设备号字符集由工厂层校验；文件失败时内存值已经改变，调用者应读回验证。
+ */
 int APP_vDevInfoInit(const char *pcDevId)
 {
 
@@ -330,6 +362,12 @@ static void APP_vParamDebug(void)
 
 
 
+/**
+ * @brief 加载设备号并兼容旧长度，再尝试初始化其他参数及读取独立输出配置。
+ * @return 设备号文件大小/标记无效为 LYY_READ_PARAM_FAIL，否则为 LYY_SUCCESS。
+ * @note 缺失的通用/服务参数采用默认值并尝试写回；这些写入的错误和独立输出读取失败
+ *       不传播为本函数失败。空设备号由 APP 启动层继续检查。
+ */
 int APP_lParamInit(void)
 {
 
