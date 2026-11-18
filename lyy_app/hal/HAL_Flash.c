@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
 
 
 #include "HAL_Log.h"
@@ -133,16 +134,35 @@ void HAL_vFileClear(const char *pcStore)
 
 
 /**
+ * @brief 获取 VFS 文件长度。
+ * @param[in] pcStore 相对于 VFS_REGION_1 的文件名。
+ * @return 文件长度（字节）。打开、定位或读取位置失败时返回负值。
+ * @note Realtek VFS 的 fseek 成功时返回新偏移，失败时返回负值。
+ */
+long HAL_lFileSize(const char *pcStore)
+{
+    char path[HAL_FLASH_VFS_PATH_MAX_LEN] = {0};
+    HAL_prvFileGetVfsPath(pcStore, path, sizeof(path));
+    FILE *file = fopen(path, "rb");
+    if (!file) return -1;
+
+    long size = fseek(file, 0, SEEK_END) < 0 ? -1 : ftell(file);
+    fclose(file);
+    return size;
+}
+
+/**
  * @brief 在文件偏移处写入，文件不存在时尝试创建。
  * @param[in] pcStore VFS 文件名。
  * @param[in] pucDuf 源数据。
  * @param[in] xSize 请求写入字节数。
  * @param[in] xOffset 从文件头起的字节偏移。
- * @return 实际写入字节数；打开失败为 0，定位失败为 -1。
- * @note 不截断已有文件；调用者应串行化同一镜像的下载与读取。
+ * @return 实际写入字节数。打开失败为 0，偏移越界、定位或关闭失败为 -1。
+ * @note Realtek VFS 的 fseek 允许非零成功返回值。已有文件保留未覆盖部分，调用者须串行化同一文件的读写。
  */
 int HAL_vFileWriteOffset(const char *pcStore, uint8_t *pucDuf, size_t xSize, size_t xOffset)
 {
+    if (xOffset > LONG_MAX) return -1;
 
     int  lRet                               = 0x00;
     char pcPath[HAL_FLASH_VFS_PATH_MAX_LEN] = {0x00, }; 
@@ -160,18 +180,15 @@ int HAL_vFileWriteOffset(const char *pcStore, uint8_t *pucDuf, size_t xSize, siz
     if (pxFd == NULL) return lRet;
 
     // 文件头开始进行偏移
-    if (fseek((FILE *)pxFd, xOffset, SEEK_SET)) { fclose((FILE *)pxFd); return -1; }
+    if (fseek((FILE *)pxFd, (long)xOffset, SEEK_SET) < 0) { fclose((FILE *)pxFd); return -1; }
 
     //lRet = fwrite(pucDuf, xSize, 1, (FILE *)pxFd);
     lRet = fwrite(pucDuf, 1, xSize, (FILE *)pxFd);
 
     LYY_LOGD("write : [%d]", lRet);
 
-    fclose((FILE *)pxFd);
-    
+    if (fclose((FILE *)pxFd) < 0) return -1;
     return lRet;
-
-
 }
 
 
@@ -181,10 +198,12 @@ int HAL_vFileWriteOffset(const char *pcStore, uint8_t *pucDuf, size_t xSize, siz
  * @param[out] pucDuf 至少 xSize 字节的目标缓冲。
  * @param[in] xSize 请求读取字节数。
  * @param[in] xOffset 字节偏移。
- * @return 实际读取字节数；打开失败为 0，定位失败为 -1。
+ * @return 实际读取字节数。打开失败为 0，偏移越界或定位失败为 -1。
+ * @note Realtek VFS 的 fseek 成功时可能返回正偏移。
  */
 int HAL_vFileReadOffset(const char *pcStore, uint8_t *pucDuf, size_t xSize, size_t xOffset)
 {
+    if (xOffset > LONG_MAX) return -1;
 
     int  lRet                               = 0x00;
     char pcPath[HAL_FLASH_VFS_PATH_MAX_LEN] = {0x00, }; 
@@ -204,7 +223,7 @@ int HAL_vFileReadOffset(const char *pcStore, uint8_t *pucDuf, size_t xSize, size
     }
 
     // 文件头开始进行偏移
-    if (fseek((FILE *)pxFd, xOffset, SEEK_SET)) { fclose((FILE *)pxFd); return -1; }
+    if (fseek((FILE *)pxFd, (long)xOffset, SEEK_SET) < 0) { fclose((FILE *)pxFd); return -1; }
 
     //lRet = fread(pucDuf, xSize, 1, (FILE *)pxFd);
     lRet = fread(pucDuf, 1, xSize, (FILE *)pxFd);

@@ -15,6 +15,12 @@
 #include "FreeRTOS.h"
 #include "semphr.h"
 #define SEM_TYPE SemaphoreHandle_t
+/** @brief BW20 的 D6/01 发送缓冲区容量，单位为字节。 */
+#define ZCJ_SCREEN_FRAME_CAPACITY (1024U + 128U)
+/** @brief D6/01 帧头、内嵌长度字段、XOR 校验及帧尾合计的字节数。 */
+#define ZCJ_SCREEN_FRAME_OVERHEAD 9U
+/** @brief D6/01 单帧可承载的最大屏幕原始数据长度，含屏幕自身的协议头。 */
+#define ZCJ_SCREEN_PAYLOAD_MAX (ZCJ_SCREEN_FRAME_CAPACITY - ZCJ_SCREEN_FRAME_OVERHEAD)
 
 /** @brief 特殊现金通道：100 表示纸钞脉冲，101 表示硬币脉冲。 */
 enum { NOTE_CHANNLE_PULSE = 100, NOTE_CHANNLE_COINS = 101 };

@@ -5,6 +5,8 @@
 extern void HAL_vFlashInit(void);
 
 extern void HAL_vFileClear(const char *pcStore);
+/** @brief 返回指定 VFS 文件的字节数，负值表示无法获取。 */
+extern long HAL_lFileSize(const char *pcStore);
 extern int  HAL_vFileRead(const char *pcStore,  uint8_t *pucDuf, size_t xSize);
 extern int  HAL_vFileWrite(const char *pcStore, uint8_t *pucDuf, size_t xSize);
 extern int  HAL_vFileReadOffset(const char *pcStore, uint8_t *pucDuf, size_t xSize, size_t xOffset);

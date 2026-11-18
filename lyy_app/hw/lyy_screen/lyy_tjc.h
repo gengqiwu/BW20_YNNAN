@@ -84,7 +84,6 @@ typedef enum
     PACKAGE_PAGE_NUMBER_5,          //5
 }PACKAGE_PAGE_NUMBER;
 
-#define TJC_SEND_PIC_PACKET_SIZE    2000//4096//1024*4
 
 typedef struct
 {

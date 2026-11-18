@@ -19,7 +19,7 @@ FLAGS=(-std=c99 -D_DEFAULT_SOURCE -Wall -Wextra -Werror -g -fsanitize=address,un
     "$ROOT/lyy_app/tests/test_mcu_ota.c" -o "$OUT/test_mcu_ota"
 "$OUT/test_mcu_ota"
 "$CC" "${FLAGS[@]}" -include stdint.h -D__HAL_LOG_H__ -include "$ROOT/lyy_app/tests/stubs/HAL_Log.h" -I "$ROOT/lyy_app/tests/stubs" -I "$ROOT/lyy_app/hal" \
-    "$ROOT/lyy_app/hal/HAL_Flash.c" "$ROOT/lyy_app/tests/test_flash.c" -o "$OUT/test_flash"
+    "$ROOT/lyy_app/hal/HAL_Flash.c" "$ROOT/lyy_app/tests/test_flash.c" -Wl,--wrap=fseek -o "$OUT/test_flash"
 TEST_FLASH_PREFIX="$OUT/flash" "$OUT/test_flash"
 "$CC" "${FLAGS[@]}" -I "$ROOT/lyy_app/tests/stubs" -I "$ROOT/lyy_app/hal" \
     -I "$ROOT/lyy_app/app" -I "$ROOT/lyy_app/cfg" -I "$ROOT/lyy_app/hw/lyy_device" \

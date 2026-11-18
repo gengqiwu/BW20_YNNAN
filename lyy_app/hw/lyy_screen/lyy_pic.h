@@ -141,20 +141,25 @@ typedef enum
     LYY_SENDPIC_TRANS = 1,
 }LYY_DISPLAY_SENDPIC_STATUS;
 
-//发送文件结构体内容
+/** @brief 当前串口屏图片的分包进度和重发状态。 */
 typedef struct
 {
     char                fileName[20];       //文件名
     unsigned int        fileSize;           //文件大小
     unsigned int        totalPack;          //总包数
     unsigned int        sendPack;           //发送包号
-    unsigned char       state;              //状态
+    uint8_t             retries;            /**< 当前分包的重发次数。 */
+    uint8_t             packetSent;         /**< 已发出第 0 包，可处理后续分包确认。 */
+    volatile uint8_t    state;              /**< 屏幕初始化任务和 UART 接收任务共享的传输模式。 */
 }LYY_SENDPIC,*PLYY_SENDPIC;
 
 
 
 #define LYY_DISPLAY_BUFF_MAX        2048
-#define LYY_SEND_PIC_PACKET_SIZE    2000   //1000+12
+/** @brief 单个图片分包的数据字节数，与 ESP32C2 参考实现一致。 */
+#define LYY_SEND_PIC_PACKET_SIZE    1000
+/** @brief 屏幕图片分包头长度，包含包头、包号和数据长度。 */
+#define LYY_SEND_PIC_HEADER_SIZE    12
 
 
 

@@ -1,6 +1,6 @@
 /**
  * @file test_zcj.c
- * @brief 真实 D6 编解码主机回归：参数 ACK、订单/通道关联、32 位接单结果、现金 ACK/去重及配置字段。
+ * @brief D6 编解码主机回归，覆盖支付、账目、配置和完整图片分包透传。
  * @note 用模拟传输同步注入应答，另覆盖非阻塞总账查询与短帧，不替代真实并发和硬件联调。
  */
 #include <assert.h>
@@ -9,6 +9,7 @@
 #include "lyy_zcj.h"
 #include "lyy_device.h"
 #include "lyy_para.h"
+#include "lyy_pic.h"
 #include "APP_Param.h"
 #include "APP_Led.h"
 #include "HAL_Uart.h"
@@ -76,6 +77,7 @@ void HAL_vUartSend(uint8_t port,uint8_t *p,uint32_t n,uint32_t timeout)
         uint8_t payload[41]={10};respond(p[4],payload,sizeof(payload));
     }
 }
+/** @brief 验证 D6 业务报文及图片透传容量边界。 @return 全部断言通过时返回 0。 */
 int main(void)
 {
     zcj_protocol_init();
@@ -103,6 +105,19 @@ int main(void)
     assert(info.dev_type==9 && info.brt==38400 && info.pluse_output==1 && info.pluse_outputPort==2 && info.pluse_level==1);
     unsigned before=signals;uint8_t short_packet[7]={0xAA,4,1,0xD6,3,0,0};
     lyy_zcj_packet_parse(short_packet,sizeof(short_packet));assert(signals==before);
+    uint8_t picture[LYY_SEND_PIC_HEADER_SIZE + LYY_SEND_PIC_PACKET_SIZE];
+    memset(picture, 0xA5, sizeof(picture));
+    last_len = 0;
+    zcj_packet_screen_dtu_send((char *)picture, sizeof(picture));
+    assert(last_len == sizeof(picture) + ZCJ_SCREEN_FRAME_OVERHEAD);
+    assert(last_frame[1] == 0xFF && last_frame[4] == ZCJ_SUB_CMD_DTU_SCREEN);
+    assert((last_frame[5] | (unsigned)last_frame[6] << 8) == sizeof(picture));
+    assert(memcmp(last_frame + 7, picture, sizeof(picture)) == 0);
+    last_len = 0;
+    uint8_t oversized[ZCJ_SCREEN_PAYLOAD_MAX + 1] = {0};
+    zcj_packet_screen_dtu_send((char *)oversized, sizeof(oversized));
+    assert(last_len == 0);
     puts("D6 tests passed: parameter ACK, matching orders/channels, u32 start result, timeout, cash ACK/dedup, final event, config fields, short frames");
+    puts("D6 screen tests passed: full picture packet and oversized payload rejection");
     return 0;
 }

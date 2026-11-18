@@ -80,15 +80,19 @@ int8_t zcj_build_packet(PZCJ_PACKET pack)
 }
 /**
  * @brief 以 D6/01、LEN=FF、小端 u16 长度封装屏幕原始字节。
- * @param[in] buffer 屏幕原始数据，NULL 时不发送。
- * @param[in] len 原始字节数；大于工作区容量减 9 时忽略。
+ * @param[in] buffer 屏幕原始数据，含屏幕自身的命令或分包头。
+ * @param[in] len 屏幕原始数据的字节数，上限为 ZCJ_SCREEN_PAYLOAD_MAX。
+ * @note 空指针或超长载荷记录错误并返回；发送函数不等待 STM32 或屏幕应答。
  */
 void zcj_build_packet_dtu(uint8_t *buffer, uint16_t len)
 {
-    uint8_t bytes[1024 + 128] = {0};
+    uint8_t bytes[ZCJ_SCREEN_FRAME_CAPACITY];
     PZCJ_PACKET_DTU tp = (PZCJ_PACKET_DTU)bytes;
     uint16_t length = len + 9;
-    if (len > sizeof(bytes) - 9 || buffer == NULL) return;
+    if (len > ZCJ_SCREEN_PAYLOAD_MAX || buffer == NULL) {
+        LYY_LOGE("Screen DTU payload rejected: %u bytes", (unsigned int)len);
+        return;
+    }
     tp->head = 0xAA;
     tp->len = 0xFF;
     tp->index = 1;

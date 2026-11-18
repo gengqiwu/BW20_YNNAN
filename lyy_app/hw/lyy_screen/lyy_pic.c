@@ -42,9 +42,14 @@
 #include "lyy_pic.h"
 #include "lyy_para.h"
 #include "lyy_start.h"
+#include "lyy_zcj.h"
 #include "thing_mqtt.h"
 
 #include "USER_Config.h"
+
+#if LYY_SEND_PIC_PACKET_SIZE + LYY_SEND_PIC_HEADER_SIZE > ZCJ_SCREEN_PAYLOAD_MAX
+#error Screen picture packet exceeds the D6 screen payload capacity
+#endif
 
 
 
@@ -56,11 +61,25 @@ char lyy_screen[64] = LYY_SCREEN_DEVICE_4880x243;
 
 
 LYY_SENDPIC sendPic;
+/** @brief 已在末包发出后收到屏幕的 FD FF FF FF 完成确认。 */
+static uint8_t picTransferComplete;
 static uint8_t g_SemSta;
 
 
 static uint32_t g_ulWriteOffset;
 static char g_pcPath[64];
+
+/**
+ * @brief 生成钱包图标或扫码提示图的 Flash 缓存文件名。
+ * @param[out] path 文件名缓冲区。
+ * @param[in] size 缓冲区容量，包含结尾的 NUL。
+ * @param[in] wallet 从 0 开始的支付渠道序号。
+ * @param[in] type PIG_WALLET 或 PIG_SCAN。
+ */
+static void picture_cache_path(char *path, size_t size, unsigned int wallet, uint8_t type)
+{
+    snprintf(path, size, type == PIG_WALLET ? "PAY_WALLET_%u" : "PAY_SCAN_%u", wallet);
+}
 
 SemaphoreHandle_t hw_httpGetPicUrlSem  = NULL;
 SemaphoreHandle_t hw_httpTranPicUrlSem = NULL;
@@ -627,9 +646,7 @@ http_retry :
 
     memset(g_pcPath, 0x00, sizeof(g_pcPath));
 
-    sprintf( g_pcPath, 
-            picVair.startGetPicType == PIG_WALLET ? "PAY_WALLET_%d" : "PAY_SCAN_%d", 
-            picVair.startGetPic);
+    picture_cache_path(g_pcPath, sizeof(g_pcPath), picVair.startGetPic, type);
 
 
     LYY_LOGD("pic : type : [%d] url_add = [%d] url : [%s] pcPath : [%s]", 
@@ -682,8 +699,9 @@ http_retry :
 
 
 /**
- * @brief 
- * http跟新图片
+ * @brief 检查当前渠道的图片缓存并下载所需文件。
+ * @details URL 已匹配的缓存仍须与元数据长度一致。缓存缺失或长度不符时，
+ *          重新下载该图片。处理完各渠道后进入串口屏传输阶段。
  */
 void getTjcPicUpdata(void)
 {
@@ -707,7 +725,19 @@ void getTjcPicUpdata(void)
         for(picVair.startGetPicType = PIG_WALLET; picVair.startGetPicType <= PIG_SCAN; picVair.startGetPicType++)
         {
 
-            if(picVair.picState[((picVair.startGetPic*PIC_INFO_MAX) + picVair.startGetPicType)] != TJC_PIC_STATE_UPDATA) 
+            unsigned int index = picVair.startGetPic * PIC_INFO_MAX + picVair.startGetPicType;
+            if (picVair.picState[index] == TJC_PIC_STATE_TRAN) {
+                char path[20];
+                picture_cache_path(path, sizeof(path), picVair.startGetPic, picVair.startGetPicType);
+                const INFOR_PIC_INFO *images = (const INFOR_PIC_INFO *)g_pxTjcPicFlashInfo.pucData;
+                long actual = HAL_lFileSize(path);
+                if (actual < 0 || (unsigned long)actual != images[index].filesize) {
+                    LYY_LOGW("Screen picture cache incomplete: %s, got %ld/%u",
+                             path, actual, images[index].filesize);
+                    picVair.picState[index] = TJC_PIC_STATE_UPDATA;
+                }
+            }
+            if (picVair.picState[index] != TJC_PIC_STATE_UPDATA)
                 continue;
 
             vTaskDelay(300 / portTICK_PERIOD_MS);
@@ -745,7 +775,8 @@ void lyy_pic_objTxt(char *objName, char *txt)
 }
 /**
  * @brief 将待传输图片依次发送到屏幕 RAM 文件。
- * @note 每张图发送前清除残留完成信号，最多等待 20000 ms；超时退出传输模式并标记失败，流程结束转为空闲。
+ * @note 分包进度通过信号量续期。20 秒未收到进度或接收失败时发送退出命令，
+ *       只有末包后的完成应答会将该图片标记为传输成功。
  */
 void getTjcPicTran(void)
 {
@@ -791,15 +822,16 @@ void getTjcPicTran(void)
             
             LYY_LOGD("========================  url_temp.filesize : [%d]  ulUrlAdd :[%d]" , pxTjcInfo->filesize, ulUrlAdd);
             xSemaphoreTake(hw_httpTranPicUrlSem, 0);
-            g_SemSta = 1;
-            lyy_display_sendPic("ram",file_name, pxTjcInfo->filesize);
-
-            
-            result = xSemaphoreTake(hw_httpTranPicUrlSem, pdMS_TO_TICKS(20000));
-            g_SemSta = 0;
-
-            if(result == 0)
+            result = 0;
+            if (lyy_display_sendPic("ram", file_name, pxTjcInfo->filesize)) {
+                do {
+                    result = xSemaphoreTake(hw_httpTranPicUrlSem, pdMS_TO_TICKS(20000));
+                } while (result && lyy_display_getSendPicStatus() == LYY_SENDPIC_TRANS);
+            }
+            if (!result || !picTransferComplete)
             {
+                LYY_LOGE("Screen picture transfer failed: %s, packet %u/%u",
+                         file_name, sendPic.sendPack, sendPic.totalPack);
                 picVair.picState[((picVair.startGetPic*PIC_INFO_MAX)+picVair.startGetPicType)] = TJC_PIC_RESULT_TRAN_FAIL;
                 lyy_display_setSendPicStatus(LYY_SENDPIC_NORMAL);
                 lyy_display_sendExitTrans();
@@ -862,20 +894,20 @@ int lyy_display_sendExitTrans(void)
 
 
 /**
- * @description: 外部图片传输指令
- * 
- * @param [in]    addr 地址路径(ram/sd0)
- * @param [in]    fileName 文件
- * @param [in]    fileSize  文件大小    
- * 
- * @return {int } 1成功/0失败
+ * @brief 初始化分包状态并向串口屏发送 twfile 命令。
+ * @param[in] addr 屏幕存储路径，如 ram 或 sd0。
+ * @param[in] fileName 图片文件名，不带 .xi 后缀，须适合传输状态的文件名缓冲区。
+ * @param[in] fileSize 图片字节数，须能用 16 位包号覆盖。
+ * @retval 1 已提交传输命令，随后等待屏幕应答。
+ * @retval 0 路径或文件名指针为空，或者文件长度超出可传输范围。
+ * @note 先进入传输状态再发送 twfile，避免漏掉先到达的 FE 确认。
  */
 int lyy_display_sendPic(char *  addr, char * fileName, unsigned int  fileSize)
 {
     int res = 1;
     if(addr == NULL) return 0;
     if(fileName == NULL) return 0;
-    if(fileSize == 0) return 0;
+    if (fileSize == 0 || fileSize > (UINT16_MAX + 1U) * LYY_SEND_PIC_PACKET_SIZE) return 0;
 
     char CmdBuff[LYY_DISPLAY_BUFF_MAX] = {0x00,};
     
@@ -887,7 +919,10 @@ int lyy_display_sendPic(char *  addr, char * fileName, unsigned int  fileSize)
 
     memcpy(sendPic.fileName,fileName,strlen(fileName));
     sendPic.fileSize = fileSize;
-    sendPic.sendPack = 0;       // 从第0包开始
+    sendPic.sendPack = 0;
+    sendPic.retries = 0;
+    sendPic.packetSent = 0;
+    picTransferComplete = 0;
 
     sendPic.totalPack = (fileSize/LYY_SEND_PIC_PACKET_SIZE);
     if(fileSize%LYY_SEND_PIC_PACKET_SIZE != 0)
@@ -903,156 +938,99 @@ int lyy_display_sendPic(char *  addr, char * fileName, unsigned int  fileSize)
     LYY_LOGD("====================================================");
     LYY_LOGD("====================================================");
 
-    lyy_display_send((unsigned char *)CmdBuff,strlen((const char *)CmdBuff));
-
     lyy_display_setSendPicStatus(LYY_SENDPIC_TRANS);
+    lyy_display_send((unsigned char *)CmdBuff,strlen((const char *)CmdBuff));
 
     return res;
 }
 
 /**
- * @brief 在图片传输模式下处理屏幕返回的二进制确认。
- * @param[in] pack 接收数据，不要求零结尾。
- * @param[in] len 数据字节数；四字节确认使用长度检查和 memcmp。
- * @retval 0 参数为空、长度为零或当前不在图片传输状态。
- * @retval 1 已进入处理流程，包含未识别确认的情况，不等同图片发送成功。
- * @note 0x05 推进分包，0x04 重发当前包，结束确认使等待方获得信号量。
+ * @brief 处理 STM32 转发的串口屏图片确认，包括同帧中的多个确认。
+ * @param[in] pack 屏幕返回的原始字节，不需要 NUL 结尾。
+ * @param[in] len 有效字节数。
+ * @retval 1 至少识别一条图片确认。
+ * @retval 0 缓冲区为空、当前未传图或未识别出图片确认。
+ * @details FE 开始传输，05 推进分包，04 重发当前包，06 表示启动失败。
+ *          FD 仅在末包发出后记为完成，进度和终止结果均通过信号量唤醒等待任务。
  */
-int lyy_display_recvPic(unsigned char * pack,unsigned int  len)
+int lyy_display_recvPic(unsigned char *pack, unsigned int len)
 {
-    if(pack == NULL) return 0;
-    if(len == 0) return 0;
+    if (!pack || !len || lyy_display_getSendPicStatus() != LYY_SENDPIC_TRANS) return 0;
 
-    if(lyy_display_getSendPicStatus() != LYY_SENDPIC_TRANS ) return 0;
-
-    #define PIC_CMD_FILE_SUCESS "\xfe\xff\xff\xff"
-    #define PIC_CMD_FILE_FAIL "\x06\xff\xff\xff"
-    #define PIC_CMD_FILE_END "\xfd\xff\xff\xff"
-
-    if (len >= 4 && memcmp(pack, PIC_CMD_FILE_SUCESS, 4) == 0)
-    {
-        LYY_LOGD(" PIC_CMD_FILE_SUCESS");
-        lyy_display_pick(sendPic.sendPack);
-
-    }else if (len >= 4 && memcmp(pack, PIC_CMD_FILE_FAIL, 4) == 0)
-    {
-        LYY_LOGD(" PIC_CMD_FILE_FAIL");
-        lyy_display_setSendPicStatus(LYY_SENDPIC_NORMAL);
-
-    }else if (pack[0] == 0x05)     // 传输成功
-    {
-        LYY_LOGD(" 0x05");
-
-        // 发送下一包数据
-        sendPic.sendPack++;
-        lyy_display_pick(sendPic.sendPack);
-
-
-    }else if(pack[0] == 0x04)      // 传输失败
-    {
-        LYY_LOGD(" 0x04");
-        // 重新发送该包数据
-        lyy_display_pick(sendPic.sendPack);
-        
-    }else if (len >= 4 && memcmp(pack, PIC_CMD_FILE_END, 4) == 0)
-    {
-        LYY_LOGD(" PIC_CMD_FILE_END");
-        // 切换回普通模式
-        lyy_display_setSendPicStatus(LYY_SENDPIC_NORMAL);
-        if(g_SemSta)
-        {
-            xSemaphoreGive(hw_httpTranPicUrlSem);  
-            g_SemSta = 0x00;
+    int handled = 0;
+    while (len && lyy_display_getSendPicStatus() == LYY_SENDPIC_TRANS) {
+        uint8_t status = *pack++;
+        len--;
+        if (status == 0xFF && handled) continue;
+        if (status == 0xFE || status == 0xFD || status == 0x06) {
+            if (len < 3 || memcmp(pack, "\xff\xff\xff", 3) != 0) break;
+            pack += 3;
+            len -= 3;
+        } else if (status != 0x04 && status != 0x05) {
+            break;
         }
-    
-    }             
+        handled = 1;
 
-    return 1;
+        if (status == 0xFD) {
+            // 退出传输也可能收到 FD，只有末包发出后才接受完成确认。
+            if (!sendPic.packetSent || sendPic.sendPack + 1 != sendPic.totalPack) continue;
+            picTransferComplete = 1;
+        } else if (status != 0x06) {
+            if (status == 0x05) {
+                if (!sendPic.packetSent || sendPic.sendPack + 1 >= sendPic.totalPack) continue;
+                sendPic.sendPack++;
+                sendPic.retries = 0;
+            } else if (status == 0x04 || sendPic.packetSent) {
+                if (!sendPic.packetSent) continue;
+                if (++sendPic.retries > 3) goto transfer_done;
+            }
+            if (lyy_display_pick(sendPic.sendPack)) {
+                sendPic.packetSent = 1;
+                xSemaphoreGive(hw_httpTranPicUrlSem);
+                continue;
+            }
+        }
+
+transfer_done:
+        lyy_display_setSendPicStatus(LYY_SENDPIC_NORMAL);
+        xSemaphoreGive(hw_httpTranPicUrlSem);
+    }
+    return handled;
 }
 
 /**
- * @brief 从本地图片文件读取指定分包并转交屏幕发送入口。
+ * @brief 从 Flash 图片缓存读取并发送指定分包。
  * @param[in] packet 从 0 开始的分包序号。
- * @return 重复发送保护触发或读取结果检查失败时为 0；序号不小于总包数时为 1 且不发送；否则返回内部文件读取结果。
- * @note 最后一包按文件剩余字节发送，上限为 LYY_SEND_PIC_PACKET_SIZE；返回值不检查 D6 实际送达情况。
+ * @retval 1 已将完整的屏幕分包交给 D6/01 发送入口。
+ * @retval 0 包号越界或缓存读取长度不足。
+ * @note 数据长度按文件剩余字节计算，整除分包大小的末包仍发送完整数据。
  */
-int lyy_display_pick(unsigned int  packet)
+int lyy_display_pick(unsigned int packet)
 {
+    if (packet >= sendPic.totalPack) return 0;
 
-    unsigned int res        = 1;
-    unsigned int readSize   = 0;
-    unsigned int offset     = 0;
-
-    // 防卡死
-    static unsigned char sendNum        = 0;
-    static unsigned char sendNumCount   = 0;
-
-    LYY_LOGD(" send pic sendPic.sendPack =%d",sendPic.sendPack);
-    if(sendNum == sendPic.sendPack)
-    {
-        sendNumCount++;
-        if(sendNumCount>=3)
-        {
-            LYY_LOGD("send pic times out!!!! id=%d", sendPic.sendPack);
-            sendNumCount = 0;
-            sendNum = 0;
-            LYY_LOGD("picSend_sendProcess end");
-            memset(&sendPic, 0x00, sizeof(LYY_SENDPIC));
-            lyy_display_setSendPicStatus(LYY_SENDPIC_NORMAL);
-            lyy_display_sendExitTrans();
-            return 0;
-        }    
-    }
-    else
-    {
-        sendNum = sendPic.sendPack;
-        sendNumCount = 0;
-    }
-
-    if (packet >= sendPic.totalPack) return 1;
-    offset = packet * LYY_SEND_PIC_PACKET_SIZE;
-    readSize = sendPic.fileSize - offset;
+    unsigned int offset = packet * LYY_SEND_PIC_PACKET_SIZE;
+    unsigned int readSize = sendPic.fileSize - offset;
     if (readSize > LYY_SEND_PIC_PACKET_SIZE) readSize = LYY_SEND_PIC_PACKET_SIZE;
 
-    offset = packet*LYY_SEND_PIC_PACKET_SIZE;
+    unsigned char fileBuff[LYY_SEND_PIC_HEADER_SIZE + LYY_SEND_PIC_PACKET_SIZE] = {
+        0x3a, 0xa1, 0xbb, 0x44, 0x7f, 0xff, 0xfe, 0x00
+    };
+    fileBuff[8] = packet & 0xff;
+    fileBuff[9] = packet >> 8;
+    fileBuff[10] = readSize & 0xff;
+    fileBuff[11] = readSize >> 8;
 
-    LYY_LOGD(" send pic offset =%d",offset);
-
-    unsigned char fileBuff[LYY_DISPLAY_BUFF_MAX] = {0x00, };
-
-    // 拼接数据
-    memcpy(fileBuff,"\x3a\xa1\xbb\x44\x7f\xff\xfe", 7);         //包头
-    fileBuff[7] = 0x00;                                         //无校验
-    memcpy(&fileBuff[8],&sendPic.sendPack, 2);                  //第几包数 
-    memcpy(&fileBuff[10],&readSize, 2);                         //数据大小
-
-
-    // 获取要保存的地址文件长度
-    sprintf( g_pcPath, 
-            picVair.startGetPicType == PIG_WALLET ? "PAY_WALLET_%d" : "PAY_SCAN_%d", 
-            picVair.startGetPic);
-
-    res = HAL_vFileReadOffset(  g_pcPath, 
-                                (uint8_t *)&fileBuff[12], 
-                                readSize,
-                                offset);
-
-    LYY_LOGD("===========g_pcPath= [%s] [%d]", g_pcPath, readSize); 
-    
-
-
-    if(res <= 0)
-    {
-        LYY_LOGD(" picSend_sendProcess read len error");
+    char path[20];
+    picture_cache_path(path, sizeof(path), picVair.startGetPic, picVair.startGetPicType);
+    int bytes = HAL_vFileReadOffset(path, fileBuff + LYY_SEND_PIC_HEADER_SIZE, readSize, offset);
+    if (bytes != (int)readSize) {
+        LYY_LOGE("Screen picture short read: %s, offset %u, got %d/%u", path, offset, bytes, readSize);
         return 0;
     }
 
-    LYY_LOGD(" picSend_sendProcess res=%d",res);
-
-    lyy_display_send(fileBuff, readSize + 12);
-
-    return res;
-
+    lyy_display_send(fileBuff, readSize + LYY_SEND_PIC_HEADER_SIZE);
+    return 1;
 }
 /**
  * @description: 设置控件外部图片
@@ -1078,15 +1056,15 @@ int lyy_display_setPicPath(char * name,char *  path)
     return 1;
 }
 /**
- * @brief 将指定钱包的两张支付图片绑定到屏幕控件。
+ * @brief 将指定钱包已传输成功的图片绑定到对应屏幕控件。
  * @param[in] page 页面字符串，目前仅含 pay 的页面执行图片绑定。
  * @param[in] walletNum 从 1 开始的钱包序号。
  * @retval 0 page 为 NULL 或钱包序号为 0。
  * @retval -1 select、result、working 或 warn 页面不提供图片。
  * @retval -2 钱包超出已有数量或页面不受支持。
- * @retval -3 元数据未准备或任一图片大小为零。
- * @retval 1 已请求绑定 wallet 和 wallet_type 控件，不保证屏幕显示成功。
- * @note 图片索引为 (walletNum-1)*PIC_INFO_MAX，与渠道序号一致。
+ * @retval -3 两张图片均未成功传输至屏幕。
+ * @retval 1 已请求绑定成功传至屏幕的图片。
+ * @note 图片索引为 (walletNum-1)*PIC_INFO_MAX，wallet 和 wallet_type 各自依据传输结果绑定。
  */
 int lyy_display_showpic(char *page,unsigned char walletNum)
 {
@@ -1096,49 +1074,49 @@ int lyy_display_showpic(char *page,unsigned char walletNum)
     LYY_LOGD("lyy_display_showpic1 %s:%d",page,walletNum);
     LYY_LOGD("lyy_display_showpic2 %s:%d",LYY_PIC_PAY_PAGE_TYPE,g_pxTjcPicFlashInfo.ucWalletNumSum);
     // 选择页面
-    if(memcmp(page, LYY_PIC_PACKAGES_PAGE_TYPE, strlen(LYY_PIC_PACKAGES_PAGE_TYPE)) == 0)
+    if(strncmp(page, LYY_PIC_PACKAGES_PAGE_TYPE, strlen(LYY_PIC_PACKAGES_PAGE_TYPE)) == 0)
     {
         return -1;
     }else if (strstr(page,LYY_PIC_PAY_PAGE_TYPE) != NULL) //
     {
 
         // 该页是否钱包数是否正确
-        if(walletNum > g_pxTjcPicFlashInfo.ucWalletNumSum)
+        if(walletNum > CHANNELINFO_MAX || walletNum > g_pxTjcPicFlashInfo.ucWalletNumSum)
         {
             LYY_LOGD("walletInfo.walletNum =========[%d]",g_pxTjcPicFlashInfo.ucWalletNumSum);
             return -2;
         }
 
         char file_name[20];
-
-        if (g_pxTjcPicFlashInfo.pucData == NULL) return -3;
-        INFOR_PIC_INFO *info = (INFOR_PIC_INFO *)g_pxTjcPicFlashInfo.pucData;
         unsigned int index = (walletNum - 1) * PIC_INFO_MAX;
-        if (info[index].filesize == 0 || info[index + 1].filesize == 0) return -3;
-        memset(file_name, 0, sizeof(file_name));
-        sprintf(file_name, "filename_%d", index);
-        lyy_display_setPicPath("wallet", file_name);
-        vTaskDelay(100 / portTICK_PERIOD_MS);
-        sprintf(file_name, "filename_%d", index + 1);
-        lyy_display_setPicPath("wallet_type", file_name);
-        vTaskDelay(100 / portTICK_PERIOD_MS);
+        int shown = 0;
+        if (picVair.picState[index] == TJC_PIC_RESULT_TRAN_SUCCESS) {
+            snprintf(file_name, sizeof(file_name), "filename_%u", index);
+            lyy_display_setPicPath("wallet", file_name);
+            vTaskDelay(100 / portTICK_PERIOD_MS);
+            shown = 1;
+        }
+        if (picVair.picState[index + 1] == TJC_PIC_RESULT_TRAN_SUCCESS) {
+            snprintf(file_name, sizeof(file_name), "filename_%u", index + 1);
+            lyy_display_setPicPath("wallet_type", file_name);
+            vTaskDelay(100 / portTICK_PERIOD_MS);
+            shown = 1;
+        }
+        return shown ? 1 : -3;
 
-
-    }else if (memcmp(page, LYY_PIC_RESULT_PAGE_TYPE, strlen(LYY_PIC_RESULT_PAGE_TYPE)) == 0)
+    }else if (strncmp(page, LYY_PIC_RESULT_PAGE_TYPE, strlen(LYY_PIC_RESULT_PAGE_TYPE)) == 0)
     {
         return -1;
-    }else if (memcmp(page, LYY_PIC_WORKING_PAGE_TYPE, strlen(LYY_PIC_WORKING_PAGE_TYPE)) == 0)
+    }else if (strncmp(page, LYY_PIC_WORKING_PAGE_TYPE, strlen(LYY_PIC_WORKING_PAGE_TYPE)) == 0)
     {
         return -1;
-    }else if (memcmp(page, LYY_PIC_WARN_PAGE_TYPE, strlen(LYY_PIC_WARN_PAGE_TYPE)) == 0)
+    }else if (strncmp(page, LYY_PIC_WARN_PAGE_TYPE, strlen(LYY_PIC_WARN_PAGE_TYPE)) == 0)
     {
         return -1;
     }else
     {
         return -2;
     }
-    
-    return 1;
 }
 
 
