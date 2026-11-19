@@ -68,6 +68,8 @@ enum
 TJC_INFOR_DEF   tjc_infor_t;
 /** @brief 屏幕当前 payN 页的钱包数量，其他页面为 0。 */
 static uint8_t active_pay_wallet_count;
+/** @brief 已收到包含型号的 screen_type 回包，单独的 screen_ver 不再覆盖显示。 */
+static uint8_t has_screen_type_label;
 
 void lyy_tjc_pay_package_ndj(void);
 void lyy_tjc_page_pkgs_ndj(void);
@@ -1375,19 +1377,46 @@ void lyy_tjc_page_regist_set(void)
     lyy_tjc_set_status(TJC_SHOW_DEVICE_REGIST); 
 }
 /**
- * @brief 从屏幕版本字符串更新方向及缓存版本，随后关闭 tm0。
- * @param[in] pack 有效的零结尾版本字符串；长度大于 1 且小于版本缓存容量时保存。
- * @param[in] len 未使用，字符串操作依赖零结尾。
- * @note 仅识别 _00_ 和 _270_ 方向；不在此处发送 OTA 版本上报。
+ * @brief 提取屏幕回包中可直接写入 tjc_ver.txt 的型号或版本。
+ * @param[in] pack 屏幕解析器提供的零结尾回包，可以带串口字符串应答头。
+ * @param[in] prefix 字段名，包含结尾的冒号。
+ * @param[out] label 输出文本，容量需与 tjc_infor_t.tjc_ver 一致。
+ * @return 1 表示成功，0 表示字段缺失、无效或过长。
+ */
+static int lyy_tjc_parse_screen_label(const char *pack, const char *prefix, char *label)
+{
+    const char *value = strstr(pack, prefix);
+    if (value == NULL) return 0;
+    value += strlen(prefix);
+
+    size_t length = strcspn(value, "\xff\r\n");
+    if (length <= 1 || length >= sizeof(tjc_infor_t.tjc_ver)) return 0;
+
+    for (size_t i = 0; i < length; i++) {
+        unsigned char ch = (unsigned char)value[i];
+        if (ch < ' ' || ch > '~' || ch == '"' || ch == '\\') return 0;
+    }
+    memcpy(label, value, length);
+    label[length] = '\0';
+    return 1;
+}
+
+/**
+ * @brief 在尚未取得屏幕型号时使用旧版 screen_ver 回包作为显示信息。
+ * @param[in] pack 零结尾的屏幕回包。
+ * @param[in] len 解析器提供的回包长度，字符串已由解析器截断并补零。
  */
 void lyy_tjc_time_version(char *pack,uint16_t len)
 {
     (void)len;
-    if (strstr(pack, "_00_") != NULL) set_tjc_screen_type(LYY_SCREEN_TYPC_00);
-    else if (strstr(pack, "_270_") != NULL) set_tjc_screen_type(LYY_SCREEN_TYPC_270);
-    if (strlen(pack) > 1 && strlen(pack) < sizeof(tjc_infor_t.tjc_ver)) {
-        memset(tjc_infor_t.tjc_ver, 0, sizeof(tjc_infor_t.tjc_ver));
-        strcpy(tjc_infor_t.tjc_ver, pack);
+    char label[sizeof(tjc_infor_t.tjc_ver)];
+    if (!lyy_tjc_parse_screen_label(pack, "screen_ver:", label)) return;
+
+    if (!has_screen_type_label) {
+        if (strstr(label, "_00_") != NULL) set_tjc_screen_type(LYY_SCREEN_TYPC_00);
+        else if (strstr(label, "_270_") != NULL) set_tjc_screen_type(LYY_SCREEN_TYPC_270);
+        strcpy(tjc_infor_t.tjc_ver, label);
+        LYY_LOGD("tjc_ver: %s", tjc_infor_t.tjc_ver);
     }
     lyy_tjc_time_en("tm0", 0);
 }
@@ -1433,67 +1462,54 @@ int tjc_packet_queEntry(uint8_t *pack, uint16_t len)
  */
 int tjc_packet_queOut(STORAGE_QUE_DEF *unit) { (void)unit; return -1; }
 /**
- * @brief 解析屏幕型号与旋转方向，更新图片请求的屏幕配置。
- * @param[in] pack 含型号和方向标记的零结尾字符串。
- * @param[in] len 未使用。
- * @note 屏幕版本由独立 screen_ver 命令处理，此处不更新版本。
+ * @brief 使用 screen_type 回包更新显示的型号版本，并配置图片请求的型号和方向。
+ * @param[in] pack 零结尾的屏幕回包。
+ * @param[in] len 解析器提供的回包长度，字符串已由解析器截断并补零。
  */
 void lyy_tjc_vlaue_screen_type(char *pack,uint16_t len)
 {
-
     (void)len;
-    LYY_LOGD("lyy_tjc_vlaue_screen_type:%s",pack);
-    // char ver_screen[50] = {0};
-    // char *p = NULL;
+    char label[sizeof(tjc_infor_t.tjc_ver)];
+    if (!lyy_tjc_parse_screen_label(pack, "screen_type:", label)) return;
+
+    strcpy(tjc_infor_t.tjc_ver, label);
+    has_screen_type_label = 1;
+    LYY_LOGD("tjc_ver: %s", tjc_infor_t.tjc_ver);
 
     // 获取屏幕型号 TJC8048
-    if((strstr(pack,LYY_SCREEN_DEVICE_TJC8048x270) != NULL) || (strstr(pack,LYY_SCREEN_DEVICE_TJC8048x243) != NULL) )
+    if((strstr(label,LYY_SCREEN_DEVICE_TJC8048x270) != NULL) || (strstr(label,LYY_SCREEN_DEVICE_TJC8048x243) != NULL) )
     {
         set_tjc_Screen(LYY_SCREEN_DEVICE);
         // 获取屏幕方向
-        if(strstr(pack,"_00_") != NULL) 
+        if(strstr(label,"_00_") != NULL)
         {
             set_tjc_screen_type(LYY_SCREEN_TYPC_H);
         }
-        else if(strstr(pack,"_270_") != NULL) 
+        else if(strstr(label,"_270_") != NULL)
         {
             set_tjc_screen_type(LYY_SCREEN_TYPC_V);
         }
     }
-    else if(strstr(pack,LYY_SCREEN_DEVICE_TJC4880x243) != NULL) 
+    else if(strstr(label,LYY_SCREEN_DEVICE_TJC4880x243) != NULL)
     {
         set_tjc_Screen(LYY_SCREEN_DEVICE_4880x243);
         // 获取屏幕方向
-        if(strstr(pack,"_00_") != NULL) 
+        if(strstr(label,"_00_") != NULL)
         {
             set_tjc_screen_type(LYY_SCREEN_TYPC_00);
         }
-        else if(strstr(pack,"_90_") != NULL) 
+        else if(strstr(label,"_90_") != NULL)
         {
             set_tjc_screen_type(LYY_SCREEN_TYPC_90);
-        }else if(strstr(pack,"_180_") != NULL) 
+        }else if(strstr(label,"_180_") != NULL)
         {
             set_tjc_screen_type(LYY_SCREEN_TYPC_180);
         }
-        else if(strstr(pack,"_270_") != NULL) 
+        else if(strstr(label,"_270_") != NULL)
         {
             set_tjc_screen_type(LYY_SCREEN_TYPC_270);
         }
     }
-
-    // 获取屏幕字库
-    // tjc_infor_t.screen_type.languages = TJC_ENGLISH;
-    /*
-    if(strstr(pack,"_QYZ_") != NULL) 
-    {
-        tjc_infor_t.screen_type.languages = TJC_QYZ;
-    }else{
-        tjc_infor_t.screen_type.languages = TJC_ENGLISH;
-    }
-    */
-    // p = strchr(pack,':');
-    // if(p != NULL)  strcpy(ver_screen,p+1);
-    /* Screen version is reported separately by screen_ver. */
 }
 
 
@@ -1992,6 +2008,7 @@ void lyy_init_tjc(void)
 
     lyy_picInit();
     tjc_infor_t.step = SCREEN_START_STEP_HOMEPAGE;
+    has_screen_type_label = 0;
     strcpy(tjc_infor_t.tjc_ver, "tjc_default_v3.0.0");
     
 #define SCAN_UART_BRT               115200
