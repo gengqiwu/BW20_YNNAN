@@ -133,7 +133,7 @@ void APP_prvWifiWorkSta(WIFI_WORK_STA_T xSta)
 
             APP_vLedSstSta(LED_GREEN,   LED_STA_ON);
             APP_vLedSstSta(LED_RED,     LED_STA_SLOW_FLASH);
-            set_led_status(LED_STATUS_LOGIN_SUCCESS);
+            set_led_status(LED_STATUS_WIFI_CONNECTED);
 
             LYY_LOGI(">>> WIFI_WORK_CONNED");
 

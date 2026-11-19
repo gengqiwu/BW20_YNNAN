@@ -194,6 +194,8 @@ extern void     lyy_tjc_showPay(uint8_t picId);
 extern void     lyy_tjc_changePayQRMoney(char *qr, char *money);
 
 extern void     lyy_tjc_switch_page(char *page);
+/** @brief 控制当前页面指定控件的可见性，val 为 0 隐藏，为 1 显示。 */
+extern void     lyy_tjc_objHide(char *objName, uint8_t val);
 extern void     lyy_tjc_set_status(uint8_t newState);
 extern void     picSend_startProcess(char *fileName, uint32_t fileSize);
 

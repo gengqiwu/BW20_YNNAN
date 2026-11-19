@@ -130,10 +130,18 @@ char *APP_pcGetParamWifiPwd(void)
 }
 
 
-void APP_vSetParamWifiMode(WIFI_MODE_T xWifiMode)
+/**
+ * @brief 保存 Wi-Fi 模式，供下次启动读取。
+ * @param[in] xWifiMode 要保存的 Wi-Fi 模式。
+ * @return APP_lParamSetInfo 的写入结果。
+ */
+int APP_lSetParamWifiMode(WIFI_MODE_T xWifiMode)
 {
+    WIFI_MODE_T previous = g_xAppParam.xWifiInfo.xMode;
     g_xAppParam.xWifiInfo.xMode = xWifiMode;
-    APP_lParamSetInfo(&g_xAppParam);
+    int result = APP_lParamSetInfo(&g_xAppParam);
+    if (result != LYY_SUCCESS) g_xAppParam.xWifiInfo.xMode = previous;
+    return result;
 }
 
 

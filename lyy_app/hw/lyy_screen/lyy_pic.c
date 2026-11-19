@@ -775,7 +775,7 @@ void lyy_pic_objTxt(char *objName, char *txt)
 }
 /**
  * @brief 将待传输图片依次发送到屏幕 RAM 文件。
- * @note 分包进度通过信号量续期。20 秒未收到进度或接收失败时发送退出命令，
+ * @note 分包进度通过信号量续期。20 秒未收到进度或接收失败时退出并重传一次，
  *       只有末包后的完成应答会将该图片标记为传输成功。
  */
 void getTjcPicTran(void)
@@ -821,24 +821,24 @@ void getTjcPicTran(void)
             sprintf(file_name,"filename_%d",(picVair.startGetPic * PIC_INFO_MAX + picVair.startGetPicType));
             
             LYY_LOGD("========================  url_temp.filesize : [%d]  ulUrlAdd :[%d]" , pxTjcInfo->filesize, ulUrlAdd);
-            xSemaphoreTake(hw_httpTranPicUrlSem, 0);
-            result = 0;
-            if (lyy_display_sendPic("ram", file_name, pxTjcInfo->filesize)) {
+            picVair.picState[ulUrlAdd] = TJC_PIC_RESULT_TRAN_FAIL;
+            for (unsigned int attempt = 0; attempt < 2; ++attempt) {
+                xSemaphoreTake(hw_httpTranPicUrlSem, 0);
+                if (!lyy_display_sendPic("ram", file_name, pxTjcInfo->filesize)) break;
+
                 do {
                     result = xSemaphoreTake(hw_httpTranPicUrlSem, pdMS_TO_TICKS(20000));
                 } while (result && lyy_display_getSendPicStatus() == LYY_SENDPIC_TRANS);
-            }
-            if (!result || !picTransferComplete)
-            {
+
+                if (result && picTransferComplete) {
+                    picVair.picState[ulUrlAdd] = TJC_PIC_RESULT_TRAN_SUCCESS;
+                    break;
+                }
                 LYY_LOGE("Screen picture transfer failed: %s, packet %u/%u",
                          file_name, sendPic.sendPack, sendPic.totalPack);
-                picVair.picState[((picVair.startGetPic*PIC_INFO_MAX)+picVair.startGetPicType)] = TJC_PIC_RESULT_TRAN_FAIL;
                 lyy_display_setSendPicStatus(LYY_SENDPIC_NORMAL);
                 lyy_display_sendExitTrans();
                 vTaskDelay(1000 / portTICK_PERIOD_MS);
-            }else
-            {
-                picVair.picState[((picVair.startGetPic*PIC_INFO_MAX)+picVair.startGetPicType)] = TJC_PIC_RESULT_TRAN_SUCCESS;
             }
         }
     }
@@ -1094,13 +1094,18 @@ int lyy_display_showpic(char *page,unsigned char walletNum)
             snprintf(file_name, sizeof(file_name), "filename_%u", index);
             lyy_display_setPicPath("wallet", file_name);
             vTaskDelay(100 / portTICK_PERIOD_MS);
+            lyy_tjc_objHide("wallet", 1);
             shown = 1;
         }
         if (picVair.picState[index + 1] == TJC_PIC_RESULT_TRAN_SUCCESS) {
             snprintf(file_name, sizeof(file_name), "filename_%u", index + 1);
             lyy_display_setPicPath("wallet_type", file_name);
             vTaskDelay(100 / portTICK_PERIOD_MS);
+            lyy_tjc_objHide("wallet_type", 1);
             shown = 1;
+        } else {
+            // 原页切换钱包时，防止显示上一个渠道的扫码提示图。
+            lyy_tjc_objHide("wallet_type", 0);
         }
         return shown ? 1 : -3;
 

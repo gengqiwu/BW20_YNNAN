@@ -25,7 +25,10 @@
 #include "HAL_System.h"
 
 
+#include "APP_Detect.h"
+#include "APP_Led.h"
 #include "APP_Param.h"
+#include "lyy_zcj.h"
 
 
 typedef struct {
@@ -192,15 +195,21 @@ static void APP_prvApTask(void *pvArg)
 
 
 
+/**
+ * @brief 长按达到阈值后保存配网模式，并在重启前通知 STM32 更新灯效。
+ * @param[in] pvArg 按键回调参数，未使用。
+ * @note 通知表示准备进入配网。热点在 BW20 重启后启动。
+ */
 void APP_vApConfigSet(void *pvArg)
 {
-
     (void)pvArg;
+    if (APP_lSetParamWifiMode(WIFI_AP) != LYY_SUCCESS) return;
 
-    APP_vSetParamWifiMode(WIFI_AP);
-
+    APP_prvDetectMachtineLvl();
+    uint8_t status = APP_ulGetMachtineLvl() ? LED_STATUS_WIFI_SMART : LED_STATUS_WIFI_AP;
+    set_led_status(status);
+    zcj_notify_provisioning_led(status);
     HAL_vReset("WIFI_AP", 500);
-
 }
 
 

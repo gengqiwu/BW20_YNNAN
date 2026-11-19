@@ -130,7 +130,8 @@ extern int          APP_lPulseParamSetInfo(uint32_t pxAppParam);
 extern WIFI_MODE_T APP_xGetParamWifiMode(void);
 extern char         *APP_pcGetParamWifiPwd(void);
 extern char         *APP_pcGetParamWifiSsid(void);
-extern void         APP_vSetParamWifiMode(WIFI_MODE_T xWifiMode);
+/** @brief 持久化 Wi-Fi 模式。写入失败时恢复原内存模式。 */
+extern int          APP_lSetParamWifiMode(WIFI_MODE_T xWifiMode);
 extern int          APP_lParamSetWifiInfo(WIFI_INFO_T *pcWifiInfo);
 
 

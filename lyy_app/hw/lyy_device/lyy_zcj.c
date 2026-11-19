@@ -60,6 +60,13 @@ int zcj_terminal_device_data(uint8_t *buff, uint16_t len)
     vTaskDelay(3 / portTICK_PERIOD_MS);
     return 0;
 }
+/** @brief 用固定 8 字节普通帧发出配网灯状态。 */
+void zcj_notify_provisioning_led(uint8_t status)
+{
+    uint8_t frame[] = {0xAA, 5, 1, 0xD6, ZCJ_SUB_CMD_PROVISIONING_LED, status, 0, 0xDD};
+    frame[6] = check_xor_memory(frame + 1, frame[1]);
+    zcj_terminal_device_data(frame, sizeof(frame));
+}
 /**
  * @brief 按普通帧 LEN 补 AA/INDEX/XOR/DD 并发送。
  * @param[in,out] pack 已设置 len/cmd/sub_cmd/载荷的有效组帧工作区。

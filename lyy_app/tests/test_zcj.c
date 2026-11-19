@@ -103,6 +103,11 @@ int main(void)
     assert(last_len==sizeof(ZCJ_DEV_TYPE_INFOR)+7);
     ZCJ_DEV_TYPE_INFOR info;memcpy(&info,last_frame+5,sizeof(info));
     assert(info.dev_type==9 && info.brt==38400 && info.pluse_output==1 && info.pluse_outputPort==2 && info.pluse_level==1);
+    zcj_notify_provisioning_led(LED_STATUS_WIFI_AP);
+    assert(last_len == 8 && last_frame[1] == 5 && last_frame[3] == 0xD6);
+    assert(last_frame[4] == ZCJ_SUB_CMD_PROVISIONING_LED && last_frame[5] == LED_STATUS_WIFI_AP);
+    zcj_notify_provisioning_led(LED_STATUS_WIFI_SMART);
+    assert(last_len == 8 && last_frame[5] == LED_STATUS_WIFI_SMART);
     unsigned before=signals;uint8_t short_packet[7]={0xAA,4,1,0xD6,3,0,0};
     lyy_zcj_packet_parse(short_packet,sizeof(short_packet));assert(signals==before);
     uint8_t picture[LYY_SEND_PIC_HEADER_SIZE + LYY_SEND_PIC_PACKET_SIZE];

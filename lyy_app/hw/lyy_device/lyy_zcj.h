@@ -38,6 +38,7 @@ enum {
     ZCJ_SUB_CMD_DEV_TYPE_SET = 0x0A,
     ZCJ_SUB_CMD_DEV_TYPE_GET = 0x0B,
     ZCJ_SUB_CMD_DEV_TOTAL_ACCOUNTS = 0x0C,
+    ZCJ_SUB_CMD_PROVISIONING_LED = 0x0D, /**< 模块主动通知 STM32 更新配网灯效。 */
     ZCJ_SUB_CMD_DEV_UPGRADE = 0x0E,
     ZCJ_SUB_CMD_DEV_INFOR_UPDATE = 0x10
 };
@@ -205,6 +206,12 @@ int zcj_cmd_get_param(void);
  * @param[in] len 原始字节数，超过工作区上限时忽略。
  */
 void zcj_packet_screen_dtu_send(char *pack, uint16_t len);
+/**
+ * @brief 主动发送 D6/0D 配网灯状态，常规 D6/0B 轮询仍提供补偿。
+ * @param[in] status LED_STATUS_WIFI_AP 或 LED_STATUS_WIFI_SMART。
+ * @pre 在 FreeRTOS 调度器启动后，从任务上下文调用。
+ */
+void zcj_notify_provisioning_led(uint8_t status);
 /** @brief 查询 D6/10 MCU 版本并更新缓存。 @retval 1 收到查询应答。 @retval 0 资源失败或超时。 */
 int zcj_cmd_get_param_ver(void);
 /** @brief 获取最近的 MCU 版本缓存。 @return 模块拥有的可写缓存指针，不主动查询。 */

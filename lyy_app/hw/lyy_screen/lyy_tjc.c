@@ -66,6 +66,8 @@ enum
 } SCREEN_START_STEP;
 
 TJC_INFOR_DEF   tjc_infor_t;
+/** @brief 屏幕当前 payN 页的钱包数量，其他页面为 0。 */
+static uint8_t active_pay_wallet_count;
 
 void lyy_tjc_pay_package_ndj(void);
 void lyy_tjc_page_pkgs_ndj(void);
@@ -199,6 +201,7 @@ void lyy_tjc_objHide(char *objName, uint8_t val)
  */
 void lyy_tjc_switch_page(char *page)
 {
+    active_pay_wallet_count = 0;
     char cmdBuff[TJC_BUFF_MAX] = {0x00,};
     memset(cmdBuff, 0, TJC_BUFF_MAX);
     sprintf(cmdBuff, "page %s\xff\xff\xff", page);
@@ -413,16 +416,31 @@ void lyy_tjc_pay_page(PTJC_PAY_PAGE_DEF pay)
 }
 #endif
 /**
+ * @brief 在需要时打开与渠道数量匹配的支付页。
+ * @param[in] wallet_sum 支付页的钱包数量，对应 payN 中的 N。
+ * @note 同页切换钱包时保留屏幕页内的控件状态。其他页面切换会清除记录。
+ */
+static void lyy_tjc_ensure_pay_page(uint8_t wallet_sum)
+{
+    if (active_pay_wallet_count != 0 && active_pay_wallet_count == wallet_sum) return;
+
+    char page_name[20];
+    snprintf(page_name, sizeof(page_name), "pay%u", (unsigned int)wallet_sum);
+    lyy_tjc_switch_page(page_name);
+    active_pay_wallet_count = wallet_sum;
+}
+
+/**
  * @brief 刷新支付页的渠道图片、金额及非空二维码链接。
  * @param[in] pay 有效支付页参数，金额与 get_money_unit() 拼接显示。
- * @note 图片序号取全局钱包序号加 1；链接发送后延时 20 ms，不检查图片绑定结果。
+ * @note 云端回包先于等待页渲染时，也会先打开正确的支付页。
  */
 void lyy_tjc_pay_url_money(PTJC_PAY_PAGE_DEF pay)
 {
     char money_unit[128] = {0};
-    // char page_name[20] = {0};
     sprintf(money_unit, "%s %s", pay->money, get_money_unit());
-    lyy_display_showpic("pay",tjc_infor_t.pay.wallet_num+1);
+    lyy_tjc_ensure_pay_page(pay->wallet_sum);
+    lyy_display_showpic("pay",pay->wallet_num+1);
     vTaskDelay(5 / portTICK_PERIOD_MS);  
     lyy_tjc_objTxt("money", money_unit);
     vTaskDelay(5 / portTICK_PERIOD_MS);
@@ -437,16 +455,14 @@ void lyy_tjc_pay_url_money(PTJC_PAY_PAGE_DEF pay)
     lyy_tjc_device_infor();
 }
 /**
- * @brief 
- * 切换到现实支付二维码界面
- * @param wallet_sum 
- * @param wallet_num 
+ * @brief 在支付页更新当前钱包，并清空上一钱包显示的二维码和金额。
+ * @param[in] wallet_sum 本页钱包总数。
+ * @param[in] wallet_num 当前钱包的零基下标。
  */
 void lyy_tjc_change_pay_page(uint8_t wallet_sum,uint8_t wallet_num)
 {
-    char page_name[20] = {0}; 
-    sprintf(page_name,"pay%d",wallet_sum);
-    lyy_tjc_switch_page(page_name);
+    lyy_tjc_ensure_pay_page(wallet_sum);
+    lyy_tjc_objTxt("pay_url", "");
     vTaskDelay(2 / portTICK_PERIOD_MS);    
     lyy_tjc_objTxt("money", " ");
     vTaskDelay(2 / portTICK_PERIOD_MS);    
@@ -1765,12 +1781,17 @@ void thread_page_display(void *arg)
             case TJC_SHOW_PAY_URL: //显示支付二维码
             {
                 lyy_tjc_pay_url_money(&tjc_infor_t.pay);
-                lyy_tjc_count_down(tjc_infor_t.pay.time, TJC_SHOW_PACKAGES);
+                if (tjc_infor_t.status == TJC_SHOW_PAY_URL) {
+                    lyy_tjc_count_down(tjc_infor_t.pay.time, TJC_SHOW_PACKAGES);
+                }
             }break; 
             case TJC_SHOW_PAY_PAGE: //支付界面
             {
-                lyy_tjc_change_pay_page(tjc_infor_t.pay.wallet_sum,tjc_infor_t.pay.wallet_num);
-                lyy_tjc_count_down(tjc_infor_t.pay.time, TJC_SHOW_PACKAGES);
+                uint8_t wallet_num = tjc_infor_t.pay.wallet_num;
+                lyy_tjc_change_pay_page(tjc_infor_t.pay.wallet_sum, wallet_num);
+                if (tjc_infor_t.status == TJC_SHOW_PAY_PAGE && tjc_infor_t.pay.wallet_num == wallet_num) {
+                    lyy_tjc_count_down(tjc_infor_t.pay.time, TJC_SHOW_PACKAGES);
+                }
             }break;  
             case TJC_SHOW_COUNT_DOWN:
             {

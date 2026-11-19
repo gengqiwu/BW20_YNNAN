@@ -23,16 +23,23 @@
 #include "APP_DrillingMode.h"
 #include "lyy_tjc.h"
 #include "lyy_device.h"
+#include "lyy_zcj.h"
 #include "thing_init.h"
 
 /**
  * @brief 每 10 ms 调度一次已注册的软件定时回调。
  * @param[in] arg 任务参数，未使用。
+ * @note 配网启动补发放在此任务中执行，串口发送使用的 RTOS API 要求调度器已运行。
  * @note 回调共享当前任务上下文，不应在回调中长时间阻塞。
  */
 static void APP_vSoftTimeTask(void *arg)
 {
     (void)arg;
+    uint8_t status = get_led_status();
+    if (status == LED_STATUS_WIFI_AP || status == LED_STATUS_WIFI_SMART) {
+        zcj_notify_provisioning_led(status);
+    }
+
     for (;;) {
         HAL_vSoftTimeLoop();
         vTaskDelay(pdMS_TO_TICKS(10));
@@ -70,16 +77,20 @@ void APP_vMainInit(void)
         return;
     }
 
-    /* All bill, machine and screen traffic is routed through STM32. */
+    const uint8_t provisioning = (APP_xGetParamWifiMode() == WIFI_AP);
+    if (provisioning) {
+        APP_prvDetectMachtineLvl();
+        set_led_status(APP_ulGetMachtineLvl() ? LED_STATUS_WIFI_SMART : LED_STATUS_WIFI_AP);
+    }
+
+    /* Set the provisioning status before wiring up the D6/0B reply handler. */
     lyy_init_device();
-    if (WIFI_AP == APP_xGetParamWifiMode()) {
+    if (provisioning) {
         WIFI_INFO_T wifi = {0};
         wifi.xMode = WIFI_STA;
         strcpy(wifi.pcSsid, LYY_WIFI_SSID);
         strcpy(wifi.pcPwd, LYY_WIFI_PWD);
         APP_lParamSetWifiInfo(&wifi);
-        APP_prvDetectMachtineLvl();
-        set_led_status(APP_ulGetMachtineLvl() ? LED_STATUS_WIFI_SMART : LED_STATUS_WIFI_AP);
         if (APP_ulGetMachtineLvl()) APP_vDevApInit();
         else APP_vApConfigInit();
         APP_vLedSstSta(LED_GREEN, APP_ulGetMachtineLvl() ? LED_STA_OFF : LED_STA_ON);

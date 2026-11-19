@@ -31,8 +31,12 @@ enum {
     LED_STATUS_NO_DEVID,
     LED_STATUS_LOGIN_FAIL,
     LED_STATUS_FACTORY_PDP_OK,
-    LED_STATUS_WIFI_AP,
-    LED_STATUS_WIFI_SMART,
+    /** @brief 设备热点配网。扩展编号避开 STM32 的工厂测试灯状态。 */
+    LED_STATUS_WIFI_AP = 0x20,
+    /** @brief 通过配网工具热点下发凭据。 */
+    LED_STATUS_WIFI_SMART = 0x21,
+    /** @brief 目标 Wi-Fi 已连接，等待 MQTT 登录。 */
+    LED_STATUS_WIFI_CONNECTED = 0x22,
 };
 /** @brief 获取当前缓存的系统灯状态。 @return LED_STATUS_* 编号，不是 GPIO 电平。 */
 extern uint8_t get_led_status(void);
