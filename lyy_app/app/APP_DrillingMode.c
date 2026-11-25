@@ -107,24 +107,6 @@ void APP_vCoinIn(void *pvArg)
 
 
 
-void APP_vGiftOut(void *pvArg)
-{
-
-    // APP_prvAccOp(0x00, 
-    //              0x00, 
-    //              *((uint32_t *)pvArg), 
-    //              APP_PULSE_ACC);
-
-    acc_timeout_to_checkSta = ACC_PERIOD_FOR_CHECKSTA / ACC_TIME_INTERRUPT_MS;
-    app_acc_update_t.ucAccGiftOut += *((uint32_t *)pvArg);
-
-
-    //LYY_LOGD(">>> GiftOut sum : [%d][%d]",  g_DrillSta.pxAcc->ulGiftOutSum, 
-                                            //*((uint32_t *)pvArg));
-
-}
-
-
 void APP_vWwjCoinIn(uint32_t ulCoinIn)
 {
 

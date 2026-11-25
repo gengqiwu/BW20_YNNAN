@@ -21,6 +21,7 @@
 #include "lyy_pic.h"
 #include "lyy_tjc.h"
 #include "lyy_para.h"
+#include "lyy_pulses.h"
 #include "lyy_device.h"
 
 #include "mqtt_api.h"
@@ -176,7 +177,7 @@ void box_get_cloud_pay_param(void)
         event_post_query_pay_packages_ndj("CONSUMPTION",1,0,"true");
         vTaskDelay(1000  / portTICK_PERIOD_MS);
     }   
-    else  //其他都是一样的方式
+    else if (get_dev_type_code() != DEVICE_TYPE_PULSES) // 双路脉冲在货道同步后查询
     {
         event_post_query_pay_packages("CONSUMPTION");
         vTaskDelay(1000  / portTICK_PERIOD_MS);
@@ -278,6 +279,10 @@ static void lyy_mqtt_sta(unsigned char lmqSta)
     static uint8_t startUp = 0x00;
     static enum device_lmq_sta deviceLmqSta;
 
+
+    if (get_dev_type_code() == DEVICE_TYPE_PULSES) {
+        pulses_sync_poll(lmqSta == MQTT_STATE_SUCCESS);
+    }
 
     if(lmqSta != MQTT_STATE_SUCCESS) {
 

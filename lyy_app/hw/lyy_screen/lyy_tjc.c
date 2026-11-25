@@ -23,6 +23,7 @@
 #include "HAL_Uart.h"
 #include "HAL_System.h"
 #include "hal_sem.h"
+#include "queue.h"
 #include "HAL_Flash.h"
 
 #include "thing_mqtt.h"
@@ -35,6 +36,7 @@
 #include "lyy_tjc.h"
 #include "lyy_pic.h"
 #include "lyy_para.h"
+#include "lyy_pulses.h"
 #include "lyy_start.h"
 #include "lyy_amy.h"
 
@@ -65,6 +67,51 @@ int baudTable[3] = {115200, 9600, 921600};
 static SEM_TYPE screen_ota_connect_cmd_send = NULL;
 static SEM_TYPE screen_ota_baud_set = NULL;
 static SEM_TYPE screen_ota_ota_cmd_send = NULL;
+
+enum
+{
+    PULSES_TOUCH_POSITION,
+    PULSES_TOUCH_PACKAGE,
+    PULSES_TOUCH_WALLET,
+};
+
+typedef struct
+{
+    uint32_t generation;
+    uint8_t kind;
+    uint8_t index;
+} TJC_PULSES_TOUCH;
+
+typedef struct
+{
+    char id[sizeof(((PAY_PACKAGE_DEF *)0)->id)];
+    char currency[64];
+} TJC_PULSES_SLOT;
+
+typedef struct
+{
+    char url[sizeof(tjc_infor_t.pay.url)];
+    char money[sizeof(tjc_infor_t.pay.money)];
+    char currency[sizeof(tjc_infor_t.pay.currency_desc)];
+} TJC_PULSES_QR;
+
+static QueueHandle_t pulses_touches;
+static QueueHandle_t pulses_qr_replies;
+/* Shared between the display task and the MQTT QR callback. */
+static char pulses_qr_token[13];
+/* UART RX stamps touches; only the display task changes the generation and owns UI state. */
+static uint32_t pulses_generation;
+static uint32_t pulses_revision;
+static uint8_t pulses_on_packages;
+static uint8_t pulses_position;
+static TJC_PULSES_SLOT pulses_slots[PULSES_PACKAGE_MAX];
+static struct
+{
+    uint8_t position;  /* 0 when no active payment */
+    uint8_t pending;
+    TJC_PULSES_SLOT slot;
+    TJC_PULSES_QR reply;
+} pulses_payment;
 
 
 void lyy_tjc_pay_package_ndj(void);
@@ -155,6 +202,7 @@ TJC_POINT_CLAIM_DEF *get_point_claim(void)
  */
 void device_get_points_show(void)
 {
+    if (get_dev_type_code() == DEVICE_TYPE_PULSES) return;
     char str[200] = {0};
 
     TJC_POINT_CONFIG_DEF *point_config_data = get_point_config();
@@ -198,6 +246,7 @@ void member_now_points_show(void)
  */
 void points_deduction_max_amount_show(void)
 {
+    if (get_dev_type_code() == DEVICE_TYPE_PULSES) return;
 
     char str[200] = {0};
     char str_2[200] = {0};
@@ -293,6 +342,7 @@ void member_to_consume_add_points_show(void)
  */
 void tourist_to_consume_add_points_show(void)
 {
+    if (get_dev_type_code() == DEVICE_TYPE_PULSES) return;
 
     char str[200] = {0};
     char str_2[200] = {0};
@@ -377,6 +427,17 @@ void lyy_tjc_objTxt(char *objName, char *txt)
 
     //需要更换成
     lyy_tjc_cmd_send(cmdBuff, strlen(cmdBuff));
+}
+
+/* Like the existing TJC text path, pass through the cloud's UTF-8 bytes.
+ * Replace unsafe ASCII/terminator bytes before putting text in a TJC string literal. */
+static void tjc_pulses_safe_text(char *text)
+{
+    for (unsigned char *p = (unsigned char *)text; *p; ++p)
+    {
+        if (*p < 0x20 || *p == 0x7f || *p == 0xff || *p == '"' || *p == '\\')
+            *p = ' ';
+    }
 }
 
 /**
@@ -659,6 +720,22 @@ void lyy_tjc_pay_page(PTJC_PAY_PAGE_DEF pay)
  */
 void lyy_tjc_pay_url_money(PTJC_PAY_PAGE_DEF pay)
 {
+    if (get_dev_type_code() == DEVICE_TYPE_PULSES)
+    {
+        char amount[sizeof(pulses_payment.reply.money) + sizeof(pulses_payment.slot.currency) + 1];
+        const char *currency = pulses_payment.reply.currency[0] ?
+            pulses_payment.reply.currency : pulses_payment.slot.currency;
+        snprintf(amount, sizeof(amount), "%s%s%s", pulses_payment.reply.money,
+                 currency[0] ? " " : "", currency);
+        tjc_pulses_safe_text(amount);
+        lyy_tjc_objTxt("money", amount);
+        vTaskDelay(5 / portTICK_PERIOD_MS);
+        lyy_tjc_objTxt("pay_prompt", "Scan the QR code to pay");
+        vTaskDelay(5 / portTICK_PERIOD_MS);
+        lyy_tjc_objTxt("pay_url", pulses_payment.reply.url);
+        lyy_tjc_objHide("pay_url", 1);
+        return;
+    }
     char money_unit[128] = {0};
     char currency[10] = {0};
     if (tjc_infor_t.pay.currency_desc[0] == '\0')   //为了解决货币单位任意变化的问题，由后台下发
@@ -706,7 +783,9 @@ void lyy_tjc_change_pay_page(uint8_t wallet_sum,uint8_t wallet_num)
     char page_name[20] = {0}; 
     sprintf(page_name,"pay%d",wallet_sum);
     lyy_tjc_switch_page(page_name);
-    vTaskDelay(2 / portTICK_PERIOD_MS);    
+    if (get_dev_type_code() == DEVICE_TYPE_PULSES)
+        lyy_tjc_objHide("pay_url", 0);
+    vTaskDelay(2 / portTICK_PERIOD_MS);
     lyy_tjc_objTxt("money", " ");
     vTaskDelay(2 / portTICK_PERIOD_MS);    
     lyy_tjc_objTxt("time", " ");
@@ -752,14 +831,30 @@ void lyy_tjc_pay_page_set(uint8_t wallet_num,uint8_t wallet_sum)
     lyy_tjc_set_status(TJC_SHOW_PAY_PAGE);
     vTaskDelay(20 / portTICK_PERIOD_MS);  
 }
-/**
- * @brief 
- * 显示二维码
- * @param url 
- * @param money 
- */
+/* Only the current dual-lane QR request may publish a reply. */
+int lyy_tjc_pulses_qr_reply(const char *token, const char *url, const char *money, const char *currency)
+{
+    TJC_PULSES_QR reply = {0};
+    if (!pulses_qr_replies || !token || !*token || !url || !*url || !money ||
+        strlen(url) >= sizeof(reply.url) || strlen(money) >= sizeof(reply.money)) return 0;
+    for (const unsigned char *p = (const unsigned char *)url; *p; ++p) {
+        if (*p <= 0x20 || *p == 0x7f || *p == 0xff || *p == '"' || *p == '\\') return 0;
+    }
+    strcpy(reply.url, url);
+    strcpy(reply.money, money);
+    if (currency) snprintf(reply.currency, sizeof(reply.currency), "%s", currency);
+
+    /* Matched and queued under the same lock as token replacement. A late
+     * reply cannot overwrite a new wallet's QR, even during the switch. */
+    taskENTER_CRITICAL();
+    int ok = strcmp(token, pulses_qr_token) == 0 && xQueueOverwrite(pulses_qr_replies, &reply) == pdPASS;
+    taskEXIT_CRITICAL();
+    return ok;
+}
+
 void lyy_tjc_pay_url_show(char *url,char *money)
 {
+    if (get_dev_type_code() == DEVICE_TYPE_PULSES) return;
     memset(tjc_infor_t.pay.url,0,sizeof(tjc_infor_t.pay.url));
     memset(tjc_infor_t.pay.money,0,sizeof(tjc_infor_t.pay.money));
     strcpy(tjc_infor_t.pay.url,url);
@@ -783,12 +878,94 @@ void lyy_tjc_pay_url_show(char *url,char *money)
 //     tjc_infor_t.pay.time   = 40;  //倒计时固定40秒
 //     lyy_tjc_set_status(TJC_SHOW_PAY_URL);
 // }
+static void tjc_pulses_render(void)
+{
+    char names[PULSES_LANE_COUNT][128] = {{0}};
+    uint8_t lane_ready = 0;
+    /* Odd generation while painting: no package tap can select a partially rendered slot. */
+    __atomic_add_fetch(&pulses_generation, 1, __ATOMIC_RELAXED);
+    pulses_revision = pulses_get_revision();
+    for (uint8_t position = 1; position <= PULSES_LANE_COUNT; ++position)
+    {
+        char *name = names[position - 1];
+        if (pulses_get_lane_name(position, name, sizeof(names[0])) == 1)
+        {
+            name[sizeof(names[0]) - 1] = '\0';
+            tjc_pulses_safe_text(name);
+            if (position == pulses_position) lane_ready = 1;
+        }
+        else
+            name[0] = '\0';
+    }
+    lyy_tjc_objTxt("t1", names[0]);
+    lyy_tjc_objTxt("t3", names[1]);
+    lyy_tjc_objHide("t0", pulses_position == 1);
+    lyy_tjc_objHide("t2", pulses_position == 2);
+
+    uint8_t count = lane_ready ? pulses_get_package_count(pulses_position) : 0;
+    memset(pulses_slots, 0, sizeof(pulses_slots));
+    for (uint8_t i = 0; i < PULSES_PACKAGE_MAX; ++i)
+    {
+        PAY_PACKAGE_DEF pkg = {0};
+        TJC_PULSES_SLOT *slot = &pulses_slots[i];
+        char obj[16];
+        char cmd[32];
+        uint8_t visible = i < count && pulses_touches != NULL && pulses_qr_replies != NULL &&
+            pulses_get_package(pulses_position, i, &pkg, slot->currency, sizeof(slot->currency)) == 1 &&
+            pkg.id[0] != '\0' && memchr(pkg.id, '\0', sizeof(pkg.id)) != NULL;
+        snprintf(obj, sizeof(obj), "pkg%d", i + 1);
+        if (visible)
+        {
+            char first[100], second[100];
+            memcpy(slot->id, pkg.id, sizeof(slot->id));
+            slot->currency[sizeof(slot->currency) - 1] = '\0';
+            if (pkg.commodity_Desc[0] || pkg.price_Desc[0])
+            {
+                snprintf(first, sizeof(first), "%.*s", (int)sizeof(pkg.commodity_Desc), pkg.commodity_Desc);
+                snprintf(second, sizeof(second), "%.*s", (int)sizeof(pkg.price_Desc), pkg.price_Desc);
+            }
+            else
+            {
+                snprintf(first, sizeof(first), "%.*s %s", (int)sizeof(pkg.display_price),
+                         pkg.display_price, slot->currency);
+                snprintf(second, sizeof(second), "%.*s %.*s", (int)sizeof(pkg.display_value),
+                         pkg.display_value, (int)sizeof(pkg.unit), pkg.unit);
+            }
+            tjc_pulses_safe_text(first);
+            tjc_pulses_safe_text(second);
+            char text[sizeof(first) + sizeof(second) + 1];
+            snprintf(text, sizeof(text), "%s\\r%s", first, second);
+            lyy_tjc_objTxt(obj, text);
+        }
+        lyy_tjc_objHide(obj, visible);
+        int len = snprintf(cmd, sizeof(cmd), "tsw %s,%d\xff\xff\xff", obj, visible);
+        lyy_tjc_cmd_send(cmd, len);
+    }
+    __atomic_add_fetch(&pulses_generation, 1, __ATOMIC_RELAXED);
+}
+
+static void tjc_pulses_enter_packages(void)
+{
+    pulses_position = 1;
+    pulses_on_packages = 0;
+    if (pulses_touches != NULL) xQueueReset(pulses_touches);
+    lyy_tjc_switch_page("pkg_std2");
+    lyy_tjc_device_infor();
+    tjc_pulses_render();
+    pulses_on_packages = 1;
+}
+
 /**
  * @brief 
  * 
  */
 void lyy_tjc_packages_show(void)
 {
+    if (get_dev_type_code() == DEVICE_TYPE_PULSES)
+    {
+        tjc_pulses_enter_packages();
+        return;
+    }
     #ifdef _PIC_PKG_
     switch (get_dev_type_code())
     {
@@ -1387,6 +1564,7 @@ void lyy_tjc_page_scan_points_std(void){
 
 void lyy_tjc_page_scan_points(void)
 {
+    if (get_dev_type_code() == DEVICE_TYPE_PULSES) return;
     lyy_tjc_switch_page("scan_points");
     vTaskDelay(5 / portTICK_PERIOD_MS);
 
@@ -2111,6 +2289,7 @@ void lyy_tjc_get_pay_url_std(uint8_t id,uint8_t wallet_id)
  */
 void lyy_tjc_get_pay_qrcode(uint8_t id,uint8_t wallet_id)
 {
+    if (get_dev_type_code() == DEVICE_TYPE_PULSES) return;  /* guest-only path below the UART dispatcher */
     pay_url_wallet_number_set(wallet_id);//默认使用第一个钱包
     pay_url_package_id_set(id);
     PAY_PARAM_DEF *param = get_pay_param();
@@ -2165,6 +2344,7 @@ void lyy_tjc_points_page_skip(void)
  */
 void lyy_tjc_touch_package(char *pack,uint16_t len)
 {
+    if (get_dev_type_code() == DEVICE_TYPE_PULSES) return;
 
     (void)pack;  
     (void)len;
@@ -2202,6 +2382,19 @@ int get_wallet_id(char *wallet)
  */
 void lyy_tjc_touch_wallet(char *pack,uint16_t len)
 {
+    if (get_dev_type_code() == DEVICE_TYPE_PULSES) {
+        /* Match the existing dispatcher even when the frame has extra bytes. */
+        for (uint8_t i = 0; i < PAY_CHANNEL_MAX; ++i) {
+            char cmd[] = "wallet0";
+            cmd[6] += i;
+            if (strnstr(pack, cmd, len)) {
+                TJC_PULSES_TOUCH touch = { .kind = PULSES_TOUCH_WALLET, .index = i };
+                if (pulses_touches) xQueueSend(pulses_touches, &touch, 0);
+                break;
+            }
+        }
+        return;
+    }
 
     (void)len;
 
@@ -2469,6 +2662,39 @@ int tjc_isPacket(uint8_t *packet,uint16_t len)
 }
 
 
+/* Touch text may be raw or wrapped in the existing TJC string-return frame. */
+static int tjc_pulses_recv_touch(const uint8_t *pack, uint32_t len)
+{
+    TJC_PULSES_TOUCH touch = {0};
+    if (len >= 3 && memcmp(pack + len - 3, "\xff\xff\xff", 3) == 0)
+    {
+        len -= 3;
+        if (len >= 2 && pack[0] == 0x70 && (pack[1] == 'p' || pack[1] == 'w'))
+        {
+            ++pack;
+            --len;
+        }
+    }
+    if (len == 9 && memcmp(pack, "position", 8) == 0 &&
+        pack[8] >= '1' && pack[8] < '1' + PULSES_LANE_COUNT)
+    {
+        touch.kind = PULSES_TOUCH_POSITION;
+        touch.index = pack[8] - '0';
+    }
+    else if (len == 8 && memcmp(pack, "package", 7) == 0 &&
+             pack[7] >= '1' && pack[7] < '1' + PULSES_PACKAGE_MAX)
+    {
+        touch.kind = PULSES_TOUCH_PACKAGE;
+        touch.index = pack[7] - '1';
+    }
+    else
+        return 0;
+
+    touch.generation = __atomic_load_n(&pulses_generation, __ATOMIC_RELAXED);
+    if (pulses_touches != NULL) xQueueSend(pulses_touches, &touch, 0);
+    return 1;
+}
+
 /**
  * @brief 
  * 
@@ -2503,6 +2729,7 @@ void tjc_recv_packet_handle(uint8_t *pack,uint32_t len)
     else
     {
         lyy_display_recvPic(pack, len);
+        if (get_dev_type_code() == DEVICE_TYPE_PULSES && tjc_pulses_recv_touch(pack, len)) return;
     }
 
 #if 0
@@ -3041,6 +3268,110 @@ void thread_screen_ota(void *arg)
 }
 
 
+static int tjc_pulses_request(const TJC_PULSES_SLOT *slot, uint8_t position, uint8_t wallet)
+{
+    uint8_t status = tjc_infor_t.status;
+    PAY_PARAM_DEF *para = get_pay_param();
+    uint8_t wallet_sum = para->chnl_sum;
+    if (wallet_sum > PAY_CHANNEL_MAX || wallet >= wallet_sum ||
+        para->channel[wallet].code[0] == '\0' || para->channel[wallet].channel_number[0] == '\0')
+        return 0;
+
+    static uint16_t sequence;
+    char token[sizeof(pulses_qr_token)];
+    snprintf(token, sizeof(token), "%08lx%04x", (unsigned long)HAL_ulGetRandom(), (unsigned int)++sequence);
+    taskENTER_CRITICAL();
+    xQueueReset(pulses_qr_replies);
+    memcpy(pulses_qr_token, token, sizeof(token));
+    taskEXIT_CRITICAL();
+    LYY_LOGD("pulses get_qrcode: lane=%u wallet=%u package=%s", position, wallet, slot->id);
+    if (event_post_query_dynamic_url_pulses(slot->id, para->channel[wallet].code,
+            para->channel[wallet].channel_number, position, token) != 1) {
+        taskENTER_CRITICAL();
+        pulses_qr_token[0] = '\0';
+        taskEXIT_CRITICAL();
+        return 0;
+    }
+    if (tjc_infor_t.status != status) {
+        taskENTER_CRITICAL();
+        pulses_qr_token[0] = '\0';
+        taskEXIT_CRITICAL();
+        return 1; /* Do not reopen a page the user left during send. */
+    }
+
+    pulses_payment.slot = *slot;
+    pulses_payment.position = position;
+    pulses_payment.pending = 1;
+    pulses_on_packages = 0;
+    tjc_infor_t.pay.wallet_num = wallet;
+    tjc_infor_t.pay.wallet_sum = wallet_sum;
+    tjc_infor_t.pay.time = PAY_COUNTDOWN_MAX;
+    lyy_tjc_set_status(TJC_SHOW_PAY_PAGE);
+    return 1;
+}
+
+static void tjc_pulses_poll(void)
+{
+    uint8_t status = tjc_infor_t.status;
+    if (status != TJC_SHOW_UPDATE_NET) pulses_on_packages = 0;
+    if (status != TJC_SHOW_PAY_PAGE && status != TJC_SHOW_COUNT_DOWN && status != TJC_SHOW_PAY_URL)
+    {
+        if (pulses_payment.position != 0) {
+            taskENTER_CRITICAL();
+            pulses_qr_token[0] = '\0';
+            taskEXIT_CRITICAL();
+        }
+        pulses_payment.position = 0;
+        pulses_payment.pending = 0;
+    }
+    if (pulses_touches == NULL || pulses_qr_replies == NULL) return;
+
+    if (status == TJC_SHOW_COUNT_DOWN && pulses_payment.pending) {
+        taskENTER_CRITICAL();
+        int ready = xQueueReceive(pulses_qr_replies, &pulses_payment.reply, 0) == pdPASS;
+        if (ready) pulses_qr_token[0] = '\0';
+        taskEXIT_CRITICAL();
+        if (ready) {
+            pulses_payment.pending = 0;
+            lyy_tjc_set_status(TJC_SHOW_PAY_URL);
+            return;
+        }
+    }
+
+    TJC_PULSES_TOUCH touch;
+    if (xQueueReceive(pulses_touches, &touch, 0) == pdPASS)
+    {
+        if (pulses_on_packages && status == TJC_SHOW_UPDATE_NET)
+        {
+            if (touch.kind == PULSES_TOUCH_POSITION && touch.index != pulses_position)
+            {
+                pulses_position = touch.index;
+                tjc_pulses_render();
+                return;
+            }
+            if (touch.kind == PULSES_TOUCH_PACKAGE && pulses_slots[touch.index].id[0] &&
+                touch.generation == __atomic_load_n(&pulses_generation, __ATOMIC_RELAXED) &&
+                pulses_revision == pulses_get_revision())
+            {
+                if (!tjc_pulses_request(&pulses_slots[touch.index], pulses_position, 0))
+                    lyy_tjc_page_waring_normal("Payment request unavailable");
+                return;
+            }
+        }
+        else if (touch.kind == PULSES_TOUCH_WALLET && status == TJC_SHOW_COUNT_DOWN &&
+                 pulses_payment.position != 0 && touch.index < tjc_infor_t.pay.wallet_sum &&
+                 touch.index != tjc_infor_t.pay.wallet_num)
+        {
+            if (!tjc_pulses_request(&pulses_payment.slot, pulses_payment.position, touch.index))
+                lyy_tjc_page_waring_normal("Payment request unavailable");
+        }
+    }
+
+    if (pulses_on_packages && tjc_infor_t.status == TJC_SHOW_UPDATE_NET &&
+        pulses_revision != pulses_get_revision())
+        tjc_pulses_render();
+}
+
 /**
  * @brief 
  * 处理串口屏显示状态机
@@ -3060,6 +3391,7 @@ void thread_page_display(void *arg)
 
     while(1)
     {
+        if (get_dev_type_code() == DEVICE_TYPE_PULSES) tjc_pulses_poll();
         switch (tjc_infor_t.status)
         {
             case TJC_SHOW_UPDATE_NET:
@@ -3083,9 +3415,10 @@ void thread_page_display(void *arg)
                 tjc_infor_t.points_pay_flag = 0; //清空积分抵扣消费标记
 
                 lyy_tjc_packages_show();
-                device_get_points_show(); //可以得到的积分展示   先放这里，后续改位置
+                if (get_dev_type_code() != DEVICE_TYPE_PULSES) device_get_points_show();
                 memset(&tjc_infor_t.count_down,0x00,sizeof(TJC_COUNT_DOWN_DEF));
-                tjc_infor_t.status = TJC_SHOW_UPDATE_NET;
+                if (get_dev_type_code() != DEVICE_TYPE_PULSES || tjc_infor_t.status == TJC_SHOW_PACKAGES)
+                    tjc_infor_t.status = TJC_SHOW_UPDATE_NET;
             }break; 
             #if 0
             case TJC_SHOW_PAY: //支付界面
@@ -3118,6 +3451,10 @@ void thread_page_display(void *arg)
                     //计时结束，回到套餐页面
                     if(tjc_infor_t.count_down.time == 0)
                     {
+                        if (get_dev_type_code() == DEVICE_TYPE_PULSES && pulses_payment.pending) {
+                            LYY_LOGD("pulses get_qrcode timeout: lane=%u wallet=%u",
+                                     pulses_payment.position, tjc_infor_t.pay.wallet_num);
+                        }
                         tjc_infor_t.status = tjc_infor_t.count_down.next_status;
                     } 
                     lyy_tjc_net_status();         
@@ -3383,6 +3720,14 @@ void lyy_init_tjc(void)
 #define TJC_THREAD_NAME             "TJC_THREAD"
 #define TJC_THREAD_STACK            (1024 * 4 / sizeof(portSTACK_TYPE))
 
+
+    if (get_dev_type_code() == DEVICE_TYPE_PULSES)
+    {
+        pulses_touches = xQueueCreate(8, sizeof(TJC_PULSES_TOUCH));
+        pulses_qr_replies = xQueueCreate(1, sizeof(TJC_PULSES_QR));
+        if (pulses_touches == NULL || pulses_qr_replies == NULL)
+            LYY_LOGE("TJC pulses: could not allocate screen queues");
+    }
 
     HAL_vUartInit(HAL_UART_SCREEN,      SCAN_UART_BRT);
     HAL_vUartRecvProc(HAL_UART_SCREEN,  tjc_recv_packet_handle); 

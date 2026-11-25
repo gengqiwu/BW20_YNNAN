@@ -6,6 +6,8 @@
 #include "HAL_System.h"
 
 #include "APP_Detect.h"
+#include "APP_Pluse.h"
+#include "lyy_para.h"
 
 
 
@@ -40,12 +42,6 @@ static APP_DETECT_CB_T g_xDetect[APP_DETECT_MAX] = {   {    0x00,
                                                             0x00, 
                                                             NULL}, 
                                                             
-                                                        {   0x00, 
-                                                            (APP_DETECT_PULSE_MARK_FLAG),                
-                                                            GPIO_GIFT_OUT,          
-                                                            0x00, 
-                                                            NULL}, 
-
                                                         {   0x00, 
                                                             (APP_DETECT_PULSE_MARK_FLAG),                
                                                             GPIO_COIN_IN,           
@@ -106,7 +102,7 @@ static void APP_prvDetectTask(void *pvArg)
 #endif
             }break;
 
-            /* 投币、退礼检测 */
+            /* 投币检测 */
             default :  {
 
                 if(g_xDetect[ucCnt].ulTriggerNumer > 0) {
@@ -141,7 +137,7 @@ static void APP_prvDetectTask(void *pvArg)
 #endif
                 }break;
 
-                /* 投币、退礼检测 */
+                /* 投币检测 */
                 default : 
                 {
 
@@ -181,18 +177,12 @@ void APP_vDeteclRegisterFunc(uint16_t usDetectType, void (*vFunc)(void *pvArg))
 void APP_vDetecTimerMs(void)
 {
 
-    volatile uint16_t usCnt;
+    APP_DETECT_CB_T *pxDetect = &g_xDetect[APP_INPUT_COIN];
 
-    for(usCnt = APP_INPUT_GIFT; usCnt < APP_DETECT_MAX; usCnt++) {
-
-        g_xDetect[usCnt].usGatCnt <<=  0x01;
-        g_xDetect[usCnt].usGatCnt  |=  HAL_vGpioGet(g_xDetect[usCnt].usGpio);
-
-        if(g_xDetect[usCnt].usTriggerCond == g_xDetect[usCnt].usGatCnt) {
-
-            g_xDetect[usCnt].ulTriggerNumer++;
-        }
-
+    pxDetect->usGatCnt <<= 1;
+    pxDetect->usGatCnt |= HAL_vGpioGet(pxDetect->usGpio);
+    if (pxDetect->usTriggerCond == pxDetect->usGatCnt) {
+        pxDetect->ulTriggerNumer++;
     }
 
 }
@@ -202,6 +192,7 @@ void APP_vDetecTimerMs(void)
 void APP_prvDetectMachtineLvl(void)
 {
 
+    const bool bDualLane = (get_dev_type_code() == DEVICE_TYPE_PULSES);
     APP_MODE_CRTL_CLOSE;
 
     g_ulMachtineLvl = APP_GET_ELE_SWITCH;
@@ -209,6 +200,8 @@ void APP_prvDetectMachtineLvl(void)
     LYY_LOGD(">>> ele switch :[%d]", g_ulMachtineLvl);
 
     g_ulMachtineLvl ? APP_COIN_OUT_OPEN : APP_COIN_OUT_CLOSE;
+    /* For the dual-lane type, both outputs use the sampled machine idle. */
+    APP_vPulseOutputInit(bDualLane);
 
     APP_MODE_CRTL_OPEN;
 

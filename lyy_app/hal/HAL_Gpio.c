@@ -51,11 +51,11 @@ static const GPIO_INFO_T g_pxGpioInfo[] = {
     GPIO_INIT_OUT(COIN_CTR,         GPIO_PuPd_NOPULL),
     GPIO_INIT_IN(MODE_CTRL,         GPIO_PuPd_NOPULL),
 
-/* 投币、退礼检测 */
+/* 投币输入、出礼脉冲输出 */
 #define     GIFT_OUT                (_PB_21)
 #define     COIN_IN                 (_PB_20)
 
-    GPIO_INIT_IN(GIFT_OUT,          GPIO_PuPd_NOPULL),
+    GPIO_INIT_IN(GIFT_OUT,          GPIO_PuPd_NOPULL), /* Hi-Z until MODE_CTRL is sampled */
     GPIO_INIT_IN(COIN_IN,           GPIO_PuPd_NOPULL),
 
 /* 机台接口 */
@@ -71,6 +71,13 @@ void HAL_vGpioSet(uint32_t ulIoType, uint8_t ucLevel)
     GPIO_WriteBit(g_pxGpioInfo[ulIoType].ulGpioPin, ucLevel);
 }
 
+void HAL_vGpioEnableOutput(uint32_t ulIoType, uint8_t ucIdle)
+{
+    const uint32_t ulPin = g_pxGpioInfo[ulIoType].ulGpioPin;
+    /* Preload the data latch while the pad is still an input. */
+    GPIO_WriteBit(ulPin, ucIdle);
+    GPIO_Direction(ulPin, GPIO_Mode_OUT);
+}
 
 uint8_t HAL_vGpioGet(uint32_t ulIoType)
 {

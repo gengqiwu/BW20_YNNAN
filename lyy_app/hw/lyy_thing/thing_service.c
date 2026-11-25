@@ -233,6 +233,53 @@ int thing_service_pay_start_pulse(cJSON* params, char *id)
 
 }
 
+/* Dedicated pay_start entry to the existing start task (lyy_start.c). */
+extern int lyy_start_submit_pulses(uint16_t num, const char *order, uint16_t x, uint16_t y, const char *id);
+
+static int thing_service_pay_start_pulses(cJSON *params, char *id)
+{
+    const cJSON *number = cJSON_GetObjectItemCaseSensitive(params, "number");
+    const cJSON *order = cJSON_GetObjectItemCaseSensitive(params, "order");
+    const cJSON *x = cJSON_GetObjectItemCaseSensitive(params, "position_x");
+    const cJSON *y = cJSON_GetObjectItemCaseSensitive(params, "position_y");
+
+    const bool bOrderValid = cJSON_IsString(order) && order->valuestring != NULL &&
+                            order->valuestring[0] != '\0' &&
+                            strlen(order->valuestring) < sizeof(((HW_PAY_APPLY *)0)->uniqueid);
+    const bool bPositionValid = cJSON_IsNumber(x) && cJSON_IsNumber(y) &&
+                               (x->valuedouble == 1.0 || x->valuedouble == 2.0) &&
+                               y->valuedouble == 0.0;
+    /* Bounds before narrowing: negative values, NaN, infinity and overflow
+     * must not reach the uint16_t start-queue API. */
+    const bool bCountValid = cJSON_IsNumber(number) &&
+                            number->valuedouble >= 1.0 && number->valuedouble <= UINT16_MAX &&
+                            number->valuedouble == (uint16_t)number->valuedouble;
+
+    if (id == NULL || id[0] == '\0') {
+        return -1; /* No usable reply correlation id. */
+    }
+
+    bool bAccepted = bOrderValid && bPositionValid && bCountValid &&
+                     lyy_start_submit_pulses((uint16_t)number->valuedouble, order->valuestring,
+                                             (uint16_t)x->valuedouble - 1U, 0, id) == 1;
+    char *pcResult = bAccepted ? "success" : "fail";
+    cJSON *data = cJSON_CreateObject();
+    if (data != NULL) {
+        cJSON_AddStringToObject(data, "result", pcResult);
+        if (bOrderValid) {
+            cJSON_AddStringToObject(data, "order", order->valuestring);
+        }
+        if (bPositionValid) {
+            cJSON_AddNumberToObject(data, "position_x", x->valuedouble);
+            cJSON_AddNumberToObject(data, "position_y", 0);
+        }
+    }
+    /* The generic reply envelope always uses code 200. message/result say
+     * whether the pulse engine accepted the request, not whether it vended. */
+    thing_service_invoke_reply(data, pcResult, id, "pay_start");
+    return bAccepted ? 1 : -1;
+}
+
 /**
  * @brief 
  * 
@@ -244,6 +291,8 @@ int thing_service_pay_start(cJSON* params, char *id)
 {
     switch(get_dev_type_code())
     {
+        case DEVICE_TYPE_PULSES:
+            return thing_service_pay_start_pulses(params, id);
         case DEVICE_TYPE_LEVEL:
         case DEVICE_TYPE_PULSE:
         {
@@ -1678,6 +1727,23 @@ char thing_service_qrcode_dynamic_ndj(cJSON* params, char *id)
  */
 int thing_service_qrcode_dynamic(cJSON* params, char *id)
 {
+    if (get_dev_type_code() == DEVICE_TYPE_PULSES) {
+        const cJSON *token = cJSON_GetObjectItemCaseSensitive(params, "unique_code");
+        const cJSON *url = cJSON_GetObjectItemCaseSensitive(params, "url");
+        const cJSON *money = cJSON_GetObjectItemCaseSensitive(params, "money");
+        const cJSON *currency = cJSON_GetObjectItemCaseSensitive(params, "currency_desc");
+        if (!cJSON_IsString(token) || !cJSON_IsString(url) || !cJSON_IsString(money)) {
+            LYY_LOGD("pulses qrcode_post: missing token, URL or amount");
+            return -1;
+        }
+        if (!lyy_tjc_pulses_qr_reply(token->valuestring, url->valuestring, money->valuestring,
+                                    cJSON_IsString(currency) ? currency->valuestring : NULL)) {
+            LYY_LOGD("pulses qrcode_post: stale or invalid reply");
+            return -1;
+        }
+        thing_service_invoke_reply(NULL, "success", id, "qrcode_post");
+        return 1;
+    }
     if(get_dev_type_code()==DEVICE_TYPE_UART_NDJ) //扭蛋机
     {
         thing_service_qrcode_dynamic_ndj(params,id);

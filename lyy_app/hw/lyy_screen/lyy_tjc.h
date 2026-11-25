@@ -266,6 +266,7 @@ extern void     lyy_tjc_pay_page(PTJC_PAY_PAGE_DEF pay);
 extern void     lyy_tjc_pay_page_set(uint8_t wallet_num,uint8_t wallet_sum,char *url,char *money);
 #endif
 extern void     lyy_tjc_pay_page_set(uint8_t wallet_num,uint8_t wallet_sum);
+extern int      lyy_tjc_pulses_qr_reply(const char *token, const char *url, const char *money, const char *currency);
 extern void     lyy_tjc_pay_url_show(char *url,char *money);
 
 extern void     lyy_tjc_page_package(void);

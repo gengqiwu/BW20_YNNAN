@@ -33,6 +33,7 @@ typedef enum
     DEVICE_TYPE_UART_DFSSJ,          /*德锋售水机*/
     DEVICE_TYPE_UART_THXCJ,          /*探虎洗车机*/
     DEVICE_TYPE_UART_KOREAPOS,        /*韩国POS*/
+    DEVICE_TYPE_PULSES,
 } DEVICE_TYPE;
 
 typedef enum

@@ -37,6 +37,8 @@ extern void event_post_start_result_ndj(uint16_t result,uint8_t x,uint8_t y,char
 extern void event_post_account_dbj_uart_change(char *type, uint32_t acc_sum, uint32_t acc_inc, char *unqueId);
 
 extern void event_post_query_dynamic_url_ndj(char *package_id, char *channel, char *channel_number, uint32_t x, uint32_t y);
+extern int event_post_query_dynamic_url_pulses(const char *package_id, const char *channel,
+                                               const char *channel_number, uint8_t position, const char *unique_code);
 extern void event_post_query_dynamic_url_std(char *package_id,char *channel,char *channel_number);
 extern void event_post_out_coin_result(char *result, uint32_t out_coins, char *unique_code,float pay_amount);
 extern void event_post_account_dbj_uart(char *type,uint32_t acc_sum,uint32_t acc_inc,uint32_t out_sum,uint32_t out_inc,char *unqueId);

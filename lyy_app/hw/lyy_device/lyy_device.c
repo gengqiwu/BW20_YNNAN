@@ -958,6 +958,8 @@ void lyy_DevDataParse(uint8_t *pdata,uint32_t len)
     static uint8_t recvindex = 0;
     uint8_t pkgLen = 0;
 
+    if (get_dev_type_code() == DEVICE_TYPE_PULSES) return;
+
     // 针对modbus协议增加包检查
     LYY_LOGD("lyy_DevDataParse\r\n");
     lyy_printf_hex(pdata, len);

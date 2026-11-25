@@ -136,7 +136,6 @@ void APP_vMainInit(void)
 
         /* 外设触发 */
     APP_vDeteclRegisterFunc(APP_NETWORK_DETECT, APP_vApConfigSet);
-    APP_vDeteclRegisterFunc(APP_INPUT_GIFT,     APP_vGiftOut);
     APP_vDeteclRegisterFunc(APP_INPUT_COIN,     APP_vCoinIn);
 
     /* 平台业务 */

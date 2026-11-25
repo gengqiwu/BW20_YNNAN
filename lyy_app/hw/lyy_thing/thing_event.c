@@ -22,6 +22,8 @@
 
 
 #include "lyy_start.h"
+#include "lyy_pulses.h"
+#include "thing_mqtt.h"
 
 #include "utils.h"
 #include "cJSON.h"
@@ -389,6 +391,30 @@ void event_post_query_dynamic_url_ndj(char *package_id, char *channel, char *cha
         thing_event_post(value, "get_qrcode");
     }
 }
+
+int event_post_query_dynamic_url_pulses(const char *package_id, const char *channel,
+                                        const char *channel_number, uint8_t position, const char *unique_code)
+{
+    if (!lyy_mqtt_connect_result() || position < 1 || position > PULSES_LANE_COUNT ||
+        !pulses_valid_package_id(package_id) || !channel || !*channel ||
+        !channel_number || !*channel_number || !unique_code || !*unique_code) return 0;
+
+    cJSON *value = cJSON_CreateObject();
+    if (!value) return 0;
+    /* The cloud expects a number but cJSON's double would round long IDs. */
+    if (!cJSON_AddRawToObject(value, "commodity_id", package_id) ||
+        !cJSON_AddNumberToObject(value, "position_x", position) ||
+        !cJSON_AddNumberToObject(value, "position_y", 0) ||
+        !cJSON_AddStringToObject(value, "pay_channel_code", channel) ||
+        !cJSON_AddStringToObject(value, "pay_channel_number", channel_number) ||
+        !cJSON_AddStringToObject(value, "unique_code", unique_code)) {
+        cJSON_Delete(value);
+        return 0;
+    }
+    thing_event_post(value, "get_qrcode");
+    return 1;
+}
+
 
 /**
  * @brief 

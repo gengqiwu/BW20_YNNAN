@@ -146,6 +146,7 @@ void lyy_start_pay_apply(uint8_t *pucData, uint32_t ulLen)
     switch(get_dev_type_code())
     {
 
+        case DEVICE_TYPE_PULSES:
         case DEVICE_TYPE_PULSE:
         case DEVICE_TYPE_LEVEL:
         
@@ -481,6 +482,85 @@ void lyy_start_pay_start(uint8_t *pucData, uint32_t ulLen)
     }          
 }
 
+
+/* APP_vEventSendBuff has no return status. Require an acknowledgement from
+ * the existing start task, and cancel the ticket if it never gets there
+ * (full ring, allocation failure, or stalled worker). No late GPIO output. */
+typedef struct {
+    HW_PAY_APPLY xPay;
+    uint32_t ulTicket;
+} PULSES_START_EVENT_T;
+
+enum {
+    PULSES_START_FREE,
+    PULSES_START_WAITING,
+    PULSES_START_REJECTED,
+    PULSES_START_ACCEPTED,
+};
+
+static uint8_t g_ucPulsesStartState;
+static uint32_t g_ulPulsesStartTicket;
+
+static void lyy_start_pay_start_pulses(uint8_t *pucData, uint32_t ulLen)
+{
+    if (pucData == NULL || ulLen != sizeof(PULSES_START_EVENT_T)) {
+        return;
+    }
+    const PULSES_START_EVENT_T *pxEvent = (const PULSES_START_EVENT_T *)pucData;
+    const bool bDualLane = (get_dev_type_code() == DEVICE_TYPE_PULSES);
+
+    taskENTER_CRITICAL();
+    if (g_ucPulsesStartState == PULSES_START_WAITING &&
+        g_ulPulsesStartTicket == pxEvent->ulTicket) {
+        const bool bAccepted = bDualLane && pxEvent->xPay.y == 0 &&
+                               APP_bTryLanePulseStart(pxEvent->xPay.x, pxEvent->xPay.number);
+        g_ucPulsesStartState = bAccepted ? PULSES_START_ACCEPTED : PULSES_START_REJECTED;
+    }
+    taskEXIT_CRITICAL();
+}
+
+/* Dedicated to validated pay_start; other START_TYPE_PAY_START producers
+ * (e.g. out_coins) must not default to the first lane on this device type. */
+int lyy_start_submit_pulses(uint16_t num, const char *order, uint16_t x, uint16_t y, const char *id)
+{
+    PULSES_START_EVENT_T xEvent = {0};
+    if (num == 0 || x >= 2 || y != 0 ||
+        order == NULL || order[0] == '\0' || strlen(order) >= sizeof(xEvent.xPay.uniqueid) ||
+        id == NULL || id[0] == '\0' || strlen(id) >= sizeof(xEvent.xPay.pay_apply_id)) {
+        return 0;
+    }
+    strcpy(xEvent.xPay.uniqueid, order);
+    strcpy(xEvent.xPay.pay_apply_id, id);
+    xEvent.xPay.number = num;
+    xEvent.xPay.x = x;
+    xEvent.xPay.y = y;
+
+    taskENTER_CRITICAL();
+    if (g_ucPulsesStartState != PULSES_START_FREE) {
+        taskEXIT_CRITICAL();
+        return 0;
+    }
+    xEvent.ulTicket = ++g_ulPulsesStartTicket;
+    g_ucPulsesStartState = PULSES_START_WAITING;
+    taskEXIT_CRITICAL();
+
+    /* The task services one start event per 50 ms (ring capacity: 30). */
+    const TickType_t xStart = xTaskGetTickCount();
+    APP_vEventSendBuff(eEventStart, lyy_start_pay_start_pulses,
+                       (uint8_t *)&xEvent, sizeof(xEvent));
+    for (;;) {
+        taskENTER_CRITICAL();
+        if (g_ucPulsesStartState != PULSES_START_WAITING ||
+            (TickType_t)(xTaskGetTickCount() - xStart) >= pdMS_TO_TICKS(2000U)) {
+            int accepted = (g_ucPulsesStartState == PULSES_START_ACCEPTED);
+            g_ucPulsesStartState = PULSES_START_FREE;
+            taskEXIT_CRITICAL();
+            return accepted;
+        }
+        taskEXIT_CRITICAL();
+        vTaskDelay(1);
+    }
+}
 
 int api_std_start_entryQue(uint8_t type,uint16_t num,char *order , uint16_t x, uint16_t y, char *id)
 {

@@ -79,6 +79,7 @@ set(
     ${HW}/lyy_device/lyy_xcj.c
     ${HW}/lyy_user/lyy_start.c
     ${HW}/lyy_user/lyy_para.c
+    ${HW}/lyy_user/lyy_pulses.c
     ${HW}/lyy_thing/mqtt_api.c
     ${HW}/lyy_thing/thing_init.c
     ${HW}/lyy_thing/thing_mqtt.c

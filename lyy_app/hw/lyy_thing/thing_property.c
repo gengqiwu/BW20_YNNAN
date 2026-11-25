@@ -31,6 +31,7 @@
 #include "lyy_tjc.h"
 #include "lyy_pic.h"
 #include "lyy_para.h"
+#include "lyy_pulses.h"
 #include "lyy_start.h"
 #include "lyy_dfssj.h"
 
@@ -484,6 +485,10 @@ void pay_package_update(void *package, cJSON *body)
  */
 int property_write_pay_pkgs_ndj(cJSON* params)
 {   
+    if (get_dev_type_code() == DEVICE_TYPE_PULSES) {
+        return pulses_write_packages(params);
+    }
+
     //ndj_add
     uint8_t i   = 0;
     uint8_t lane_id = 0;
@@ -1019,6 +1024,10 @@ void ndj_lane_param_update(LANE_INFOR_TABLE_DEF *lane, cJSON *body,uint8_t cnt)
  */
 int property_write_ndj_lane(cJSON* params)
 {
+    if (get_dev_type_code() == DEVICE_TYPE_PULSES) {
+        return pulses_write_positions(params);
+    }
+
 
     //ndj_add
     PLANE_INFOR_TABLE_DEF lane = ndj_net_lane_infor();

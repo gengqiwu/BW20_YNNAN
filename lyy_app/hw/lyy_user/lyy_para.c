@@ -75,6 +75,7 @@ int get_dev_type_code(void)
             {"dev_type_uart_dfssj_lyy"},    /*德锋售水机*/
             {"dev_type_uart_thxcj_lyy"},    /*探虎洗车机*/
             {"dev_type_uart_koreapos_lyy"}, /*韩国POS*/
+            [DEVICE_TYPE_PULSES] = {"dev_type_pulses"},
         };
 
     for(uint8_t i=0;i<sizeof(dev_type_t)/sizeof(dev_type_t[0]);i++)

@@ -163,6 +163,7 @@ void dev_type_update(cJSON *member)
             {"dev_type_uart_mshgj_lyy"},
             {"dev_type_uart_cwhgj_lyy"}, /*创维烘干机*/
             {"dev_type_uart_cwxhj_lyy"}, /*创维洗烘机*/
+            {"dev_type_pulses"},
         };
 
     cJSON *temp = cJSON_GetObjectItem(member, "dev_type");
@@ -172,14 +173,14 @@ void dev_type_update(cJSON *member)
         LYY_LOGD("dev_type1: %s ", temp->valuestring);
         LYY_LOGD("dev_type2: %s ", APP_pcGetDevType());
 
-        if(memcmp(temp->valuestring, APP_pcGetDevType(), strlen(temp->valuestring)) != 0) //不一样
+        if(strcmp(temp->valuestring, APP_pcGetDevType()) != 0)
         {
 
             for (uint8_t i = 0; i < sizeof(dev_type_t) / sizeof(dev_type_t[0]); i++)   //为了解决洗衣机烘干机默认波特率9600的问题。
             {
                 if (strstr(dev_type_t[i].name, temp->valuestring) != NULL) // 一样
                 {
-                    if (i > DEVICE_TYPE_UART_NOTE)
+                    if (i > DEVICE_TYPE_UART_NOTE && strcmp(dev_type_t[i].name, "dev_type_pulses") != 0)
                     {
                         APP_lParamSetBaundRate(9600);
                         HAL_vUartSetParam(HAL_UART_MAIN_BOARD, 9600);

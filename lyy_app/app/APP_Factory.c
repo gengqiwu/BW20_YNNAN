@@ -142,19 +142,6 @@ static void APP_prvTestCoinIn(void *pvArg)
 }
 
 
-static void APP_prvTestGiftOut(void *pvArg)
-{
-
-    HAL_vUartSend(  HAL_UART_MAIN_BOARD, 
-                    (uint8_t *)TEST_GIFT_SEND_DATA, 
-                    strlen(TEST_GIFT_SEND_DATA),
-                    100);
-
-    LYY_LOGD(">>> GiftOut test : [%d]", *((uint32_t *)pvArg));
-
-}
-
-
 
 static void APP_PrvUartSendTask(void *pvArg)
 {
@@ -194,7 +181,6 @@ void APP_vFactoryInit(void)
     APP_vDetectInit();
     APP_Timer1msInit();
 
-    APP_vDeteclRegisterFunc(APP_INPUT_GIFT,     APP_prvTestGiftOut);
     APP_vDeteclRegisterFunc(APP_INPUT_COIN,     APP_prvTestCoinIn);
 
 

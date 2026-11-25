@@ -14,9 +14,8 @@ enum
     /* 配网检测 */
     APP_NETWORK_DETECT,     
 
-    /* 投币、退礼检测 */
-    APP_INPUT_GIFT,         
-    APP_INPUT_COIN,         
+    /* 投币检测 */
+    APP_INPUT_COIN,
 
     APP_DETECT_MAX
 };
