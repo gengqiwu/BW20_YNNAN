@@ -41,7 +41,7 @@
 #define CFG_USER_SOC		(CFG_SOC_RTL8711)
 
 //屏蔽了是生产环境，打开了是开发环境
-#define URL_TYPE_DEVELOP 
+//#define URL_TYPE_DEVELOP 
 
 #if(CFG_USER_SOC == CFG_SOC_ESP8684)
 
@@ -73,7 +73,7 @@
 2.0.2优化新帐目脉冲账目功能
 
 */
-#define CFG_APP_VERSION                         "BW20_POINTS_V2.0.2"        
+#define CFG_APP_VERSION                         "BW20_PLUSES_V2.0.2"        
 #define CFG_SDK_VERSION                         "AMEBA_RTOS_SDK_V1.0.1"    
 #define CFG_HARD_VERSION                        "BW20_LYY_V1.00"    
 
