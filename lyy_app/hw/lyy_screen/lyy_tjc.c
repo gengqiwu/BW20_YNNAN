@@ -942,25 +942,25 @@ static void tjc_pulses_render(void)
         snprintf(obj, sizeof(obj), "pkg%d", i + 1);
         if (visible)
         {
-            char first[100], second[100];
+            char name[sizeof(pkg.name) + 1];
+            char duration[sizeof(pkg.display_value) + sizeof(pkg.unit) + 2];
+            char price[sizeof(pkg.display_price) + sizeof(slot->currency) + 2];
             memcpy(slot->id, pkg.id, sizeof(slot->id));
             slot->currency[sizeof(slot->currency) - 1] = '\0';
-            if (pkg.commodity_Desc[0] || pkg.price_Desc[0])
-            {
-                snprintf(first, sizeof(first), "%.*s", (int)sizeof(pkg.commodity_Desc), pkg.commodity_Desc);
-                snprintf(second, sizeof(second), "%.*s", (int)sizeof(pkg.price_Desc), pkg.price_Desc);
-            }
-            else
-            {
-                snprintf(first, sizeof(first), "%.*s %s", (int)sizeof(pkg.display_price),
-                         pkg.display_price, slot->currency);
-                snprintf(second, sizeof(second), "%.*s %.*s", (int)sizeof(pkg.display_value),
-                         pkg.display_value, (int)sizeof(pkg.unit), pkg.unit);
-            }
-            tjc_pulses_safe_text(first);
-            tjc_pulses_safe_text(second);
-            char text[sizeof(first) + sizeof(second) + 1];
-            snprintf(text, sizeof(text), "%s\\r%s", first, second);
+
+            const char *label = pkg.name[0] ? pkg.name :
+                                (pkg.commodity_Desc[0] ? pkg.commodity_Desc : "-");
+            snprintf(name, sizeof(name), "%s", label);
+            snprintf(duration, sizeof(duration), "%s%s%s", pkg.display_value,
+                     pkg.unit[0] ? " " : "", pkg.unit);
+            snprintf(price, sizeof(price), "%s%s%s", pkg.display_price,
+                     slot->currency[0] ? " " : "", slot->currency);
+            tjc_pulses_safe_text(name);
+            tjc_pulses_safe_text(duration);
+            tjc_pulses_safe_text(price);
+            /* TJC uses a literal \\r escape to break each line in .txt. */
+            char text[sizeof(name) + sizeof(duration) + sizeof(price) + 2];
+            snprintf(text, sizeof(text), "%s\\r%s\\r%s", name, duration, price);
             lyy_tjc_objTxt(obj, text);
         }
         lyy_tjc_objHide(obj, visible);
