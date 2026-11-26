@@ -24,6 +24,13 @@
 
 #define APP_MASK_INIT_LOGO         'D'
 
+/** @brief APP_SER_INFO 缓存所属环境；不改变设备参数的旧初始化标记。 */
+#ifdef URL_TYPE_DEVELOP
+#define APP_SER_ENV_MARK           'T'
+#else
+#define APP_SER_ENV_MARK           'P'
+#endif
+
 
 static APP_SER_T        g_xAppSer;
 static APP_PARAM_T      g_xAppParam;
@@ -148,7 +155,7 @@ int APP_lserSetDevTypeInfo(char *pcDevType)
 
     int lSize = sizeof(APP_SER_T);
 
-    g_xAppSer.cInitMark = APP_MASK_INIT_LOGO;
+    g_xAppSer.cInitMark = APP_SER_ENV_MARK;
 
     if(lSize != HAL_vFileWrite(APP_SER_INFO, (uint8_t *)&g_xAppSer, lSize)) {
 
@@ -181,7 +188,7 @@ int APP_lSerSetInfo(APP_SER_T *pxAppSer)
 
     int lSize = sizeof(APP_SER_T);
 
-    g_xAppSer.cInitMark = APP_MASK_INIT_LOGO;
+    g_xAppSer.cInitMark = APP_SER_ENV_MARK;
 
     if(lSize != HAL_vFileWrite(APP_SER_INFO, (uint8_t *)&g_xAppSer, lSize)) {
 
@@ -337,24 +344,30 @@ int APP_lParamInit(void)
     }    
 
 
-    /* 获取网络信息 */
+    /* 服务器缓存按环境隔离。旧版 'D' 缓存没有环境信息，迁移一次。 */
     lSize = sizeof(APP_SER_T);
+    memset(&g_xAppSer, 0, sizeof(g_xAppSer));
+    int serReadLen = HAL_vFileRead(APP_SER_INFO, (uint8_t *)&g_xAppSer, lSize);
+    if (serReadLen != lSize || g_xAppSer.cInitMark != APP_SER_ENV_MARK) {
+        LYY_LOGI("server cache reset: read_len=%d, mark=0x%02x, expected=%c",
+                 serReadLen, (unsigned int)(unsigned char)g_xAppSer.cInitMark, APP_SER_ENV_MARK);
+        APP_SER_T xAppSer = { APP_SER_ENV_MARK,
+                              CFG_MODEL_PRODUCT_KEY,
+                              CFG_MODEL_PRODUCT_SECRET,
+                              CFG_SERVER_PORT,
+                              CFG_SERVER_URL,
+                              CFG_DEV_TYPE };
 
-    if(lSize != HAL_vFileRead(APP_SER_INFO, (uint8_t *)&g_xAppSer, lSize) 
-                                    ||  g_xAppSer.cInitMark != APP_MASK_INIT_LOGO) {
-
-        APP_SER_T xAppSer = {   APP_MASK_INIT_LOGO,
-                                CFG_MODEL_PRODUCT_KEY,
-                                CFG_MODEL_PRODUCT_SECRET,
-                                CFG_SERVER_PORT, 
-                                CFG_SERVER_URL,
-                                CFG_DEV_TYPE };
-
+        /* 设备类型不随环境切换。只从完整且可识别的旧记录保留它。 */
+        if (serReadLen == lSize && (g_xAppSer.cInitMark == APP_MASK_INIT_LOGO ||
+            g_xAppSer.cInitMark == 'P' || g_xAppSer.cInitMark == 'T') &&
+            g_xAppSer.pcDevType[0] != '\0' &&
+            memchr(g_xAppSer.pcDevType, '\0', sizeof(g_xAppSer.pcDevType)) != NULL) {
+            memcpy(xAppSer.pcDevType, g_xAppSer.pcDevType, sizeof(xAppSer.pcDevType));
+        }
         APP_lSerSetInfo(&xAppSer);
-
         LYY_LOGD(">>> server init");
-
-    }    
+    }
 
 
     APP_vParamDebug();

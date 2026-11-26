@@ -41,7 +41,7 @@
 #define CFG_USER_SOC		(CFG_SOC_RTL8711)
 
 //屏蔽了是生产环境，打开了是开发环境
-#define URL_TYPE_DEVELOP 
+//#define URL_TYPE_DEVELOP 
 
 #if(CFG_USER_SOC == CFG_SOC_ESP8684)
 

@@ -230,10 +230,11 @@ static void APP_prvHttpDataParse(char *pcData, uint32_t ulLen)
 
     if(0x01 == pucUpdate) {
 
-        xAppSer.cInitMark = 'D';
-        APP_lSerSetInfo(&xAppSer);
-
-        HAL_vReset("guide update", 1000);
+        /* 引导回包不包含设备类型，保留本地类型；保存接口写入环境标记。 */
+        snprintf(xAppSer.pcDevType, sizeof(xAppSer.pcDevType), "%s", APP_pcGetDevType());
+        if (APP_lSerSetInfo(&xAppSer) == LYY_SUCCESS) {
+            HAL_vReset("guide update", 1000);
+        }
 
     }
 
