@@ -27,6 +27,7 @@ static struct {
     uint32_t last_query;
     uint8_t connected;
     uint8_t positions;
+    uint8_t disabled_positions;
     uint8_t query_stage;
     uint8_t packages_ready;
     uint8_t packages_synced;
@@ -42,6 +43,12 @@ static int valid_position(uint8_t position)
 static int position_ready(uint8_t position)
 {
     return valid_position(position) && (s_pulses.positions & (1U << (position - 1)));
+}
+
+/* Caller holds the cache lock; position_ready validates the shift index. */
+static int position_can_show_packages(uint8_t position)
+{
+    return position_ready(position) && !(s_pulses.disabled_positions & (1U << (position - 1)));
 }
 
 static void copy_text(char *dest, size_t capacity, const char *text)
@@ -69,7 +76,7 @@ int pulses_get_lane_name(uint8_t position, char *name, size_t capacity)
 uint8_t pulses_get_package_count(uint8_t position)
 {
     taskENTER_CRITICAL();
-    uint8_t count = s_pulses.packages_ready && position_ready(position)
+    uint8_t count = s_pulses.packages_ready && position_can_show_packages(position)
                   ? s_pulses.data.count[position - 1] : 0;
     taskEXIT_CRITICAL();
     return count;
@@ -80,7 +87,7 @@ int pulses_get_package(uint8_t position, uint8_t slot, PAY_PACKAGE_DEF *out,
 {
     if (!out) return 0;
     taskENTER_CRITICAL();
-    int ready = s_pulses.packages_ready && position_ready(position) &&
+    int ready = s_pulses.packages_ready && position_can_show_packages(position) &&
                 slot < s_pulses.data.count[position - 1];
     if (ready) {
         *out = s_pulses.data.packages[position - 1][slot];
@@ -110,6 +117,8 @@ void pulses_sync_poll(int connected)
         if (s_pulses.connected) {
             s_pulses.connected = 0;
             s_pulses.positions = 0;
+            s_pulses.disabled_positions = 0;
+            memset(s_pulses.names, 0, sizeof(s_pulses.names));
             s_pulses.query_stage = 0;
             s_pulses.packages_ready = 0;
             s_pulses.packages_synced = 0;
@@ -173,28 +182,39 @@ int pulses_write_positions(const cJSON *params)
     if (!connected) return -1;
 
     char names[PULSES_LANE_COUNT][PULSES_NAME_SIZE] = {{0}};
-    uint8_t mask = 0;
+    uint8_t name_mask = 0, enable_mask = 0, disabled_mask = 0;
     const cJSON *entry;
     cJSON_ArrayForEach(entry, params) {
         if (!cJSON_IsString(entry) || !entry->valuestring) continue;
         cJSON *body = cJSON_ParseWithOpts(entry->valuestring, NULL, 1);
         uint8_t position = read_position(body);
-        const char *name = text_field(body, "positionName");
-        if (valid_position(position) && *name) {
-            copy_text(names[position - 1], sizeof(names[0]), name);
-            mask |= 1U << (position - 1);
+        if (valid_position(position)) {
+            uint8_t bit = 1U << (position - 1);
+            const char *name = text_field(body, "positionName");
+            const cJSON *enable = cJSON_GetObjectItemCaseSensitive(body, "enable");
+            if (*name) {
+                copy_text(names[position - 1], sizeof(names[0]), name);
+                name_mask |= bit;
+            }
+            if (cJSON_IsBool(enable)) {
+                enable_mask |= bit;
+                if (cJSON_IsFalse(enable)) disabled_mask |= bit;
+                else disabled_mask &= (uint8_t)~bit;
+            }
         }
         cJSON_Delete(body);
     }
+    uint8_t mask = name_mask | enable_mask;
     if (!mask) return -1;
 
     int result = -1;
     taskENTER_CRITICAL();
     if (s_pulses.connected && session == s_pulses.session) {
         for (uint8_t i = 0; i < PULSES_LANE_COUNT; ++i) {
-            if (mask & (1U << i)) memcpy(s_pulses.names[i], names[i], sizeof(names[i]));
+            if (name_mask & (1U << i)) memcpy(s_pulses.names[i], names[i], sizeof(names[i]));
         }
         s_pulses.positions |= mask;
+        s_pulses.disabled_positions = (s_pulses.disabled_positions & (uint8_t)~enable_mask) | disabled_mask;
         ++s_pulses.revision;
         result = 1;
     }

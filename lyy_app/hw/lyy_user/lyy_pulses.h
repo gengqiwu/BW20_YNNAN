@@ -25,7 +25,7 @@ int pulses_get_lane_name(uint8_t position, char *name, size_t capacity);
 /**
  * @brief 查询可展示的套餐数量。
  * @param position 物理货道编号 1 或 2。
- * @return 有效套餐数；货道未就绪、无套餐或编号无效时为 0。
+ * @return 有效套餐数；关闭、未就绪、无套餐或编号无效时为 0。
  */
 uint8_t pulses_get_package_count(uint8_t position);
 /**
@@ -35,7 +35,7 @@ uint8_t pulses_get_package_count(uint8_t position);
  * @param[out] out 套餐快照。
  * @param[out] currency 币种缓冲区，可为 NULL。
  * @param currency_capacity 币种缓冲区的字节数，包含结束符。
- * @return 复制成功为 1，否则为 0。
+ * @return 复制成功为 1；货道关闭、未就绪或槽位无效时为 0。
  */
 int pulses_get_package(uint8_t position, uint8_t slot, PAY_PACKAGE_DEF *out,
                        char *currency, size_t currency_capacity);
@@ -55,9 +55,10 @@ int pulses_valid_package_id(const char *id);
  */
 void pulses_sync_poll(int connected);
 /**
- * @brief 合并下发的货道名称，未列出的货道保持不变。
+ * @brief 合并货道名称和布尔型 enable，保留未列出的货道及未下发的字段。
  * @param params position_info 属性数组；各项是 JSON 字符串。
  * @return 有效货道更新为 1，未应用为 -1。
+ * @note 关闭货道不删除已缓存的套餐，重新开启可直接恢复显示。
  */
 int pulses_write_positions(const cJSON *params);
 /**

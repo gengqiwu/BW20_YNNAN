@@ -243,6 +243,7 @@ extern int lyy_start_submit_pulses(uint16_t num, const char *order, uint16_t x, 
  * @param id 云端请求标识，用于服务应答。
  * @return 脉冲队列已接收为 1；参数错误或未接收为 -1。
  * @note 成功仅表示接受启动，不代表出货完成。
+ * @details 成功应答后另发 start_result，包含订单号、脉冲数及货道坐标。
  */
 static int thing_service_pay_start_pulses(cJSON *params, char *id)
 {
@@ -285,6 +286,20 @@ static int thing_service_pay_start_pulses(cJSON *params, char *id)
     /* The generic reply envelope always uses code 200. message/result say
      * whether the pulse engine accepted the request, not whether it vended. */
     thing_service_invoke_reply(data, pcResult, id, "pay_start");
+    if (bAccepted) {
+        cJSON *value = cJSON_CreateObject();
+        if (value != NULL) {
+            if (cJSON_AddStringToObject(value, "result", "success") &&
+                cJSON_AddNumberToObject(value, "number", number->valuedouble) &&
+                cJSON_AddStringToObject(value, "order", order->valuestring) &&
+                cJSON_AddNumberToObject(value, "position_x", x->valuedouble) &&
+                cJSON_AddNumberToObject(value, "position_y", 0)) {
+                thing_event_post(value, "start_result");
+            } else {
+                cJSON_Delete(value);
+            }
+        }
+    }
     return bAccepted ? 1 : -1;
 }
 
