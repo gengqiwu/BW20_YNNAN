@@ -172,6 +172,11 @@ static void APP_prvPulseStartOp(void)
 }
 
 
+/**
+ * @brief 以空闲电平启用 PB_21 输出，并标记双路脉冲模块可用。
+ * @param bDualLane 非 0 时两路共用检测到的空闲极性；否则 GIFT_OUT 空闲为低。
+ * @pre 已完成 MODE_CTRL 采样，尚未启动脉冲定时器。
+ */
 void APP_vPulseOutputInit(uint8_t bDualLane)
 {
     g_ucGiftIdle = bDualLane ? APP_ulGetMachtineLvl() : GPIO_LOW;
@@ -180,6 +185,12 @@ void APP_vPulseOutputInit(uint8_t bDualLane)
     g_bOutputsReady = true;
 }
 
+/**
+ * @brief 原子地将一批脉冲加入指定输出队列。
+ * @param usLane 从 0 开始的通道索引。
+ * @param ulPulseCnt 脉冲数量；必须大于 0。
+ * @return 已接收整批时为 true；参数、状态、脉宽或容量不满足时为 false。
+ */
 static bool APP_prvTryLanePulseStart(uint16_t usLane, uint32_t ulPulseCnt)
 {
     if (usLane >= ePulseLanes || ulPulseCnt == 0) {
@@ -205,11 +216,21 @@ static bool APP_prvTryLanePulseStart(uint16_t usLane, uint32_t ulPulseCnt)
     return bAccepted;
 }
 
+/**
+ * @brief 双货道扫码启动和实体投币共用的脉冲入队接口。
+ * @param usLane 0 对应 COIN_OUT，1 对应 GIFT_OUT。
+ * @param ulPulseCnt 待输出的脉冲数。
+ * @return 1 表示已接收，0 表示未入队；不表示设备已经启动或出货。
+ */
 uint8_t APP_bTryLanePulseStart(uint16_t usLane, uint32_t ulPulseCnt)
 {
     return g_bDualLaneReady && APP_prvTryLanePulseStart(usLane, ulPulseCnt);
 }
 
+/**
+ * @brief 兼容原 GIFT_OUT 脉冲启动接口。
+ * @param ulPulseCnt 待输出的脉冲数。
+ */
 void APP_vGiftPulseStart(uint32_t ulPulseCnt)
 {
     (void)APP_prvTryLanePulseStart(eGiftLane, ulPulseCnt);
@@ -221,6 +242,12 @@ static bool APP_prvLegacyBusy(void)
            g_xPulseInfo[APP_COIN_LEVEL].usTriggerCond != 0;
 }
 
+/**
+ * @brief 按每毫秒节拍推进指定通道的脉宽、间隔和待发数量。
+ * @param usLane 零基通道索引。
+ * @param ulGpio HAL GPIO 枚举值。
+ * @param ucIdle 空闲电平，有效脉冲取反。
+ */
 static void APP_prvLanePulseTimerMs(uint16_t usLane, uint32_t ulGpio, uint8_t ucIdle)
 {
     APP_LANE_PULSE_T *pxLane = &g_xLanePulse[usLane];
@@ -264,6 +291,7 @@ static void APP_prvLanePulseTimerMs(uint16_t usLane, uint32_t ulGpio, uint8_t uc
 }
 
 
+/** @brief 每毫秒推进旧版输出和双路脉冲；同一引脚的波形不会交叉驱动。 */
 void APP_vPulseimerMs(void)
 { 
 

@@ -32,6 +32,7 @@
 
 
 #include "lyy_tjc.h"
+#include "lyy_para.h"
 #include "thing_init.h"
 
 
@@ -128,6 +129,8 @@ void APP_vMainInit(void)
     LYY_LOGD("APP_vEvenInit");
     APP_vEventTaskCreate();
     
+    const int dual_coin_lanes = (get_dev_type_code() == DEVICE_TYPE_PULSES);
+    if (dual_coin_lanes) APP_vDetectRegisterCoinLanes(APP_vCoinInLanes);
     APP_vDetectInit();
     APP_vNetWorkInit();
     APP_vDrillingModeInit();
@@ -136,7 +139,7 @@ void APP_vMainInit(void)
 
         /* 外设触发 */
     APP_vDeteclRegisterFunc(APP_NETWORK_DETECT, APP_vApConfigSet);
-    APP_vDeteclRegisterFunc(APP_INPUT_COIN,     APP_vCoinIn);
+    if (!dual_coin_lanes) APP_vDeteclRegisterFunc(APP_INPUT_COIN, APP_vCoinIn);
 
     /* 平台业务 */
     lyy_init_tjc();

@@ -479,9 +479,9 @@ void pay_package_update(void *package, cJSON *body)
 
 
 /**
- * @description: 支付套餐设置
- * @param {*}
- * @return {*}
+ * @brief 接收多货道套餐属性；双货道类型走联网套餐同步路径。
+ * @param params position_pay_package 属性值。
+ * @return 成功为正值，失败为负值。
  */
 int property_write_pay_pkgs_ndj(cJSON* params)
 {   
@@ -1018,9 +1018,9 @@ void ndj_lane_param_update(LANE_INFOR_TABLE_DEF *lane, cJSON *body,uint8_t cnt)
 }
 
 /**
- * @description: 货道信息设置
- * @param {*}
- * @return {*}
+ * @brief 接收货道配置属性，为双货道同步保存货道名称。
+ * @param params position_info 属性数组。
+ * @return 成功为 1，失败为负值。
  */
 int property_write_ndj_lane(cJSON* params)
 {

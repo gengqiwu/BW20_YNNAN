@@ -71,6 +71,11 @@ void HAL_vGpioSet(uint32_t ulIoType, uint8_t ucLevel)
     GPIO_WriteBit(g_pxGpioInfo[ulIoType].ulGpioPin, ucLevel);
 }
 
+/**
+ * @brief 先预置 GPIO 的输出锁存器，再切换为输出，避免主动驱动错误的初值。
+ * @param ulIoType HAL GPIO 枚举值，不是芯片引脚号。
+ * @param ucIdle 要预置的空闲电平。
+ */
 void HAL_vGpioEnableOutput(uint32_t ulIoType, uint8_t ucIdle)
 {
     const uint32_t ulPin = g_pxGpioInfo[ulIoType].ulGpioPin;

@@ -501,6 +501,11 @@ enum {
 static uint8_t g_ucPulsesStartState;
 static uint32_t g_ulPulsesStartTicket;
 
+/**
+ * @brief 启动任务处理双货道请求，仅接受仍在等待确认的票据。
+ * @param pucData 队列中的启动事件数据。
+ * @param ulLen 事件数据字节数。
+ */
 static void lyy_start_pay_start_pulses(uint8_t *pucData, uint32_t ulLen)
 {
     if (pucData == NULL || ulLen != sizeof(PULSES_START_EVENT_T)) {
@@ -519,8 +524,16 @@ static void lyy_start_pay_start_pulses(uint8_t *pucData, uint32_t ulLen)
     taskEXIT_CRITICAL();
 }
 
-/* Dedicated to validated pay_start; other START_TYPE_PAY_START producers
- * (e.g. out_coins) must not default to the first lane on this device type. */
+/**
+ * @brief 提交双货道线上启动，并等待脉冲队列接收确认。
+ * @param num 订单要求输出的脉冲数。
+ * @param order 云端订单号。
+ * @param x 零基输出通道；0 为货道 1，1 为货道 2。
+ * @param y 纵坐标，必须为 0。
+ * @param id 云端请求标识，用于对应服务应答。
+ * @return 接收成功为 1，无效、忙或超时为 0；不代表出货完成。
+ * @note 等待最多约 2 秒；超时后迟到事件不会再驱动输出。
+ */
 int lyy_start_submit_pulses(uint16_t num, const char *order, uint16_t x, uint16_t y, const char *id)
 {
     PULSES_START_EVENT_T xEvent = {0};

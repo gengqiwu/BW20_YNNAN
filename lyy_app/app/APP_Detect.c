@@ -8,6 +8,7 @@
 #include "APP_Detect.h"
 #include "APP_Pluse.h"
 #include "lyy_para.h"
+#include "lyy_tjc.h"
 
 
 
@@ -51,6 +52,9 @@ static APP_DETECT_CB_T g_xDetect[APP_DETECT_MAX] = {   {    0x00,
 
 
 static uint32_t g_ulMachtineLvl;
+static void (*g_pvCoinLanes)(uint32_t lane1, uint32_t lane2);
+static uint32_t g_aLaneCoins[2];
+static uint8_t g_ucCoinPosition;
 
 
 static void APP_prvDetectNetWorkKey(void)
@@ -82,6 +86,22 @@ static void APP_prvDetectNetWorkKey(void)
 }
 
 
+/** @brief 投币检测任务取走各货道的计数，再交给业务回调。 */
+static void APP_prvDispatchCoin(void)
+{
+    if (g_pvCoinLanes) {
+        uint32_t lane1 = __atomic_exchange_n(&g_aLaneCoins[0], 0U, __ATOMIC_RELAXED);
+        uint32_t lane2 = __atomic_exchange_n(&g_aLaneCoins[1], 0U, __ATOMIC_RELAXED);
+        if (lane1 || lane2) g_pvCoinLanes(lane1, lane2);
+    } else {
+        APP_DETECT_CB_T *coin = &g_xDetect[APP_INPUT_COIN];
+        if (coin->ulTriggerNumer > 0) {
+            if (coin->vFunc) coin->vFunc(&coin->ulTriggerNumer);
+            coin->ulTriggerNumer = 0;
+        }
+    }
+}
+
 static void APP_prvDetectTask(void *pvArg)
 {
 
@@ -103,20 +123,7 @@ static void APP_prvDetectTask(void *pvArg)
             }break;
 
             /* 投币检测 */
-            default :  {
-
-                if(g_xDetect[ucCnt].ulTriggerNumer > 0) {
-
-                    if(g_xDetect[ucCnt].vFunc){
-
-                        g_xDetect[ucCnt].vFunc(&g_xDetect[ucCnt].ulTriggerNumer);
-                    }
-
-                    g_xDetect[ucCnt].ulTriggerNumer = 0x00;
-
-                }
-
-            };
+            case APP_INPUT_COIN: APP_prvDispatchCoin(); break;
 
         }
     }
@@ -138,22 +145,7 @@ static void APP_prvDetectTask(void *pvArg)
                 }break;
 
                 /* 投币检测 */
-                default : 
-                {
-
-                    if(g_xDetect[ucCnt].ulTriggerNumer > 0)
-                    {
-
-                        if(g_xDetect[ucCnt].vFunc)
-                        {
-                            g_xDetect[ucCnt].vFunc(&g_xDetect[ucCnt].ulTriggerNumer);
-                        }
-
-                        g_xDetect[ucCnt].ulTriggerNumer = 0x00;
-
-                    }
-
-                };
+                case APP_INPUT_COIN: APP_prvDispatchCoin(); break;
 
             }
         }
@@ -174,6 +166,21 @@ void APP_vDeteclRegisterFunc(uint16_t usDetectType, void (*vFunc)(void *pvArg))
 
 
 
+/**
+ * @brief 注册双货道投币回调，启用脉冲起点的货道归属采样。
+ * @param callback 接收货道 1、2 的有效脉冲数；NULL 使用原单计数流程。
+ * @pre 在检测任务和 1 ms 定时器启动前注册。
+ */
+void APP_vDetectRegisterCoinLanes(void (*callback)(uint32_t lane1, uint32_t lane2))
+{
+    g_pvCoinLanes = callback;
+}
+
+/**
+ * @brief 每毫秒采样 COIN_IN，按原 8 高、8 低规则确认一个脉冲。
+ * @details 双货道在首个低采样锁定屏幕货道，确认脉冲后才累加。
+ * @note 本函数仅采样和累计，不写 Flash、不触发 MQTT。
+ */
 void APP_vDetecTimerMs(void)
 {
 
@@ -181,7 +188,16 @@ void APP_vDetecTimerMs(void)
 
     pxDetect->usGatCnt <<= 1;
     pxDetect->usGatCnt |= HAL_vGpioGet(pxDetect->usGpio);
-    if (pxDetect->usTriggerCond == pxDetect->usGatCnt) {
+    if (g_pvCoinLanes) {
+        /* Latch on the first low sample after eight high samples; only
+         * book it when the existing eight-low debounce validates the pulse. */
+        if ((pxDetect->usGatCnt & 0x1ffU) == 0x1feU) {
+            g_ucCoinPosition = lyy_tjc_coin_position();
+        }
+        if (pxDetect->usTriggerCond == pxDetect->usGatCnt) {
+            __atomic_fetch_add(&g_aLaneCoins[g_ucCoinPosition == 2U], 1U, __ATOMIC_RELAXED);
+        }
+    } else if (pxDetect->usTriggerCond == pxDetect->usGatCnt) {
         pxDetect->ulTriggerNumer++;
     }
 
@@ -189,6 +205,7 @@ void APP_vDetecTimerMs(void)
 
 
 
+/** @brief 采样 MODE_CTRL，并以检测出的空闲电平初始化双路输出。 */
 void APP_prvDetectMachtineLvl(void)
 {
 

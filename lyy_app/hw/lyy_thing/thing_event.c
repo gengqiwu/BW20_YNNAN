@@ -392,6 +392,15 @@ void event_post_query_dynamic_url_ndj(char *package_id, char *channel, char *cha
     }
 }
 
+/**
+ * @brief 发起双货道 get_qrcode，保留长套餐 ID 的 JSON 数字精度。
+ * @param package_id 套餐 ID 的十进制原文，不经浮点转换。
+ * @param channel 支付渠道代码。
+ * @param channel_number 支付渠道编号。
+ * @param position 云端货道编号 1 或 2；上报的 position_y 固定为 0。
+ * @param unique_code 每次取码的关联标识，由云端原样回传。
+ * @return 已提交事件为 1；参数无效、未连接或构造失败为 0。
+ */
 int event_post_query_dynamic_url_pulses(const char *package_id, const char *channel,
                                         const char *channel_number, uint8_t position, const char *unique_code)
 {

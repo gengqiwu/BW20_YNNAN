@@ -32,6 +32,7 @@
 #include "lyy_tjc.h"
 #include "lyy_ndj.h"
 #include "lyy_para.h"
+#include "lyy_pulses.h"
 #include "lyy_start.h"
 #include "lyy_dfssj.h"
 #include "lyy_xyj.h"
@@ -236,6 +237,13 @@ int thing_service_pay_start_pulse(cJSON* params, char *id)
 /* Dedicated pay_start entry to the existing start task (lyy_start.c). */
 extern int lyy_start_submit_pulses(uint16_t num, const char *order, uint16_t x, uint16_t y, const char *id);
 
+/**
+ * @brief 校验并处理双货道 pay_start，只按订单报文的货道选路。
+ * @param params 包含 order、number、position_x 和 position_y 的对象。
+ * @param id 云端请求标识，用于服务应答。
+ * @return 脉冲队列已接收为 1；参数错误或未接收为 -1。
+ * @note 成功仅表示接受启动，不代表出货完成。
+ */
 static int thing_service_pay_start_pulses(cJSON *params, char *id)
 {
     const cJSON *number = cJSON_GetObjectItemCaseSensitive(params, "number");
@@ -1050,12 +1058,36 @@ int thing_service_packages_set_std(cJSON* params, char *id)
     return 1;
 }
 /**
- * @description: 配置套餐
- * @param {*}
- * @return {*}
+ * @brief 应答双货道热更新请求。
+ * @param result 缓存更新结果；正值表示已更新或有效空更新。
+ * @param id 云端请求标识。
+ * @param identifier 服务标识，不含 thing.service 前缀。
+ * @return 成功为 1，失败为 -1。
+ */
+static int thing_service_reply_pulses_update(int result, char *id, char *identifier)
+{
+    int ok = result > 0;
+    cJSON *ack = cJSON_CreateObject();
+    if (ack) cJSON_AddBoolToObject(ack, "result", ok);
+    thing_service_invoke_reply(ack, ok ? "success" : "fail", id, identifier);
+    return ok ? 1 : -1;
+}
+
+/**
+ * @brief 处理 update_position_pay_package 主动推送。
+ * @param params 包含 position_pay_package 的服务参数。
+ * @param id 云端请求标识。
+ * @return 更新成功为 1，负值表示未应用。
+ * @details 双货道仅替换有有效非空套餐的货道，其余货道保留。
  */
 int thing_service_packages_set_ndj(cJSON* params, char *id)
 {
+    if (get_dev_type_code() == DEVICE_TYPE_PULSES) {
+        const cJSON *packages = cJSON_GetObjectItemCaseSensitive(params, "position_pay_package");
+        return thing_service_reply_pulses_update(pulses_update_packages(packages), id,
+                                                 "update_position_pay_package");
+    }
+
     //ndj_add
     uint8_t  i = 0;
     uint8_t j=0,cnt = 0,sub_cnt = 0;
@@ -1173,12 +1205,20 @@ int thing_service_packages_set_ndj(cJSON* params, char *id)
 }
 
 /**
- * @description: 服务-更新货道信息
- * @param {*}
- * @return {*}
+ * @brief 处理 update_position_info 主动推送。
+ * @param params 包含 position_info 的服务参数。
+ * @param id 云端请求标识。
+ * @return 更新成功为 1，负值表示未应用或处理失败。
+ * @details 双货道直接更新本地名称；串口设备仍沿用原处理。
  */
 int thing_service_lane_infor_set(cJSON* params, char *id)
 {
+    if (get_dev_type_code() == DEVICE_TYPE_PULSES) {
+        const cJSON *positions = cJSON_GetObjectItemCaseSensitive(params, "position_info");
+        return thing_service_reply_pulses_update(pulses_write_positions(positions), id,
+                                                 "update_position_info");
+    }
+
 
     (void)id;
     //ndj_add

@@ -104,6 +104,8 @@ static uint32_t pulses_generation;
 static uint32_t pulses_revision;
 static uint8_t pulses_on_packages;
 static uint8_t pulses_position;
+/* Actual package view as commanded on UART: 0 = another page. */
+static uint32_t pulses_coin_view;
 static TJC_PULSES_SLOT pulses_slots[PULSES_PACKAGE_MAX];
 static struct
 {
@@ -431,6 +433,10 @@ void lyy_tjc_objTxt(char *objName, char *txt)
 
 /* Like the existing TJC text path, pass through the cloud's UTF-8 bytes.
  * Replace unsafe ASCII/terminator bytes before putting text in a TJC string literal. */
+/**
+ * @brief 清理不能安全放入屏幕字符串指令的字节，保留 UTF-8 文本。
+ * @param text 待就地处理的以 NUL 结尾的字符串。
+ */
 static void tjc_pulses_safe_text(char *text)
 {
     for (unsigned char *p = (unsigned char *)text; *p; ++p)
@@ -492,13 +498,22 @@ void lyy_tjc_objHide(char *objName, uint8_t val)
     lyy_tjc_cmd_send(cmdBuff, strlen(cmdBuff));
 }
 /**
- * @brief 
- * 切换页面
+ * @brief 读取供投币采样使用的货道号，不访问串口。
+ * @return 货道 2 套餐视图返回 2；其他视图返回 1。
+ */
+uint8_t lyy_tjc_coin_position(void)
+{
+    return __atomic_load_n(&pulses_coin_view, __ATOMIC_RELAXED) == 2U ? 2U : 1U;
+}
+
+/**
+ * @brief 切换页面
  * @param page 页面名称
  */
 void lyy_tjc_switch_page(char *page)
 {
     char cmdBuff[TJC_BUFF_MAX] = {0x00,};
+    __atomic_store_n(&pulses_coin_view, strcmp(page, "pkg_std2") == 0 ? 1U : 0U, __ATOMIC_RELAXED);
     memset(cmdBuff, 0, TJC_BUFF_MAX);
     sprintf(cmdBuff, "page %s\xff\xff\xff", page);
     LYY_LOGD("lyy_tjc_switch_page : %s",cmdBuff);
@@ -831,7 +846,14 @@ void lyy_tjc_pay_page_set(uint8_t wallet_num,uint8_t wallet_sum)
     lyy_tjc_set_status(TJC_SHOW_PAY_PAGE);
     vTaskDelay(20 / portTICK_PERIOD_MS);  
 }
-/* Only the current dual-lane QR request may publish a reply. */
+/**
+ * @brief 将当前取码请求的回包交给显示任务，不直接操作串口。
+ * @param token 云端回传的 unique_code，必须匹配最近一次取码。
+ * @param url 云端返回的支付链接。
+ * @param money 云端返回的金额文本。
+ * @param currency 币种描述，可为 NULL。
+ * @return 已接收为 1；回包过期、字段无效或队列未就绪为 0。
+ */
 int lyy_tjc_pulses_qr_reply(const char *token, const char *url, const char *money, const char *currency)
 {
     TJC_PULSES_QR reply = {0};
@@ -878,6 +900,10 @@ void lyy_tjc_pay_url_show(char *url,char *money)
 //     tjc_infor_t.pay.time   = 40;  //倒计时固定40秒
 //     lyy_tjc_set_status(TJC_SHOW_PAY_URL);
 // }
+/**
+ * @brief 在当前页面刷新双货道名称、选中标记和最多六个套餐控件。
+ * @details 刷新期间已排队的旧套餐触摸不用于下单，空套餐位隐藏且禁用。
+ */
 static void tjc_pulses_render(void)
 {
     char names[PULSES_LANE_COUNT][128] = {{0}};
@@ -941,9 +967,15 @@ static void tjc_pulses_render(void)
         int len = snprintf(cmd, sizeof(cmd), "tsw %s,%d\xff\xff\xff", obj, visible);
         lyy_tjc_cmd_send(cmd, len);
     }
+    uint32_t previous = __atomic_load_n(&pulses_coin_view, __ATOMIC_RELAXED);
+    if (previous != 0U) {
+        __atomic_compare_exchange_n(&pulses_coin_view, &previous, pulses_position, 0,
+                                    __ATOMIC_RELAXED, __ATOMIC_RELAXED);
+    }
     __atomic_add_fetch(&pulses_generation, 1, __ATOMIC_RELAXED);
 }
 
+/** @brief 进入双货道套餐页，默认货道 1，并丢弃上次页面的触摸事件。 */
 static void tjc_pulses_enter_packages(void)
 {
     pulses_position = 1;
@@ -2662,7 +2694,12 @@ int tjc_isPacket(uint8_t *packet,uint16_t len)
 }
 
 
-/* Touch text may be raw or wrapped in the existing TJC string-return frame. */
+/**
+ * @brief 解析双货道标签和套餐触摸，支持纯文本和 TJC 字符串帧。
+ * @param pack 串口接收缓冲区。
+ * @param len 缓冲区内报文的长度。
+ * @return 识别到双货道命令为 1，否则为 0。
+ */
 static int tjc_pulses_recv_touch(const uint8_t *pack, uint32_t len)
 {
     TJC_PULSES_TOUCH touch = {0};
@@ -3268,6 +3305,13 @@ void thread_screen_ota(void *arg)
 }
 
 
+/**
+ * @brief 为指定货道、套餐和钱包发起新取码，并替换上次请求的唯一码。
+ * @param slot 已选套餐的快照。
+ * @param position 云端货道编号 1 或 2。
+ * @param wallet 从 0 开始的钱包索引。
+ * @return 已发起请求为 1，未能提交为 0；不代表已收到二维码。
+ */
 static int tjc_pulses_request(const TJC_PULSES_SLOT *slot, uint8_t position, uint8_t wallet)
 {
     uint8_t status = tjc_infor_t.status;
@@ -3310,6 +3354,7 @@ static int tjc_pulses_request(const TJC_PULSES_SLOT *slot, uint8_t position, uin
     return 1;
 }
 
+/** @brief 在显示任务中处理触摸、匹配的二维码以及套餐缓存更新。 */
 static void tjc_pulses_poll(void)
 {
     uint8_t status = tjc_infor_t.status;

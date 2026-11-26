@@ -33,6 +33,7 @@ typedef enum
     DEVICE_TYPE_UART_DFSSJ,          /*德锋售水机*/
     DEVICE_TYPE_UART_THXCJ,          /*探虎洗车机*/
     DEVICE_TYPE_UART_KOREAPOS,        /*韩国POS*/
+    /** 双货道脉冲设备。追加在末尾以保留旧类型数值。 */
     DEVICE_TYPE_PULSES,
 } DEVICE_TYPE;
 

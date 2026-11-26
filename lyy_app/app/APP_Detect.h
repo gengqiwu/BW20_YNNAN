@@ -24,6 +24,8 @@ enum
 extern void     APP_vDetectInit(void);
 extern void     APP_vDetecTimerMs(void);
 extern void     APP_vDeteclRegisterFunc(uint16_t usDetectType, void (*vFunc)(void *pvArg));
+/* Register before starting the 1 ms timer and detection task. */
+extern void     APP_vDetectRegisterCoinLanes(void (*callback)(uint32_t lane1, uint32_t lane2));
 
 extern void     APP_prvDetectMachtineLvl(void);
 extern uint32_t APP_ulGetMachtineLvl(void);

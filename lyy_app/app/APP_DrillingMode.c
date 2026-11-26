@@ -32,6 +32,8 @@ typedef struct {
 }APP_ACC_UPDATE_T;
 
 static APP_ACC_UPDATE_T app_acc_update_t;
+static uint32_t g_aAccCoinLanes[2];
+static uint32_t g_aPendingCoinPulses[2];
 
 // enum {
 
@@ -84,6 +86,49 @@ static APP_ACC_UPDATE_T app_acc_update_t;
 // }
 
 
+/**
+ * @brief 保持旧机型的实体投币转发行为。
+ * @param count 有效投币脉冲数，按原配置以脉冲或持续电平输出。
+ */
+static void APP_prvForwardCoin(uint32_t count)
+{
+    APP_vPulseStart(START_TYPE_LEVEL == APP_pxlGetParamePulse()->ulPulsetype ?
+                    APP_COIN_LEVEL : APP_COIN_PLUSE, count);
+}
+
+/**
+ * @brief 分别向 COIN_OUT 和 GIFT_OUT 的队列提交投币脉冲。
+ * @pre 调用者持有任务临界区，防止重试和新投币重复提交同一批计数。
+ * @note 未被队列接收的计数留在原货道，下次账目任务再尝试。
+ */
+static void APP_prvForwardCoinLanes(void)
+{
+    for (uint16_t lane = 0; lane < 2; ++lane) {
+        uint32_t pending = g_aPendingCoinPulses[lane];
+        if (pending && APP_bTryLanePulseStart(lane, pending)) {
+            g_aPendingCoinPulses[lane] = 0;
+        }
+    }
+}
+
+/**
+ * @brief 接收已归属货道的投币计数，分路记账并按 1:1 转发。
+ * @param lane1 货道 1 的有效投币脉冲数，输出到 COIN_OUT。
+ * @param lane2 货道 2 的有效投币脉冲数，输出到 GIFT_OUT。
+ * @note 双货道实体投币只使用脉冲输出，不受旧版持续电平模式影响。
+ */
+void APP_vCoinInLanes(uint32_t lane1, uint32_t lane2)
+{
+    taskENTER_CRITICAL();
+    g_aAccCoinLanes[0] += lane1;
+    g_aAccCoinLanes[1] += lane2;
+    g_aPendingCoinPulses[0] += lane1;
+    g_aPendingCoinPulses[1] += lane2;
+    APP_prvForwardCoinLanes();
+    acc_timeout_to_checkSta = ACC_PERIOD_FOR_CHECKSTA / ACC_TIME_INTERRUPT_MS;
+    taskEXIT_CRITICAL();
+}
+
 void APP_vCoinIn(void *pvArg)
 {
     
@@ -96,9 +141,7 @@ void APP_vCoinIn(void *pvArg)
     app_acc_update_t.ucAccCoinIn += *((uint32_t *)pvArg);
     
 
-    START_TYPE_LEVEL == APP_pxlGetParamePulse()->ulPulsetype
-        ? APP_vPulseStart(APP_COIN_LEVEL, *((uint32_t *)pvArg))
-        : APP_vPulseStart(APP_COIN_PLUSE, *((uint32_t *)pvArg));
+    APP_prvForwardCoin(*((uint32_t *)pvArg));
 
     //LYY_LOGD(">>> CoinIn sum : [%d][%d]",  g_DrillSta.pxAcc->ulCoinInSum, 
                                             //*((uint32_t *)pvArg));
@@ -271,17 +314,33 @@ void APP_vDbjCoinOut(uint32_t ulCoinOut)
 
 
 
+/**
+ * @brief 定期重试待转发脉冲，并将已累计投币写入离线账目缓存。
+ * @param pvArg 定时器参数，未使用。
+ * @details 双货道按 position_x=1 或 2 分别写账，position_y 固定为 0。
+ *          此处不重新读取屏幕页面，避免切页改变投币归属。
+ */
 void APP_vAccTask(void *pvArg)   //新线下账目优化后
 {
 
     (void)pvArg;
 
-    if (acc_timeout_to_checkSta)
-    {
-        acc_timeout_to_checkSta--;
+    uint32_t lane1 = 0, lane2 = 0;
+    taskENTER_CRITICAL();
+    APP_prvForwardCoinLanes();
+    if (acc_timeout_to_checkSta) --acc_timeout_to_checkSta;
+    int flush = (acc_timeout_to_checkSta == 0);
+    if (flush) {
+        lane1 = g_aAccCoinLanes[0];
+        lane2 = g_aAccCoinLanes[1];
+        g_aAccCoinLanes[0] = g_aAccCoinLanes[1] = 0;
+        acc_timeout_to_checkSta = ACC_PERIOD_FOR_CHECKSTA / ACC_TIME_INTERRUPT_MS;
     }
-    if (acc_timeout_to_checkSta <= 0)
+    taskEXIT_CRITICAL();
+    if (flush)
     {
+        if (lane1) offline_accounts_save_ndj(lane1, 0, 1, MSG_TYPE_COIN_IN, PAY_METHOD_OFFLINE);
+        if (lane2) offline_accounts_save_ndj(lane2, 0, 2, MSG_TYPE_COIN_IN, PAY_METHOD_OFFLINE);
         //event_post_log("acc_time_test");
 
         if (app_acc_update_t.ucAccCoinIn != 0)
@@ -311,8 +370,6 @@ void APP_vAccTask(void *pvArg)   //新线下账目优化后
             }
             app_acc_update_t.ucAccGiftOut = 0; // 账目清零
         }
-
-        acc_timeout_to_checkSta = ACC_PERIOD_FOR_CHECKSTA / ACC_TIME_INTERRUPT_MS;
     }
 }
 

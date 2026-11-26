@@ -1,3 +1,6 @@
+/** @file lyy_pulses.c
+ *  @brief 双货道缓存、同步状态机和按货道合并的实现。
+ */
 #include <float.h>
 #include <stdio.h>
 #include <string.h>
@@ -26,6 +29,7 @@ static struct {
     uint8_t positions;
     uint8_t query_stage;
     uint8_t packages_ready;
+    uint8_t packages_synced;
     char names[PULSES_LANE_COUNT][PULSES_NAME_SIZE];
     PULSES_PACKAGES data;
 } s_pulses;
@@ -108,12 +112,13 @@ void pulses_sync_poll(int connected)
             s_pulses.positions = 0;
             s_pulses.query_stage = 0;
             s_pulses.packages_ready = 0;
+            s_pulses.packages_synced = 0;
             ++s_pulses.session;
             ++s_pulses.revision;
         }
     } else {
         s_pulses.connected = 1;
-        if (!s_pulses.packages_ready) {
+        if (!s_pulses.packages_synced) {
             uint8_t stage = s_pulses.positions ? 2U : 1U;
             if (s_pulses.query_stage != stage || now - s_pulses.last_query >= PULSES_SYNC_RETRY_MS) {
                 query = s_pulses.query_stage = stage;
@@ -229,11 +234,17 @@ static int read_package(const cJSON *entry, PAY_PACKAGE_DEF *pkg)
     return 1;
 }
 
-int pulses_write_packages(const cJSON *params)
+/**
+ * @brief 解析套餐快照，并在同一 MQTT 会话内提交缓存更新。
+ * @param params 套餐对象或承载该对象的 JSON 字符串。
+ * @param pushed 非 0 表示后台主动推送，忽略货道的空套餐数组。
+ * @return 已应用或有效空更新为 1，未应用为 -1。
+ */
+static int write_packages(const cJSON *params, int pushed)
 {
     taskENTER_CRITICAL();
     uint32_t session = s_pulses.session;
-    int requested = s_pulses.connected && s_pulses.positions && s_pulses.query_stage == 2;
+    int requested = s_pulses.connected && (pushed || (s_pulses.positions && s_pulses.query_stage == 2));
     taskEXIT_CRITICAL();
     if (!requested) return -1;
 
@@ -258,6 +269,7 @@ int pulses_write_packages(const cJSON *params)
     copy_text(next->currency_symbol, sizeof(next->currency_symbol), text_field(params, "currencySymbol"));
     const cJSON *lane, *entry;
     uint8_t seen = 0;
+    int ignored_empty = 0;
     cJSON_ArrayForEach(lane, list) {
         uint8_t position = read_position(lane);
         if (!valid_position(position)) continue;
@@ -265,18 +277,22 @@ int pulses_write_packages(const cJSON *params)
         uint8_t mask = 1U << index;
         const cJSON *packages = cJSON_GetObjectItemCaseSensitive(lane, "consumptionPackage");
         if ((seen & mask) || !cJSON_IsArray(packages)) continue;
-        seen |= mask;
+        if (pushed && !packages->child) {
+            ignored_empty = 1;
+            continue;
+        }
         uint8_t *count = &next->count[index];
         cJSON_ArrayForEach(entry, packages) {
             if (*count == PULSES_PACKAGE_MAX) break;
             if (read_package(entry, &next->packages[index][*count])) ++*count;
         }
+        if (!pushed || *count != 0) seen |= mask;
     }
     int result = -1;
     taskENTER_CRITICAL();
-    if ((seen || !list->child) && s_pulses.connected && s_pulses.positions && session == s_pulses.session) {
-        /* A single-lane update must not wipe the other lane. An explicit
-         * empty list is a full clear; a new session starts empty as well. */
+    if ((seen || (!pushed && !list->child)) && s_pulses.connected && session == s_pulses.session) {
+        /* Merge only the lanes carrying updates. Empty arrays can clear
+         * cached packages on the sync path, never on an unsolicited push. */
         if (!s_pulses.packages_ready || !list->child) {
             s_pulses.data = *next;
         } else {
@@ -289,11 +305,24 @@ int pulses_write_packages(const cJSON *params)
             if (*next->currency_symbol) memcpy(s_pulses.data.currency_symbol, next->currency_symbol, sizeof(next->currency_symbol));
         }
         s_pulses.packages_ready = 1;
+        if (!pushed) s_pulses.packages_synced = 1;
         ++s_pulses.revision;
         result = 1;
+    } else if (pushed && ignored_empty && s_pulses.connected && session == s_pulses.session) {
+        result = 1;  /* Valid no-op: keep cache and screen revision. */
     }
     taskEXIT_CRITICAL();
     cJSON_free(next);
     cJSON_Delete(parsed);
     return result;
+}
+
+int pulses_write_packages(const cJSON *params)
+{
+    return write_packages(params, 0);
+}
+
+int pulses_update_packages(const cJSON *params)
+{
+    return write_packages(params, 1);
 }

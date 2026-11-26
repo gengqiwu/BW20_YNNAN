@@ -250,6 +250,7 @@ extern void     lyy_tjc_showPay(uint8_t picId);
 extern void     lyy_tjc_changePayQRMoney(char *qr, char *money);
 
 extern void     lyy_tjc_switch_page(char *page);
+extern uint8_t  lyy_tjc_coin_position(void);
 extern void     lyy_tjc_set_status(uint8_t newState);
 extern void     picSend_startProcess(char *fileName, uint32_t fileSize);
 

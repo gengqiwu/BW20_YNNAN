@@ -945,18 +945,17 @@ int lyy_thing_down_service(char *payload, uint32_t payload_len)
 }
 
 /**
- * @brief 
- * 服务应答
- * @param data 
- * @param message 
- * @param id 
- * @param identifier 
+ * @brief 封装并发布物模型服务应答，支持完整的套餐更新方法名。
+ * @param data 应答内容，可为 NULL；本函数接管并释放非空对象。
+ * @param message 应答消息，例如 success 或 fail。
+ * @param id 原服务请求标识。
+ * @param identifier 服务标识，不含 thing.service 前缀。
  */
 void thing_service_invoke_reply(cJSON* data, char *message, char *id, char *identifier)
 {
 
     char topic[100] = {0x00,};
-    char method[40] = {0x00,};
+    char method[64] = {0x00,};
     char temp[100]  = {0x00,};
 
     cJSON* cjsonData    = NULL;
@@ -980,7 +979,7 @@ void thing_service_invoke_reply(cJSON* data, char *message, char *id, char *iden
         //message-消息
         cJSON_AddStringToObject(cjsonData, "message", message);
         //message-消息
-        sprintf(method ,"thing.service.%s", identifier);
+        snprintf(method, sizeof(method), "thing.service.%s", identifier);
         cJSON_AddStringToObject(cjsonData, "method", method);
 
         pcData = cJSON_PrintUnformatted(cjsonData);

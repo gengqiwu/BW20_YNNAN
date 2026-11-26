@@ -157,8 +157,8 @@ void lyy_mqtt_paramInit(char *devid)
 
 
 /**
- * @brief 
- * 获取云端支付参数
+ * @brief 查询云端支付参数；双货道套餐由连接状态机在货道同步后请求。
+ * @see pulses_sync_poll
  */
 void box_get_cloud_pay_param(void)
 {
