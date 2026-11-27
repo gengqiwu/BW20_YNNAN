@@ -12,6 +12,7 @@
 
 struct cJSON;
 
+extern void device_yunanshj_init(void);
 extern int device_yunanshj_pay_apply(uint8_t channel);
 extern int device_yunanshj_pay_start(void);
 extern void yunanshj_cmd_set_dispense_detect(uint8_t data);

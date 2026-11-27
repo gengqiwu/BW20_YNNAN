@@ -45,11 +45,18 @@ static volatile uint8_t g_yunanshj_detect_query_waiting = 0;
 static volatile uint8_t g_yunanshj_detect_query_done = 0;
 static volatile uint8_t g_yunanshj_drop_detect_enabled = 1;
 static volatile uint8_t g_yunanshj_detect_property_report_pending = 0;
-static uint8_t g_yunanshj_offline_pay_pending = 0;//标识是否有离线支付信息待上报
-static uint8_t g_yunanshj_offline_pay_index = 0;//标识离线支付序号，避免重复上报
-static uint16_t g_yunanshj_offline_pay_amount = 0;
-static uint8_t g_yunanshj_offline_pay_cmd = 0;
-static char g_yunanshj_offline_pay_method[16] = "offline_pay";
+// 硬币和纸币合并统计，POS 保留独立的支付方式和计时窗口。
+typedef struct
+{
+    uint64_t amount;
+    uint32_t last_ms;
+} yunanshj_receipts_t;
+
+static yunanshj_receipts_t g_yunanshj_receipts[2];
+#define YUNANSHJ_RECEIPT_WINDOW_MS 5000u
+#define YUNANSHJ_RECEIPT_POLL_MS 100u
+// 记录最近的线上出货指令，等待结束后仍能识别其重发回包。
+static volatile uint32_t g_yunanshj_online_dispense_key = 0;
 
 #define YUNANSHJ_MIN_PACKET_LEN 7
 #define YUNANSHJ_RX_BUFFER_SIZE 256
@@ -81,80 +88,85 @@ int ucCrcVal(uint8_t *data, uint16_t len)
     return crc;
 }
 
-/**
- * @brief 记录离线支付信息
- *
- * @param cmd 支付命令
- * @param amount 支付金额
- * @param index 支付序号
- */
-static void yunanshj_record_offline_payment(uint8_t cmd, uint16_t amount, uint8_t index)
+static uint32_t yunanshj_dispense_key(uint8_t channel, uint8_t index)
 {
-    if (g_yunanshj_offline_pay_pending &&
-        g_yunanshj_offline_pay_index == index &&
-        g_yunanshj_offline_pay_cmd == cmd)
+    return 0x10000u | ((uint32_t)channel << 8) | index;
+}
+
+// 调用方在临界区内检查并清空；实际 MQTT 上报在临界区外执行。
+static uint64_t yunanshj_take_expired_receipts(yunanshj_receipts_t *receipts, uint32_t now)
+{
+    if (receipts->amount == 0 || (uint32_t)(now - receipts->last_ms) < YUNANSHJ_RECEIPT_WINDOW_MS)
     {
-        if ((YUNANSHJ_PRICE_MAX - g_yunanshj_offline_pay_amount) > amount)
-        {
-            g_yunanshj_offline_pay_amount += amount;
-        }
-        else
-        {
-            g_yunanshj_offline_pay_amount = YUNANSHJ_PRICE_MAX;
-        }
-    }
-    else
-    {
-        g_yunanshj_offline_pay_amount = amount;
+        return 0;
     }
 
-    g_yunanshj_offline_pay_cmd = cmd;
-    g_yunanshj_offline_pay_index = index;
-    g_yunanshj_offline_pay_pending = 1;
+    uint64_t amount = receipts->amount;
+    receipts->amount = 0;
+    return amount;
+}
 
-    memset(g_yunanshj_offline_pay_method, 0, sizeof(g_yunanshj_offline_pay_method));
-    if (cmd == 0x37)
+static void yunanshj_report_receipts(uint64_t amount, uint8_t pos)
+{
+    if (amount != 0)
     {
-        strcpy(g_yunanshj_offline_pay_method, "pos_pay");
-    }
-    else
-    {
-        strcpy(g_yunanshj_offline_pay_method, "offline_pay");
+        // 收款事件不绑定货道，也不增加出货数量。
+        event_post_account_ynshj((double)amount, 0, 0, 0, pos ? "pos_pay" : "offline_pay", NULL);
     }
 }
 
-/**
- * @brief 上报离线账目信息
- *
- * @param channel 货道号
- * @param index 支付序号
- */
-static void yunanshj_report_offline_account(uint8_t channel, uint8_t index)
+static void yunanshj_receipts_poll(void *arg)
 {
-    double cash_increment = 0;
+    (void)arg;
 
-    if (!g_yunanshj_offline_pay_pending)
+    taskENTER_CRITICAL();
+    uint32_t now = (uint32_t)HAL_ulGetTimeMs();
+    uint64_t cash = yunanshj_take_expired_receipts(&g_yunanshj_receipts[0], now);
+    uint64_t pos = yunanshj_take_expired_receipts(&g_yunanshj_receipts[1], now);
+    taskEXIT_CRITICAL();
+
+    yunanshj_report_receipts(cash, 0);
+    yunanshj_report_receipts(pos, 1);
+}
+
+void device_yunanshj_init(void)
+{
+    static struct HalSoftTimer receipts_timer;
+    HAL_vSoftTimeInit(&receipts_timer, yunanshj_receipts_poll, YUNANSHJ_RECEIPT_POLL_MS, NULL);
+}
+
+static void yunanshj_record_offline_payment(uint8_t pos, uint16_t amount)
+{
+    // 新线下支付是交易边界，允许主板复用线上出货的货道和序号。
+    if (!g_yunanshj_wait_dispense_result)
+    {
+        g_yunanshj_online_dispense_key = 0;
+    }
+
+    yunanshj_receipts_t *receipts = &g_yunanshj_receipts[pos];
+    taskENTER_CRITICAL();
+    uint32_t now = (uint32_t)HAL_ulGetTimeMs();
+    // 即使定时扫描还没执行，超过五秒的新投币也要开启新窗口。
+    uint64_t expired = yunanshj_take_expired_receipts(receipts, now);
+    receipts->amount += amount;
+    receipts->last_ms = now;
+    taskEXIT_CRITICAL();
+
+    yunanshj_report_receipts(expired, pos);
+}
+
+static void yunanshj_report_offline_dispense(uint8_t channel)
+{
+    if (channel < 1 || channel > YUNANSHJ_CHANNEL_MAX)
     {
         return;
     }
 
-    if (g_yunanshj_offline_pay_index != index)
-    {
-        LYY_LOGD("Offline account index mismatch, pay=%d dispense=%d", g_yunanshj_offline_pay_index, index);
-        return;
-    }
-
-    cash_increment = (double)g_yunanshj_offline_pay_amount;
-    event_post_account_ynshj(cash_increment, 1, channel, 0, g_yunanshj_offline_pay_method, NULL);
-    if (channel >= 1 && channel <= YUNANSHJ_CHANNEL_MAX && g_yunanshj_stock[channel - 1] > 0)
+    event_post_account_ynshj(0, 1, channel, 0, "offline_pay", NULL);
+    if (g_yunanshj_stock[channel - 1] > 0)
     {
         g_yunanshj_stock[channel - 1]--;
     }
-
-    g_yunanshj_offline_pay_pending = 0;
-    g_yunanshj_offline_pay_index = 0;
-    g_yunanshj_offline_pay_amount = 0;
-    g_yunanshj_offline_pay_cmd = 0;
 }
 
 /**
@@ -607,6 +619,12 @@ void device_yunanshj_packet_parse(uint8_t *data, uint16_t len)
             break;
         case 0x25://售货板返回FA 00 09 00 25 ucCh ucIndex ucCrc AF,售货板报告给上位机，出货物完成
             {
+                if (len != 9)
+                {
+                    LYY_LOGD("Invalid dispense complete packet length: %d", len);
+                    break;
+                }
+                uint8_t online_dispense = (g_yunanshj_online_dispense_key == yunanshj_dispense_key(data[5], data[6]));
                 LYY_LOGD("Dispense complete, channel: %d, index: %d", data[5], data[6]);
                 //发送FA 00 07 00 25 ucCrc AF给售货板,
                 uint8_t cmd_data[7] = {0xFA, 0x00, 0x07, 0x00, 0x25, 0x00, 0xAF};
@@ -628,8 +646,10 @@ void device_yunanshj_packet_parse(uint8_t *data, uint16_t len)
                         g_xlyyHwMark.ucPaySem = 0;
                     }
                 }
-
-                yunanshj_report_offline_account(data[5], data[6]);
+                if (!online_dispense)
+                {
+                    yunanshj_report_offline_dispense(data[5]);
+                }
             }
             break;
         case 0x26: // 售货板返回FA 00 13 00 26 data1 data2 …… data12 ucCrc AF,售货板报告给上位机库存数据
@@ -785,39 +805,21 @@ void device_yunanshj_packet_parse(uint8_t *data, uint16_t len)
                 LYY_LOGD("Clear payment amount, current amount: %d", current_amount);
             }
             break;
-        case 0x36: // 售货板返回FA 00 0A 00 36 ucMoneyH ucMoneyL ucIndex ucCrc AF投现金（纸币）,参数： ucMoneyH ucMoneyL：投钱金额（16Bit），uiMoney = ucMoneyH*256+ucMoneyLucIndex：> 0,区分是否已经下发过出货指令，每次出货后增加 1（或者随机数）
+        case 0x36: // 纸币
+        case 0x37: // POS 刷卡
+        case 0x38: // 硬币
             {
+                if (len != 10)
+                {
+                    LYY_LOGD("Invalid offline payment packet length: %d", len);
+                    break;
+                }
                 uint16_t money = data[5] * 256 + data[6];
-                uint8_t index = data[7];
-                LYY_LOGD("Cash inserted, amount: %d, index: %d", money, index);
-                yunanshj_record_offline_payment(0x36, money, index);
-                //发送FA 00 08 00 36 ucStatus ucCrc AF给售货板
-                uint8_t cmd_data[8] = {0xFA, 0x00, 0x08, 0x00, 0x36, 0x01,0x00, 0xAF};
-                cmd_data[6] = ucCrcVal(&cmd_data[1], 5); // 校验位，从从机地址到数据信息进行异或得到的值
-                HAL_vUartSend(HAL_UART_MAIN_BOARD, cmd_data, sizeof(cmd_data), 500);
-            }
-            break;
-        case 0x37: // 售货板返回FA 00 0A 00 37 ucMoneyH ucMoneyL ucIndex ucCrc AF投刷卡刷卡金额,参数： ucMoneyH ucMoneyL：投钱金额（16Bit），uiMoney = ucMoneyH*256+ucMoneyLucIndex：>0,区分是否已经下发过出货指令，每次出货后增加 1（或者随机数）
-            {
-                uint16_t money = data[5] * 256 + data[6];
-                uint8_t index = data[7];
-                LYY_LOGD("Card payment, amount: %d, index: %d", money, index);
-                yunanshj_record_offline_payment(0x37, money, index);
-                //发送FA 00 08 00 37 ucStatus ucCrc AF给售货板
-                uint8_t cmd_data[8] = {0xFA, 0x00, 0x08, 0x00, 0x37, 0x01,0x00, 0xAF};
-                cmd_data[6] = ucCrcVal(&cmd_data[1], 5); // 校验位，从从机地址到数据信息进行异或得到的值
-                HAL_vUartSend(HAL_UART_MAIN_BOARD, cmd_data, sizeof(cmd_data), 500);
-            }
-            break;
-        case 0x38: // 售货板返回FA 00 0A 00 38 ucMoneyH ucMoneyL ucIndex ucCrc AF投现金（硬币）,参数： ucMoneyH ucMoneyL：投钱金额（16Bit），uiMoney = ucMoneyH*256+ucMoneyLucIndex：>0,区分是否已经下发过出货指令，每次出货后增加 1（或者随机数）
-            {
-                uint16_t money = data[5] * 256 + data[6];
-                uint8_t index = data[7];
-                LYY_LOGD("Coin inserted, amount: %d, index: %d", money, index);
-                yunanshj_record_offline_payment(0x38, money, index);
-                //发送FA 00 08 00 38 ucStatus ucCrc AF给售货板
-                uint8_t cmd_data[8] = {0xFA, 0x00, 0x08, 0x00, 0x38, 0x01,0x00, 0xAF};
-                cmd_data[6] = ucCrcVal(&cmd_data[1], 5); // 校验位，从从机地址到数据信息进行异或得到的值
+                LYY_LOGD("Offline payment cmd=%02X, amount=%d, index=%d", cmd, money, data[7]);
+                yunanshj_record_offline_payment(cmd == 0x37, money);
+
+                uint8_t cmd_data[8] = {0xFA, 0x00, 0x08, 0x00, cmd, 0x01, 0x00, 0xAF};
+                cmd_data[6] = ucCrcVal(&cmd_data[1], 5);
                 HAL_vUartSend(HAL_UART_MAIN_BOARD, cmd_data, sizeof(cmd_data), 500);
             }
             break;
@@ -992,6 +994,7 @@ int device_yunanshj_pay_start(void)
 
     g_xlyyHwMark.ucPaySem = 1;
     g_yunanshj_wait_dispense_result = 1;
+    g_yunanshj_online_dispense_key = yunanshj_dispense_key(channel, g_yunanshj_pay_index);
     yunanshj_cmd_dispense(channel, g_yunanshj_pay_index);
 
     while (waited_ms < YUNANSHJ_DISPENSE_RESULT_TIMEOUT_MS)

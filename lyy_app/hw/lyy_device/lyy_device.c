@@ -945,6 +945,10 @@ void lyy_init_device(void)
     {
         lyy_device_adh814e_init();
     }
+    else if (get_dev_type_code() == DEVICE_TYPE_UART_YUNANSHJ)
+    {
+        device_yunanshj_init();
+    }
 
     lyy_device_ndj_init();
 }
